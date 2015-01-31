@@ -13,16 +13,13 @@ function convert_formula(c::Expr)
     # Distinguish n-ary and binary plus
     if op == :+
       if length(c.args) > 3
-        c.args[1] == :sum
+        c.args[1] = :sum
       end
     # Distinguish unary and binary minus
     elseif op == :-
       n = length(c.args)
       if n == 2
-        c.args[1] == :neg
-      elseif n > 3
-        # TODO: Handle n-ary minus
-        error("n-ary minus")
+        c.args[1] = :neg
       end
     # Handle normal conversion cases
     else
@@ -55,9 +52,9 @@ const unary_special_cases = Compat.@compat Dict(
 :cscd  => (x) -> :(1 / sin(pi / 180 * $x)),
 :cotd  => (x) -> :(1 / tan(pi / 180 * $x)),
 
-:asecd => (x) -> :(acos(1 / (pi / 180 * $x))),
-:acscd => (x) -> :(asin(1 / (pi / 180 * $x))),
-:acotd => (x) -> :(pi / 2 - atan(pi / 180 * $x)),
+:asecd => (x) -> :(acos(1 / $x) * 180 / pi),
+:acscd => (x) -> :(asin(1 / $x) * 180 / pi),
+:acotd => (x) -> :((pi / 2 - atan($x)) * 180 / pi),
 
 :sech  => (x) -> :(1 / cosh($x)),
 :csch  => (x) -> :(1 / sinh($x)),
