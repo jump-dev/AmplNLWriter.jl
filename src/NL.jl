@@ -6,6 +6,7 @@ importall MathProgBase.SolverInterface
 import Compat
 
 include("nl_params.jl")
+include("nl_convert.jl")
 
 export NLSolver
 immutable NLSolver <: AbstractMathProgSolver
@@ -141,6 +142,9 @@ function to_nl(m, c::Expr, indent::Int=0)
         end
     elseif c.head == :call
         add_indent("o$(func_to_nl[c.args[1]])", indent)
+        if c.args[1] in nary_functions
+            add_indent(string(length(c.args) - 1), indent)
+        end
         for arg in c.args[2:end]
             to_nl(m, arg, indent + 2)
         end

@@ -4,7 +4,12 @@ convert_formula(c) = c
 convert_formula(c::Real) = c < 0 ? :(- $(-c)) : c
 
 function convert_formula(c::Expr)
-  if c.head == :call
+  if c.head == :comparison
+    for i in 2:length(c.args)
+      c.args[i] = convert_formula(c.args[i])
+    end
+
+  elseif c.head == :call
     for i in 2:length(c.args)
       c.args[i] = convert_formula(c.args[i])
     end

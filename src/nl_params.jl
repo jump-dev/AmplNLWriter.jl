@@ -54,3 +54,26 @@ const func_to_nl = Compat.@compat Dict(
 # :iff => 73,
 # :alldiff => 74,
 )
+
+const sense_to_nl = Compat.@compat Dict(
+:Min => 0,
+:Max => 1,
+)
+
+const relation_to_nl = Compat.@compat Dict(
+:<=   => 1,
+:>=   => 2,
+:(==) => 4,
+)
+
+const nary_functions = Set{Symbol}([
+# :min,
+# :max,
+:sum,
+# :count,
+# :numberof,
+# :numberofs,
+# :and_n,
+# :or_n,
+# :alldiff,
+])
