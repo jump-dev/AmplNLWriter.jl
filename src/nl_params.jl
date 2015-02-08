@@ -61,9 +61,10 @@ const sense_to_nl = Compat.@compat Dict(
 )
 
 const relation_to_nl = Compat.@compat Dict(
-:<=   => 1,
-:>=   => 2,
-:(==) => 4,
+:multiple => 0,
+:<=       => 1,
+:>=       => 2,
+:(==)     => 4,
 )
 
 const nary_functions = Set{Symbol}([

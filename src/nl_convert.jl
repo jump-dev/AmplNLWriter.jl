@@ -29,7 +29,8 @@ function convert_formula(c::Expr)
     # Handle normal conversion cases
     else
       if length(c.args) == 2
-        c = get(unary_special_cases, c.args[1], identity)(c.args[2])
+        c = get(unary_special_cases, c.args[1],
+                (x) -> Expr(:call, c.args[1], x))(c.args[2])
       end
     end
   end
