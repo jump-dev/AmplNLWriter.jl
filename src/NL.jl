@@ -427,7 +427,7 @@ function read_results(m::NLMathProgModel)
         eof(f) && error()
     end
 
-    # Next, we read the results file to get the solution
+    # Next, read for the variable values
     x = fill(NaN, m.nvar)
     m.objval = NaN
     if stat == :Optimal
