@@ -1,9 +1,6 @@
 convert_formula(c) = c
-
-# Convert any negative number to Expr with :-
-convert_formula(c::Real) = c < 0 ? :(- $(-c)) : c
-
 convert_formula(c::LinearityExpr) = convert_formula(c.c)
+
 function convert_formula(c::Expr)
   if c.head == :comparison
     for i in 2:length(c.args)

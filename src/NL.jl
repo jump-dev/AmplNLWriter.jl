@@ -43,8 +43,10 @@ type NLMathProgModel <: AbstractMathProgModel
     conlinearities::Vector{Symbol}
     objlinearity::Symbol
 
-    v_names::Vector{String}
-    c_names::Vector{String}
+    v_index_map::Dict{Int64, Int64}
+    v_index_map_rev::Dict{Int64, Int64}
+    c_index_map::Dict{Int64, Int64}
+    c_index_map_rev::Dict{Int64, Int64}
 
     sense::Symbol
 
@@ -78,8 +80,10 @@ type NLMathProgModel <: AbstractMathProgModel
             Symbol[],
             Symbol[],
             :Lin,
-            String[],
-            String[],
+            Dict{Int64, Int64}(),
+            Dict{Int64, Int64}(),
+            Dict{Int64, Int64}(),
+            Dict{Int64, Int64}(),
             :Min,
             zeros(0),
             "",
@@ -174,7 +178,7 @@ function write_nl(f, m, c::Expr)
     if c.head == :ref
         if c.args[1] == :x
             @assert isa(c.args[2], Int)
-            println(f, string("v", m.v_names[c.args[2]]))
+            println(f, string("v", m.v_index_map[c.args[2]]))
         else
             error("Unrecognized reference expression $c")
         end
@@ -192,10 +196,6 @@ function write_nl(f, m, c::Expr)
 end
 
 function MathProgBase.optimize!(m::NLMathProgModel)
-
-    m.v_names = ["$i" for i in 1:m.nvar]
-    m.c_names = ["$i" for i in 1:m.ncon]
-
     for (i, c) in enumerate(m.constrs)
         # Remove relations and bounds from constraint expressions
         @assert c.head == :comparison
@@ -225,22 +225,9 @@ function MathProgBase.optimize!(m::NLMathProgModel)
         tree = LinearityExpr(m.constrs[i])
         tree = pull_up_constants(tree)
         _, tree, constant = prune_linear_terms!(tree, m.lin_constrs[i])
-        tree = convert_formula(tree)
+        m.constrs[i]  = convert_formula(tree)
         m.g_l[i] -= constant
         m.g_u[i] -= constant
-
-        # The final bound must be positive
-        if (m.r_codes[i] in [0, 1] && m.g_u[i] <= 0) ||
-           (m.r_codes[i] in [2, 4] && m.g_l[i] <= 0)
-            m.g_l[i], m.g_u[i] = -m.g_u[i], -m.g_l[i]
-            m.r_codes[i] = reverse_relation[m.r_codes[i]]
-            for j in keys(m.lin_constrs[i])
-                m.lin_constrs[i][j] *= -1
-            end
-            tree = Expr(:call, :-, tree)
-            tree = convert_formula(tree)
-        end
-        m.constrs[i] = tree
 
         # Get variables that are nonlinear
         nonlinear_vars = Dict{Int64, Float64}()
@@ -298,10 +285,12 @@ function MathProgBase.optimize!(m::NLMathProgModel)
         m.obj = add_constant(m.obj, constant)
     end
 
-    println(m.x_l)
-    println(m.x_u)
+    make_var_index(m)
+    make_con_index(m)
+
     write_nl_file(m)
     run(`couenne $(m.probfile)`)
+    read_results(m)
 end
 
 MathProgBase.status(m::NLMathProgModel) = m.status
@@ -329,5 +318,129 @@ end
 
 add_constant(c, constant::Real) = c + constant
 add_constant(c::Expr, constant::Real) = Expr(:call, :+, c, constant)
+
+function make_var_index(m::NLMathProgModel)
+    nonlinear_cont = Int64[]
+    nonlinear_int = Int64[]
+    linear_cont = Int64[]
+    linear_int = Int64[]
+    linear_bin = Int64[]
+
+    for i in 1:m.nvar
+        if m.varlinearities_obj[i] == :Nonlin ||
+           m.varlinearities_con[i] == :Nonlin
+            if m.vartypes[i] == :Cont
+                push!(nonlinear_cont, i)
+            else
+                push!(nonlinear_int, i)
+            end
+        else
+            if m.vartypes[i] == :Cont
+                push!(linear_cont, i)
+            elseif m.vartypes[i] == :Int
+                push!(linear_int, i)
+            else
+                push!(linear_bin, i)
+            end
+        end
+    end
+
+    index = 0
+    # 1st: Nonlinear cont
+    index = add_to_var_index(m, nonlinear_cont, index)
+    # 2nd: Nonlinear int
+    index = add_to_var_index(m, nonlinear_int, index)
+    # 3rd: Linear cont
+    index = add_to_var_index(m, linear_cont, index)
+    # 4th: Linear bin
+    index = add_to_var_index(m, linear_bin, index)
+    # 5th: Linear int
+    index = add_to_var_index(m, linear_int, index)
+    println(m.v_index_map)
+    println(m.v_index_map_rev)
+end
+
+function add_to_var_index(m::NLMathProgModel, inds::Array{Int64}, index::Int64)
+    for i in inds
+        m.v_index_map[i] = index
+        m.v_index_map_rev[index] = i
+        index += 1
+    end
+    return index
+end
+
+function make_con_index(m::NLMathProgModel)
+    nonlinear_cons = Int64[]
+    linear_cons = Int64[]
+
+    for i in 1:m.ncon
+        if m.conlinearities[i] == :Nonlin
+            push!(nonlinear_cons, i)
+        else
+            push!(linear_cons, i)
+        end
+    end
+    index = 0
+    # 1st: Nonlinear
+    index = add_to_con_index(m, nonlinear_cons, index)
+    # 2nd: Linear
+    index = add_to_con_index(m, linear_cons, index)
+    println(m.c_index_map)
+    println(m.c_index_map_rev)
+end
+
+function add_to_con_index(m::NLMathProgModel, inds::Array{Int64}, index::Int64)
+    for i in inds
+        m.c_index_map[i] = index
+        m.c_index_map_rev[index] = i
+        index += 1
+    end
+    return index
+end
+
+function read_results(m::NLMathProgModel)
+    f = open(m.solfile, "r")
+    stat = :Undefined
+
+    # Throw away empty first line
+    line = readline(f)
+    eof(f) && error()
+
+    # Get status from second line
+    line = readline(f)
+    spl = split(chomp(line), ": ")
+    if spl[2] == "Optimal"
+        stat = :Optimal
+    elseif spl[2] == "Infeasible"
+        stat = :Infeasible
+    elseif spl[2] == "Unbounded"
+        stat = :Unbounded
+    elseif contains(spl[2], "Error")
+        stat = :Error
+    end
+    eof(f) && error()
+    m.status = stat
+
+    # Throw away lines 3-12
+    for i = 3:12
+        readline(f)
+        eof(f) && error()
+    end
+
+    # Next, we read the results file to get the solution
+    x = fill(NaN, m.nvar)
+    m.objval = NaN
+    if stat == :Optimal
+        for index in 0:(m.nvar - 1)
+            eof(f) && error("End of file while reading variables.")
+            line = readline(f)
+
+            i = m.v_index_map_rev[index]
+            x[i] = float(chomp(line))
+        end
+        m.solution = x
+    end
+    nothing
+end
 
 end

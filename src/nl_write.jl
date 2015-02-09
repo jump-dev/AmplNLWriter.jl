@@ -52,8 +52,8 @@ function write_nl_header(f, m::NLMathProgModel)
   nonlinear_con = m.varlinearities_con .== :Nonlin
   nonlinear = (nonlinear_con + nonlinear_obj) .> 0
   nonlinear_both = (nonlinear_con + nonlinear_obj) .> 1
-  nlvc = sum(nonlinear_con - nonlinear_obj .> 0)
-  nlvo = sum(nonlinear_obj - nonlinear_con .> 0)
+  nlvc = sum(nonlinear_con .> 0)
+  nlvo = sum(nonlinear_obj .> 0)
   nlvb = sum(nonlinear_both)
   println(f, " $nlvc $nlvo $nlvb")
   # Line 6: linear network variables; functions; arith, flags
@@ -80,8 +80,8 @@ end
 
 # Nonlinear constraint trees
 function write_nl_c_blocks(f, m::NLMathProgModel)
-  for i in 1:m.ncon
-    index = i - 1 # TODO
+  for index in 0:(m.ncon - 1)
+    i = m.c_index_map_rev[index]
     println(f, "C$index")
     write_nl(f, m, m.constrs[i])
   end
@@ -96,8 +96,8 @@ end
 # Initial dual guesses - unused
 function write_nl_d_block(f, m::NLMathProgModel)
   println(f, "d$(m.ncon)")
-  for i in 1:m.ncon
-    index = i - 1 # TODO
+  for index in 0:(m.ncon - 1)
+    i = m.c_index_map_rev[index]
     println(f, "$index 0")
   end
 end
@@ -105,8 +105,8 @@ end
 # Initial primal guesses
 function write_nl_x_block(f, m::NLMathProgModel)
   println(f, "x$(m.nvar)")
-  for i in 1:m.nvar
-    index = i - 1 # TODO
+  for index in 0:(m.nvar - 1)
+    i = m.v_index_map_rev[index]
     println(f, "$index $(m.x_0[i])")
   end
 end
@@ -114,8 +114,8 @@ end
 # Constraint bounds
 function write_nl_r_block(f, m::NLMathProgModel)
   println(f, "r")
-  for i in 1:m.ncon
-    index = i - 1 # TODO
+  for index in 0:(m.ncon - 1)
+    i = m.c_index_map_rev[index]
     lower = m.g_l[i]
     upper = m.g_u[i]
     rel = m.r_codes[i]
@@ -136,8 +136,8 @@ end
 # Variable bounds
 function write_nl_b_block(f, m::NLMathProgModel)
   println(f, "b")
-  for i in 1:m.nvar
-    index = i - 1 # TODO
+  for index in 0:(m.nvar - 1)
+    i = m.v_index_map_rev[index]
     lower = m.x_l[i]
     upper = m.x_u[i]
     if lower == -Inf
@@ -162,8 +162,8 @@ end
 function write_nl_k_block(f, m::NLMathProgModel)
   println(f, "k$(m.nvar - 1)")
   total = 0
-  for i = 1:(m.nvar - 1)
-    index = i # TODO
+  for index = 0:(m.nvar - 2)
+    i = m.v_index_map_rev[index]
     total += m.j_counts[i]
     println(f, total)
   end
@@ -171,11 +171,11 @@ end
 
 # Linear constraint expressions
 function write_nl_j_blocks(f, m::NLMathProgModel)
-  for i in 1:m.ncon
-    index = i - 1# TODO
+  for index in 0:(m.ncon - 1)
+    i = m.c_index_map_rev[index]
     println(f, string("J$index ", length(m.lin_constrs[i])))
-    for j in 1:m.nvar
-      index2 = j - 1 # TODO
+    for index2 = 0:(m.nvar - 1)
+      j = m.v_index_map_rev[index2]
       if j in keys(m.lin_constrs[i])
         println(f, "$index2 $(m.lin_constrs[i][j])")
       end
@@ -186,8 +186,8 @@ end
 # Linear objective expression
 function write_nl_g_block(f, m::NLMathProgModel)
   println(f, string("G0 ", length(m.lin_obj)))
-  for i in 1:m.nvar
-    index = i - 1 # TODO
+  for index in 0:(m.nvar - 1)
+    i = m.v_index_map_rev[index]
     if i in keys(m.lin_obj)
       println(f, "$index $(m.lin_obj[i])")
     end
