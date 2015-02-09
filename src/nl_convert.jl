@@ -3,6 +3,7 @@ convert_formula(c) = c
 # Convert any negative number to Expr with :-
 convert_formula(c::Real) = c < 0 ? :(- $(-c)) : c
 
+convert_formula(c::LinearityExpr) = convert_formula(c.c)
 function convert_formula(c::Expr)
   if c.head == :comparison
     for i in 2:length(c.args)
@@ -24,7 +25,11 @@ function convert_formula(c::Expr)
     elseif op == :-
       n = length(c.args)
       if n == 2
-        c.args[1] = :neg
+        if c.args[2] == 0
+          c = 0
+        else
+          c.args[1] = :neg
+        end
       end
     # Handle normal conversion cases
     else

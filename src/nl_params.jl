@@ -67,6 +67,13 @@ const relation_to_nl = Compat.@compat Dict(
 :(==)     => 4,
 )
 
+const reverse_relation = Compat.@compat Dict(
+:0 => 0,
+:1 => 2,
+:2 => 1,
+:4 => 4,
+)
+
 const nary_functions = Set{Symbol}([
 # :min,
 # :max,
