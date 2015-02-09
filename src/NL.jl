@@ -356,8 +356,6 @@ function make_var_index(m::NLMathProgModel)
     index = add_to_var_index(m, linear_bin, index)
     # 5th: Linear int
     index = add_to_var_index(m, linear_int, index)
-    println(m.v_index_map)
-    println(m.v_index_map_rev)
 end
 
 function add_to_var_index(m::NLMathProgModel, inds::Array{Int64}, index::Int64)
@@ -385,8 +383,6 @@ function make_con_index(m::NLMathProgModel)
     index = add_to_con_index(m, nonlinear_cons, index)
     # 2nd: Linear
     index = add_to_con_index(m, linear_cons, index)
-    println(m.c_index_map)
-    println(m.c_index_map_rev)
 end
 
 function add_to_con_index(m::NLMathProgModel, inds::Array{Int64}, index::Int64)
