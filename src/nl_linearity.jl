@@ -45,10 +45,14 @@ function LinearityExpr(c::Expr)
     elseif c.args[1] == :^
       if c.args[3].linearity != :const
         linearity = :nonlinear
-      elseif c.args[2].linearity == :linear && c.args[3].c == 1
-        linearity = :linear
+      elseif c.args[2].linearity == :linear
+        if c.args[3].c == 1
+          linearity = :linear
+        else
+          linearity = :nonlinear
+        end
       else
-        linearity = :const
+        linearity = c.args[2].linearity
       end
     else
       if check_for_linearity(:linear, args) ||
