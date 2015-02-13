@@ -143,7 +143,7 @@ function MathProgBase.loadnonlinearproblem!(m::NLMathProgModel,
     m.vartypes = fill(:Cont, nvar)
     m.varlinearities_con = fill(:Lin, nvar)
     m.varlinearities_obj = fill(:Lin, nvar)
-    m.conlinearities = fill(:Lin, nvar)
+    m.conlinearities = fill(:Lin, ncon)
 
     m.j_counts = zeros(Int64, nvar)
 
