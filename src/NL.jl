@@ -167,6 +167,7 @@ end
 MathProgBase.setwarmstart!(m::NLMathProgModel, v::Vector{Float64}) = m.x_0 = v
 
 write_nl(f, m, c) = println(f, string(c))
+write_nl(f, m, c::Symbol) =  write_nl(f, m, float(eval(c)))
 function write_nl(f, m, c::Real)
     if c == int(c)
         c = iround(c)
