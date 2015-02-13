@@ -56,10 +56,16 @@ const unary_special_cases = Compat.@compat Dict(
 :acsc  => (x) -> :(asin(1 / $x)),
 :acot  => (x) -> :(pi / 2 - atan($x)),
 
+:sind  => (x) -> :(sin(pi /180 * $x)),
+:cosd  => (x) -> :(cos(pi /180 * $x)),
+:tand  => (x) -> :(tan(pi /180 * $x)),
 :secd  => (x) -> :(1 / cos(pi / 180 * $x)),
 :cscd  => (x) -> :(1 / sin(pi / 180 * $x)),
 :cotd  => (x) -> :(1 / tan(pi / 180 * $x)),
 
+:asind => (x) -> :(asin($x) * 180 / pi),
+:acosd => (x) -> :(acos($x) * 180 / pi),
+:atand => (x) -> :(atan($x) * 180 / pi),
 :asecd => (x) -> :(acos(1 / $x) * 180 / pi),
 :acscd => (x) -> :(asin(1 / $x) * 180 / pi),
 :acotd => (x) -> :((pi / 2 - atan($x)) * 180 / pi),
