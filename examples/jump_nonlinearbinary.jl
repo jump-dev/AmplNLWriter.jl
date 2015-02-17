@@ -11,8 +11,12 @@ using JuMP, FactCheck, NL
 m = Model(solver=NLSolver())
 @defVar(m, x[1:2], Bin)
 
+# Set some non-binary bounds on x1 and x2. These should be ignored.
+# The optimal solution if x is Int is (1, 2) which is allowed by these bounds
+setUpper(x[1], 2)
+setUpper(x[2], 2)
+
 @setNLObjective(m, Min, 100*(x[2] - (0.5 + x[1])^2)^2 + (1 - x[1])^2)
-solve(m)
 
 facts("[jump_nonlinearbinary] Test optimal solutions") do
   @fact solve(m) => :Optimal
