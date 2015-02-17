@@ -403,24 +403,22 @@ function read_results(m::NLMathProgModel)
     eof(f) && error()
 
     # Get status from second line
-    line = readline(f)
-    spl = split(chomp(line), ": ")
-    if spl[2] == "Optimal"
+    line = lowercase(readline(f))
+    if contains(line, "optimal")
         stat = :Optimal
-    elseif spl[2] == "Infeasible"
+    elseif contains(line, "infeasible")
         stat = :Infeasible
-    elseif spl[2] == "Unbounded"
+    elseif contains(line, "unbounded")
         stat = :Unbounded
-    elseif contains(spl[2], "Error")
+    elseif contains(line, "error")
         stat = :Error
     end
-    eof(f) && error()
     m.status = stat
 
     # Throw away lines 3-12
     for i = 3:12
-        readline(f)
         eof(f) && error()
+        readline(f)
     end
 
     # Next, read for the variable values
