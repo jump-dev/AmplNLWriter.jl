@@ -292,6 +292,11 @@ function MathProgBase.optimize!(m::NLMathProgModel)
     write_nl_file(m)
     run(`couenne $(m.probfile)`)
     read_results(m)
+
+    # Finally, calculate objective value for nonlinear and linear parts
+    obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
+    obj_lin = evaluate_linear(m.lin_obj, m.solution)
+    m.objval = obj_nonlin + obj_lin
 end
 
 MathProgBase.status(m::NLMathProgModel) = m.status
@@ -436,6 +441,37 @@ function read_results(m::NLMathProgModel)
         m.solution = x
     end
     nothing
+end
+
+substitute_vars!(c, x::Array{Float64}) = c
+function substitute_vars!(c::Expr, x::Array{Float64})
+    if c.head == :ref
+        if c.args[1] == :x
+            index = c.args[2]
+            @assert isa(index, Int)
+            c = x[index]
+        else
+            error("Unrecognized reference expression $c")
+        end
+    else
+        # Convert .nl unary minus (:neg) back to :-
+        if c.args[1] == :neg
+            c.args[1] = :-
+        end
+
+        for i in 2:length(c.args)
+            c.args[i] = substitute_vars!(c.args[i], x)
+        end
+    end
+    c
+end
+
+function evaluate_linear(linear_coeffs::Dict{Int64, Float64}, x::Array{Float64})
+    total = 0.0
+    for (i, coeff) in linear_coeffs
+        total += coeff * x[i]
+    end
+    total
 end
 
 end
