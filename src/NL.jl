@@ -469,6 +469,9 @@ function substitute_vars!(c::Expr, x::Array{Float64})
         # Convert .nl unary minus (:neg) back to :-
         if c.args[1] == :neg
             c.args[1] = :-
+        # Convert .nl :sum back to :+
+        elseif c.args[1] == :sum
+            c.args[1] = :+
         end
 
         for i in 2:length(c.args)
