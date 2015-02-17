@@ -8,5 +8,7 @@ nlp_solvers = Any[]
 push!(nlp_solvers, NL.NLSolver())
 convex_nlp_solvers = Any[]
 push!(convex_nlp_solvers, NL.NLSolver())
+minlp_solvers = Any[]
+push!(minlp_solvers, NL.NLSolver())
 
 include(joinpath(Pkg.dir("JuMP"), "test", "nonlinear.jl"))
