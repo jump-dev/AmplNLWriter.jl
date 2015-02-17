@@ -1,5 +1,4 @@
-using JuMP, FactCheck
-import NL
+using JuMP, FactCheck, NL
 
 ## Solve test problem with non-linear binary variables
  #
@@ -9,7 +8,7 @@ import NL
  #  The solution is (0, 0).
  ##
 
-m = Model(solver=NL.NLSolver())
+m = Model(solver=NLSolver())
 @defVar(m, x[1:2], Bin)
 
 @setNLObjective(m, Min, 100*(x[2] - (0.5 + x[1])^2)^2 + (1 - x[1])^2)

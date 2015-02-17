@@ -1,5 +1,4 @@
-using JuMP, FactCheck
-import NL
+using JuMP, FactCheck, NL
 
 ## Solve test problem with sind and cosd functions
  #
@@ -9,7 +8,7 @@ import NL
  #  The optimal objective value is 400..
  ##
 
-m = Model(solver=NL.NLSolver())
+m = Model(solver=NLSolver())
 @defVar(m, x[1:2])
 
 @setNLObjective(m, Min, (7 - (3*cosd(x[1]) + 5*cosd(x[2])))^2 + (0 - (3*sind(x[1]) + 5*sind(x[2])))^2)

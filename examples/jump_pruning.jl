@@ -1,5 +1,4 @@
-using JuMP, FactCheck
-import NL
+using JuMP, FactCheck, NL
 
 ## Solve test problem with lots of expressions to prune
  #
@@ -17,7 +16,7 @@ import NL
  #  The optimal objective value is 400..
  ##
 
-m = Model(solver=NL.NLSolver())
+m = Model(solver=NLSolver())
 @defVar(m, x[1:2] >= 0)
 
 @setNLObjective(m, Max, x[1]^2 * x[2]^2)
