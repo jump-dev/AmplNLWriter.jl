@@ -161,7 +161,7 @@ end
 
 function MathProgBase.setvartype!(m::NLMathProgModel, cat::Vector{Symbol})
     @assert all(x-> (x in [:Cont,:Bin,:Int]), cat)
-    m.vartypes = cat
+    m.vartypes = copy(cat)
 end
 
 MathProgBase.setwarmstart!(m::NLMathProgModel, v::Vector{Float64}) = m.x_0 = v
@@ -300,7 +300,7 @@ function MathProgBase.optimize!(m::NLMathProgModel)
 end
 
 MathProgBase.status(m::NLMathProgModel) = m.status
-MathProgBase.getsolution(m::NLMathProgModel) = m.solution
+MathProgBase.getsolution(m::NLMathProgModel) = copy(m.solution)
 MathProgBase.getobjval(m::NLMathProgModel) = m.objval
 
 # We need to track linear coeffs of all variables present in the expression tree
