@@ -28,6 +28,18 @@ function convert_formula(c::Expr)
           c.args[1] = :neg
         end
       end
+    # .nl has no n-ary multiplication so we need to convert to binary
+    elseif op == :*
+      println("before:   $c")
+      # Loop backwards over any more than binary *
+      for i in length(c.args):-1:4
+        println("start $i: $c")
+        arg = pop!(c.args)
+        println(arg)
+        # Combine i-1 and ith terms into a binary * expression
+        c.args[i - 1] = :($(c.args[i - 1]) * $arg)
+        println("end $i:   $c")
+      end
     # Handle normal conversion cases
     else
       if length(c.args) == 2
