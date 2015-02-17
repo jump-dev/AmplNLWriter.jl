@@ -108,7 +108,7 @@ function prune_linear_terms!(c::LinearityExpr, lin_constr::Dict{Int64, Float64},
         pruned = falses(n - 1)
         for i in 2:n
           pruned[i - 1], expr.args[i], constant = prune_linear_terms!(
-              expr.args[i], lin_constr, constant)
+              expr.args[i], lin_constr, constant, negative_tree)
         end
         if sum(!pruned) > 1
           inds = vcat([1], [2:n][!pruned])
@@ -119,9 +119,9 @@ function prune_linear_terms!(c::LinearityExpr, lin_constr::Dict{Int64, Float64},
       elseif expr.args[1] == :-
         if length(expr.args) == 3
           pruned_first, expr.args[2], constant = prune_linear_terms!(
-              expr.args[2], lin_constr, constant)
+              expr.args[2], lin_constr, constant, negative_tree)
           pruned_second, expr.args[3], constant = prune_linear_terms!(
-              expr.args[3], lin_constr, constant, true)
+              expr.args[3], lin_constr, constant, !negative_tree)
           if pruned_first
             new_expr = Expr(:call, :-, expr.args[3])
             c = LinearityExpr(new_expr, :nonlinear)
