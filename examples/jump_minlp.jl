@@ -36,9 +36,10 @@ x_U = [2,2,1]
 @addNLConstraint(m, x[2] - 2*y[4] <= 0)
 @addNLConstraint(m, x[1] - x[2] - 2*y[5] <= 0)
 @addNLConstraint(m, y[4] + y[5] <= 1)
-solve(m)
 
 facts("[jump_minlp] Test optimal solutions") do
+  @fact solve(m) => :Optimal
   @fact getValue(x)[:] => roughly([1.30098, 0.0, 1.0], 1e-5)
   @fact getValue(y)[:] => roughly([0.0, 1.0, 0.0], 1e-5)
+  @fact getObjectiveValue(m) => roughly(6.00975, 1e-5)
 end

@@ -15,5 +15,7 @@ m = Model(solver=NLSolver())
 solve(m)
 
 facts("[jump_nonlinearbinary] Test optimal solutions") do
+  @fact solve(m) => :Optimal
   @fact getValue(x)[:] => [0.0, 0.0]
+  @fact getObjectiveValue(m) => 7.25
 end

@@ -13,7 +13,7 @@ using JuMP, FactCheck, NL
  #        x2 - x1 + x1 * x2 <= 0
  #        x1, x2 >= 0
  #
- #  The optimal objective value is 400..
+ #  The optimal objective value is 400, solutions can vary.
  ##
 
 m = Model(solver=NLSolver())
@@ -29,8 +29,7 @@ m = Model(solver=NLSolver())
 @addNLConstraint(m, x[2] - x[1] * x[2] + x[1] <= 60)
 @addNLConstraint(m, x[2] - x[1] + x[1] * x[2] <= 0)
 
-solve(m)
-
 facts("[jump_pruning] Test optimal solutions") do
-  @fact prod(getValue(x)[:].^2) => roughly(400, 1e-5)
+  @fact solve(m) => :Optimal
+  @fact getObjectiveValue(m) => roughly(400, 1e-5)
 end
