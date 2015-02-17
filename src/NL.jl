@@ -305,10 +305,12 @@ function MathProgBase.optimize!(m::NLMathProgModel)
     run(`couenne $(m.probfile)`)
     read_results(m)
 
-    # Finally, calculate objective value for nonlinear and linear parts
-    obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
-    obj_lin = evaluate_linear(m.lin_obj, m.solution)
-    m.objval = obj_nonlin + obj_lin
+    if m.status in [:Optimal]
+        # Finally, calculate objective value for nonlinear and linear parts
+        obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
+        obj_lin = evaluate_linear(m.lin_obj, m.solution)
+        m.objval = obj_nonlin + obj_lin
+    end
 end
 
 MathProgBase.status(m::NLMathProgModel) = m.status
