@@ -286,6 +286,18 @@ function MathProgBase.optimize!(m::NLMathProgModel)
         m.obj = add_constant(m.obj, constant)
     end
 
+    # Make sure binary vars have bounds in [0, 1]
+    for i in 1:m.nvar
+        if m.vartypes[i] == :Bin
+            if m.x_l[i] < 0
+                m.x_l[i] = 0
+            end
+            if m.x_u[i] > 1
+                m.x_u[i] = 1
+            end
+        end
+    end
+
     make_var_index(m)
     make_con_index(m)
 
