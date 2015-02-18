@@ -83,14 +83,14 @@ function write_nl_c_blocks(f, m::NLMathProgModel)
   for index in 0:(m.ncon - 1)
     i = m.c_index_map_rev[index]
     println(f, "C$index")
-    write_nl(f, m, m.constrs[i])
+    write_nl_expr(f, m, m.constrs[i])
   end
 end
 
 # Nonlinear objective tree
 function write_nl_o_block(f, m::NLMathProgModel)
   println(f, string("O0 ", sense_to_nl[m.sense]))
-  write_nl(f, m, m.obj)
+  write_nl_expr(f, m, m.obj)
 end
 
 # Initial dual guesses - unused
@@ -194,3 +194,38 @@ function write_nl_g_block(f, m::NLMathProgModel)
   end
 end
 
+# Convert an expression tree (with .nl formulae only) to .nl format
+write_nl_expr(f, m, c) = println(f, string(c))
+# Handle numerical constants e.g. pi
+write_nl_expr(f, m, c::Symbol) =  write_nl_expr(f, m, float(eval(c)))
+# Output numeric as `n$value`
+function write_nl_expr(f, m, c::Real)
+    if c == int(c)
+        c = iround(c)
+    end
+    println(f, "n$c")
+end
+write_nl_expr(f, m, c::LinearityExpr) = write_nl_expr(f, m, c.c)
+function write_nl_expr(f, m, c::Expr)
+    if c.head == :ref
+        # Output variable as `v$index`
+        if c.args[1] == :x
+            @assert isa(c.args[2], Int)
+            println(f, string("v", m.v_index_map[c.args[2]]))
+        else
+            error("Unrecognized reference expression $c")
+        end
+    elseif c.head == :call
+        # Output function as `o$opcode`
+        println(f, string("o", func_to_nl[c.args[1]]))
+        if c.args[1] in nary_functions
+            # Output nargs on subsequent line if n-ary function
+            println(f, (string(length(c.args) - 1)))
+        end
+        for arg in c.args[2:end]
+            write_nl_expr(f, m, arg)
+        end
+    else
+        error("Unrecognized expression $c")
+    end
+end

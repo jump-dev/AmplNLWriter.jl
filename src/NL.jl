@@ -29,8 +29,6 @@ type NLMathProgModel <: AbstractMathProgModel
     nvar::Int
     ncon::Int
 
-
-
     obj
     constrs::Array{Any}
 
@@ -170,36 +168,6 @@ end
 
 MathProgBase.setwarmstart!(m::NLMathProgModel, v::Vector{Float64}) = m.x_0 = v
 
-write_nl(f, m, c) = println(f, string(c))
-write_nl(f, m, c::Symbol) =  write_nl(f, m, float(eval(c)))
-function write_nl(f, m, c::Real)
-    if c == int(c)
-        c = iround(c)
-    end
-    println(f, "n$c")
-end
-write_nl(f, m, c::LinearityExpr) = write_nl(f, m, c.c)
-function write_nl(f, m, c::Expr)
-    if c.head == :ref
-        if c.args[1] == :x
-            @assert isa(c.args[2], Int)
-            println(f, string("v", m.v_index_map[c.args[2]]))
-        else
-            error("Unrecognized reference expression $c")
-        end
-    elseif c.head == :call
-        println(f, string("o", func_to_nl[c.args[1]]))
-        if c.args[1] in nary_functions
-            println(f, (string(length(c.args) - 1)))
-        end
-        for arg in c.args[2:end]
-            write_nl(f, m, arg)
-        end
-    else
-        error("Unrecognized expression $c")
-    end
-end
-
 function MathProgBase.optimize!(m::NLMathProgModel)
     for (i, c) in enumerate(m.constrs)
         # Remove relations and bounds from constraint expressions
@@ -224,34 +192,14 @@ function MathProgBase.optimize!(m::NLMathProgModel)
     end
 
     for i in 1:m.ncon
+        # Convert non-linear expression to non-linear, linear and constant
         m.lin_constrs[i] = Dict{Int64, Float64}()
-        extract_variables!(m.lin_constrs[i], m.constrs[i])
+        m.constrs[i], constant, m.conlinearities[i] = process_expression!(
+            m.constrs[i], m.lin_constrs[i], m.varlinearities_con)
 
-        tree = LinearityExpr(m.constrs[i])
-        tree = pull_up_constants(tree)
-        _, tree, constant = prune_linear_terms!(tree, m.lin_constrs[i])
-        m.constrs[i]  = convert_formula(tree)
+        # Update bounds on constraint
         m.g_l[i] -= constant
         m.g_u[i] -= constant
-
-        # Get variables that are nonlinear
-        nonlinear_vars = Dict{Int64, Float64}()
-        extract_variables!(nonlinear_vars, m.constrs[i])
-        for j in keys(nonlinear_vars)
-            m.varlinearities_con[j] = :Nonlin
-        end
-
-        # Remove variables at coeff 0 that aren't also in the nonlinear tree
-        for (j, coeff) in m.lin_constrs[i]
-            if coeff == 0 && !(j in keys(nonlinear_vars))
-                delete!(m.lin_constrs[i], j)
-            end
-        end
-
-        # Mark constraint as nonlinear if anything is left in the tree
-        if m.constrs[i] != 0
-            m.conlinearities[i] = :Nonlin
-        end
 
         # Update jacobian counts using the linear constraint variables
         for j in keys(m.lin_constrs[i])
@@ -261,33 +209,14 @@ function MathProgBase.optimize!(m::NLMathProgModel)
 
     # Process objective
     if m.obj != nothing
-        extract_variables!(m.lin_obj, m.obj)
-        tree = LinearityExpr(m.obj)
-        tree = pull_up_constants(tree)
-        _, tree, constant = prune_linear_terms!(tree, m.lin_obj)
-        m.obj = convert_formula(tree)
+        # Convert non-linear expression to non-linear, linear and constant
+        m.obj, constant, m.objlinearity = process_expression!(
+            m.obj, m.lin_obj, m.varlinearities_obj)
 
-        # Get variables that are nonlinear
-        nonlinear_vars = Dict{Int64, Float64}()
-        extract_variables!(nonlinear_vars, m.obj)
-        for j in keys(nonlinear_vars)
-            m.varlinearities_obj[j] = :Nonlin
+        # Add constant back into non-linear expression
+        if constant != 0
+            m.obj = add_constant(m.obj, constant)
         end
-
-        # Remove variables at coeff 0 that aren't also in the nonlinear tree
-        for (j, coeff) in m.lin_obj
-            if coeff == 0 && !(j in keys(nonlinear_vars))
-                delete!(m.lin_obj, j)
-            end
-        end
-
-        # Mark constraint as nonlinear if anything is left in the tree
-        if m.obj != 0
-            m.objlinearity = :Nonlin
-        end
-
-        # Add constant back into tree
-        m.obj = add_constant(m.obj, constant)
     end
 
     # Make sure binary vars have bounds in [0, 1]
@@ -318,6 +247,37 @@ function MathProgBase.optimize!(m::NLMathProgModel)
         obj_lin = evaluate_linear(m.lin_obj, m.solution)
         m.objval = obj_nonlin + obj_lin
     end
+end
+
+function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int64, Float64},
+                             varlinearities::Vector{Symbol})
+    # Get list of all variables in the expression
+    extract_variables!(lin_expr, nonlin_expr)
+    # Extract linear and constant terms from non-linear expression
+    tree = LinearityExpr(nonlin_expr)
+    tree = pull_up_constants(tree)
+    _, tree, constant = prune_linear_terms!(tree, lin_expr)
+    # Make sure all terms remaining in the tree are .nl-compatible
+    nonlin_expr = convert_formula(tree)
+
+    # Track which variables appear nonlinearly
+    nonlin_vars = Dict{Int64, Float64}()
+    extract_variables!(nonlin_vars, nonlin_expr)
+    for j in keys(nonlin_vars)
+        varlinearities[j] = :Nonlin
+    end
+
+    # Remove variables at coeff 0 that aren't also in the nonlinear tree
+    for (j, coeff) in lin_expr
+        if coeff == 0 && !(j in keys(nonlin_vars))
+            delete!(lin_expr, j)
+        end
+    end
+
+    # Mark constraint as nonlinear if anything is left in the tree
+    linearity = nonlin_expr != 0 ? :Nonlin : :Lin
+
+    return nonlin_expr, constant, linearity
 end
 
 MathProgBase.status(m::NLMathProgModel) = m.status

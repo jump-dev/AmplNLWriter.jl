@@ -1,3 +1,4 @@
+# Converts terms in the expression tree to .nl supported expressions
 convert_formula(c) = c
 convert_formula(c::LinearityExpr) = convert_formula(c.c)
 
@@ -30,11 +31,11 @@ function convert_formula(c::Expr)
       end
     # .nl has no n-ary multiplication so we need to convert to binary
     elseif op == :*
-      # Loop backwards over any more than binary *
-      for i in length(c.args):-1:4
+      # Loop for each arg after the 3rd (more than binary)
+      for _ in 1:(length(c.args) - 3)
+        # Combine last term with previous to form a binary * expression
         arg = pop!(c.args)
-        # Combine i-1 and ith terms into a binary * expression
-        c.args[i - 1] = :($(c.args[i - 1]) * $arg)
+        c.args[end] = :($(c.args[end]) * $arg)
       end
     # Handle normal conversion cases
     else
