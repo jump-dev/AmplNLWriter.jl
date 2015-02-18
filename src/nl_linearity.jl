@@ -165,7 +165,7 @@ function collate_linear_terms(c::LinearityExpr)
         c = multiply(c.c.args[2], c.c.args[3].c)
       end
     elseif func == :/
-      c = multiply(c.c.args[2], 1 / c.c.args[3])
+      c = multiply(c.c.args[2], 1 / c.c.args[3].c)
     elseif func == :^
       c = c.c.args[2]
     end
