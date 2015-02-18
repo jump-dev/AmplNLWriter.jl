@@ -302,11 +302,11 @@ function MathProgBase.optimize!(m::NLMathProgModel)
         end
     end
 
-    make_var_index(m)
-    make_con_index(m)
+    make_var_index!(m)
+    make_con_index!(m)
 
     write_nl_file(m)
-    run(`$(m.solver_command) $(m.probfile)`)
+    run(`$(m.solver_command) $(m.probfile)` |> DevNull)
     read_results(m)
 
     if m.status in [:Optimal]
@@ -343,79 +343,63 @@ end
 add_constant(c, constant::Real) = c + constant
 add_constant(c::Expr, constant::Real) = Expr(:call, :+, c, constant)
 
-function make_var_index(m::NLMathProgModel)
-    nonlinear_cont = Int64[]
-    nonlinear_int = Int64[]
-    linear_cont = Int64[]
-    linear_int = Int64[]
-    linear_bin = Int64[]
+function make_var_index!(m::NLMathProgModel)
+    nonlin_cont = Int64[]
+    nonlin_int = Int64[]
+    lin_cont = Int64[]
+    lin_int = Int64[]
+    lin_bin = Int64[]
 
     for i in 1:m.nvar
         if m.varlinearities_obj[i] == :Nonlin ||
            m.varlinearities_con[i] == :Nonlin
             if m.vartypes[i] == :Cont
-                push!(nonlinear_cont, i)
+                push!(nonlin_cont, i)
             else
-                push!(nonlinear_int, i)
+                push!(nonlin_int, i)
             end
         else
             if m.vartypes[i] == :Cont
-                push!(linear_cont, i)
+                push!(lin_cont, i)
             elseif m.vartypes[i] == :Int
-                push!(linear_int, i)
+                push!(lin_int, i)
             else
-                push!(linear_bin, i)
+                push!(lin_bin, i)
             end
         end
     end
 
-    index = 0
-    # 1st: Nonlinear cont
-    index = add_to_var_index(m, nonlinear_cont, index)
-    # 2nd: Nonlinear int
-    index = add_to_var_index(m, nonlinear_int, index)
-    # 3rd: Linear cont
-    index = add_to_var_index(m, linear_cont, index)
-    # 4th: Linear bin
-    index = add_to_var_index(m, linear_bin, index)
-    # 5th: Linear int
-    index = add_to_var_index(m, linear_int, index)
-end
-
-function add_to_var_index(m::NLMathProgModel, inds::Array{Int64}, index::Int64)
-    for i in inds
-        m.v_index_map[i] = index
-        m.v_index_map_rev[index] = i
-        index += 1
+    # Index variables in required order
+    for var_list in (nonlin_cont, nonlin_int, lin_cont, lin_bin, lin_int)
+        add_to_index_maps!(m.v_index_map, m.v_index_map_rev, var_list)
     end
-    return index
 end
 
-function make_con_index(m::NLMathProgModel)
-    nonlinear_cons = Int64[]
-    linear_cons = Int64[]
+function make_con_index!(m::NLMathProgModel)
+    nonlin_cons = Int64[]
+    lin_cons = Int64[]
 
     for i in 1:m.ncon
         if m.conlinearities[i] == :Nonlin
-            push!(nonlinear_cons, i)
+            push!(nonlin_cons, i)
         else
-            push!(linear_cons, i)
+            push!(lin_cons, i)
         end
     end
-    index = 0
-    # 1st: Nonlinear
-    index = add_to_con_index(m, nonlinear_cons, index)
-    # 2nd: Linear
-    index = add_to_con_index(m, linear_cons, index)
+    for con_list in (nonlin_cons, lin_cons)
+        add_to_index_maps!(m.c_index_map, m.c_index_map_rev, con_list)
+    end
 end
 
-function add_to_con_index(m::NLMathProgModel, inds::Array{Int64}, index::Int64)
+function add_to_index_maps!(forward_map::Dict{Int64, Int64},
+                            backward_map::Dict{Int64, Int64},
+                            inds::Array{Int64})
     for i in inds
-        m.c_index_map[i] = index
-        m.c_index_map_rev[index] = i
-        index += 1
+        # Indices are 0-prefixed so the next index is the current dict length
+        index = length(forward_map)
+        forward_map[i] = index
+        backward_map[index] = i
     end
-    return index
 end
 
 function read_results(m::NLMathProgModel)
