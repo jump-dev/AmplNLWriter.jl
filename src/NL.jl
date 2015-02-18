@@ -29,8 +29,6 @@ type NLMathProgModel <: AbstractMathProgModel
     nvar::Int
     ncon::Int
 
-
-
     obj
     constrs::Array{Any}
 
