@@ -11,12 +11,15 @@ include("nl_convert.jl")
 
 export NLSolver
 immutable NLSolver <: AbstractMathProgSolver
+    solver_command
     options
 end
-NLSolver(;kwargs...) = NLSolver(kwargs)
+NLSolver(solver_command; kwargs...) = NLSolver(solver_command, kwargs)
 
 type NLMathProgModel <: AbstractMathProgModel
     options
+
+    solver_command::String
 
     x_l::Vector{Float64}
     x_u::Vector{Float64}
@@ -61,8 +64,9 @@ type NLMathProgModel <: AbstractMathProgModel
 
     d::AbstractNLPEvaluator
 
-    function NLMathProgModel(;options...)
+    function NLMathProgModel(solver_command;options...)
         new(options,
+            solver_command,
             zeros(0),
             zeros(0),
             zeros(0),
@@ -96,7 +100,7 @@ end
 
 include("nl_write.jl")
 
-MathProgBase.model(s::NLSolver) = NLMathProgModel()
+MathProgBase.model(s::NLSolver) = NLMathProgModel(s.solver_command)
 
 verify_support(c) = c
 
@@ -302,7 +306,7 @@ function MathProgBase.optimize!(m::NLMathProgModel)
     make_con_index(m)
 
     write_nl_file(m)
-    run(`couenne $(m.probfile)`)
+    run(`$(m.solver_command) $(m.probfile)`)
     read_results(m)
 
     if m.status in [:Optimal]
