@@ -168,36 +168,6 @@ end
 
 MathProgBase.setwarmstart!(m::NLMathProgModel, v::Vector{Float64}) = m.x_0 = v
 
-write_nl(f, m, c) = println(f, string(c))
-write_nl(f, m, c::Symbol) =  write_nl(f, m, float(eval(c)))
-function write_nl(f, m, c::Real)
-    if c == int(c)
-        c = iround(c)
-    end
-    println(f, "n$c")
-end
-write_nl(f, m, c::LinearityExpr) = write_nl(f, m, c.c)
-function write_nl(f, m, c::Expr)
-    if c.head == :ref
-        if c.args[1] == :x
-            @assert isa(c.args[2], Int)
-            println(f, string("v", m.v_index_map[c.args[2]]))
-        else
-            error("Unrecognized reference expression $c")
-        end
-    elseif c.head == :call
-        println(f, string("o", func_to_nl[c.args[1]]))
-        if c.args[1] in nary_functions
-            println(f, (string(length(c.args) - 1)))
-        end
-        for arg in c.args[2:end]
-            write_nl(f, m, arg)
-        end
-    else
-        error("Unrecognized expression $c")
-    end
-end
-
 function MathProgBase.optimize!(m::NLMathProgModel)
     for (i, c) in enumerate(m.constrs)
         # Remove relations and bounds from constraint expressions
