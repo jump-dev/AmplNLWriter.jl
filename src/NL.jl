@@ -100,7 +100,7 @@ end
 
 include("nl_write.jl")
 
-MathProgBase.model(s::NLSolver) = NLMathProgModel(s.solver_command)
+MathProgBase.model(s::NLSolver) = NLMathProgModel(s.solver_command;s.options...)
 
 verify_support(c) = c
 
@@ -306,7 +306,10 @@ function MathProgBase.optimize!(m::NLMathProgModel)
     make_con_index!(m)
 
     write_nl_file(m)
-    run(`$(m.solver_command) $(m.probfile)` |> DevNull)
+
+    options_string = join(["$name=$value" for (name, value) in m.options], " ")
+    run(`$(m.solver_command) $(m.probfile) $options_string`)
+
     read_results(m)
 
     if m.status in [:Optimal]
