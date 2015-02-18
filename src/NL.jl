@@ -287,7 +287,9 @@ function MathProgBase.optimize!(m::NLMathProgModel)
         end
 
         # Add constant back into tree
-        m.obj = add_constant(m.obj, constant)
+        if constant != 0
+            m.obj = add_constant(m.obj, constant)
+        end
     end
 
     # Make sure binary vars have bounds in [0, 1]
