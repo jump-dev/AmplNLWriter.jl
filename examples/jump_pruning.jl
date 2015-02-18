@@ -16,7 +16,7 @@ using JuMP, FactCheck, NL
  #  The optimal objective value is 400, solutions can vary.
  ##
 
-m = Model(solver=NLSolver())
+m = Model(solver=NLSolver("bonmin"))
 @defVar(m, x[1:2] >= 0)
 
 @setNLObjective(m, Max, x[1]^2 * x[2]^2)

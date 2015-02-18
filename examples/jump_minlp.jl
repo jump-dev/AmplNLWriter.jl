@@ -24,7 +24,7 @@ using JuMP, FactCheck, NL
  #  The solution is (1.30098, 0, 1, 0, 1, 0).
  ##
 
-m = Model(solver=NLSolver())
+m = Model(solver=NLSolver("bonmin"))
 x_U = [2,2,1]
 @defVar(m, x_U[i] >= x[i=1:3] >= 0)
 @defVar(m, y[4:6], Bin)

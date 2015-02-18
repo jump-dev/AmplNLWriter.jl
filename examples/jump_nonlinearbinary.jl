@@ -8,7 +8,7 @@ using JuMP, FactCheck, NL
  #  The solution is (0, 0).
  ##
 
-m = Model(solver=NLSolver())
+m = Model(solver=NLSolver("bonmin"))
 @defVar(m, x[1:2], Bin)
 
 # Set some non-binary bounds on x1 and x2. These should be ignored.
