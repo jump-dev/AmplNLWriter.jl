@@ -39,3 +39,8 @@ facts("[nl_convert] check unary, binary and n-ary minus") do
   expr = :(x - y - z)
   @fact NL.convert_formula(expr) => :((x - y) - z)
 end
+
+facts("[nl_convert] check n-ary multiplication") do
+  expr = :(x * y * z)
+  @fact NL.convert_formula(expr) => :(x * (y * z))
+end
