@@ -302,8 +302,7 @@ function extract_variables!(lin_constr::Dict{Int64, Float64}, c::Expr)
             error("Unrecognized reference expression $c")
         end
     elseif c.head == :comparison
-        # Assuming `expr rel expr`
-        for i = [1, 3]
+        for i in 1:2:length(c.args)
             extract_variables!(lin_constr, c.args[i])
         end
     end
@@ -437,8 +436,11 @@ function substitute_vars!(c::Expr, x::Array{Float64})
             c.args[i] = substitute_vars!(c.args[i], x)
         end
     elseif c.head == :comparison
-        # Assuming `expr rel expr`
-        for i in [1, 3]
+        for i in 1:2:length(c.args)
+            c.args[i] = substitute_vars!(c.args[i], x)
+        end
+    elseif c.head in [:&&, :||]
+        for i in 1:length(c.args)
             c.args[i] = substitute_vars!(c.args[i], x)
         end
     end

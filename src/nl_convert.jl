@@ -4,9 +4,23 @@ convert_formula(c::LinearityExpr) = convert_formula(c.c)
 
 function convert_formula(c::Expr)
   if c.head == :comparison
-    # Assuming `expr rel expr`
-    for i in [1, 3]
+    n = length(c.args)
+    @assert isodd(n)
+
+    for i in 1:2:n
       c.args[i] = convert_formula(c.args[i])
+    end
+
+    # If more than binary comparison, we need to chain them together
+    # Get binary comparisons in sequence and chain with nested &&
+    # It looks like we might be able to use an n-ary &&, but that's not how
+    # Julia parses chained && expressions.
+    if n > 3
+      new_expr = extract_binary_comparison(c, 1)
+      for i in 3:2:(n - 2)
+        new_expr = Expr(:&&, new_expr, extract_binary_comparison(c, i))
+      end
+      c = new_expr
     end
 
   elseif c.head == :call
@@ -47,6 +61,13 @@ function convert_formula(c::Expr)
     end
   end
   c
+end
+
+# Extracts `expression relation expression` from a larger comparison expression
+function extract_binary_comparison(c::Expr, start::Int64)
+  @assert c.head == :comparison
+  @assert start <= length(c.args) - 2
+  Expr(:comparison, c.args[start], c.args[start + 1], c.args[start + 2])
 end
 
 const unary_special_cases = Compat.@compat Dict(

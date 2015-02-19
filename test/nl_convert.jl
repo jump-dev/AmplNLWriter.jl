@@ -1,3 +1,4 @@
+using FactCheck
 import NL
 
 facts("[nl_convert] check special conversion cases") do
@@ -43,4 +44,11 @@ end
 facts("[nl_convert] check n-ary multiplication") do
   expr = :(x * y * z)
   @fact NL.convert_formula(expr) => :(x * (y * z))
+end
+
+facts("[nl_convert] check comparison expansion") do
+  expr = :(1 < 2 < 3)
+  @fact NL.convert_formula(expr) => :(1 < 2 && 2 < 3)
+  expr = :(1 < 2 < 3 < 4)
+  @fact NL.convert_formula(expr) => :(1 < 2 && 2 < 3 && 3 < 4)
 end

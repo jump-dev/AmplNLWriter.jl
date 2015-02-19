@@ -226,11 +226,20 @@ function write_nl_expr(f, m, c::Expr)
             write_nl_expr(f, m, arg)
         end
     elseif c.head == :comparison
-        # Assuming `expr rel expr`
+        # .nl only handles binary comparison
+        @assert length(c.args) == 3
+        # Output comparison type first, followed by args
         println(f, string("o", func_to_nl[c.args[2]]))
-        for arg in c.args[[1, 3]]
+        for arg in c.args[1:2:end]
             write_nl_expr(f, m, arg)
         end
+    elseif c.head in [:&&, :||]
+      # Only support binary and/or for now
+      @assert length(c.args) == 2
+      println(f, string("o", func_to_nl[c.head]))
+      for arg in c.args
+          write_nl_expr(f, m, arg)
+      end
     else
         error("Unrecognized expression $c")
     end

@@ -80,12 +80,12 @@ function LinearityExpr(c::Expr)
   elseif c.head == :ref
     linearity = :linear
   elseif c.head == :comparison
-    # This assumes `expr rel expr` for now
-    for i in [1, 3]
+    indices = 1:2:length(c.args)
+    for i in indices
       c.args[i] = LinearityExpr(c.args[i])
     end
-    if check_for_linearity(:linear, c.args[[1, 3]]) ||
-        check_for_linearity(:nonlinear, c.args[[1, 3]])
+    if check_for_linearity(:linear, c.args[indices]) ||
+        check_for_linearity(:nonlinear, c.args[indices])
       linearity = :nonlinear
     else
       linearity = :const
@@ -107,8 +107,7 @@ function get_expr(c::Expr)
       c.args[i] = get_expr(c.args[i].c)
     end
   elseif c.head == :comparison
-    # This assumes `expr rel expr` for now
-    for i in [1, 3]
+    for i in 1:2:length(c.args)
       c.args[i] = get_expr(c.args[i].c)
     end
   end
@@ -125,7 +124,7 @@ function pull_up_constants(c::LinearityExpr)
       end
     elseif c.c.head == :comparison
       # This assumes `expr rel expr` for now
-      for i in [1, 3]
+      for i in 1:2:length(c.c.args)
         c.c.args[i] = pull_up_constants(c.c.args[i])
       end
     end
