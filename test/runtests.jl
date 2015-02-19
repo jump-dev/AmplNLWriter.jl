@@ -1,8 +1,9 @@
 using FactCheck
+import NL
 
 include("nl_convert.jl")
+include("nl_linearity.jl")
 
-import NL
 bonmin = NL.NLSolver("bonmin", ["bonmin.nlp_log_level"=>0])
 couenne = NL.NLSolver("couenne", ["bonmin.lp_log_level"=>0,
                                   "bonmin.nlp_log_level"=>0])
