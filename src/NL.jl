@@ -238,7 +238,7 @@ function MathProgBase.optimize!(m::NLMathProgModel)
     write_nl_file(m)
 
     options_string = join(["$name=$value" for (name, value) in m.options], " ")
-    run(`$(m.solver_command) $(m.probfile) $options_string`)
+    run(`$(m.solver_command) -s $(m.probfile) $options_string`)
 
     read_results(m)
 
