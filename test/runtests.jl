@@ -3,8 +3,9 @@ using FactCheck
 include("nl_convert.jl")
 
 import NL
-bonmin = NL.NLSolver("bonmin", print_level=0)
-couenne = NL.NLSolver("couenne", tol=0.1, max_iter=2000)
+bonmin = NL.NLSolver("bonmin", ["bonmin.nlp_log_level"=>0])
+couenne = NL.NLSolver("couenne", ["bonmin.lp_log_level"=>0,
+                                  "bonmin.nlp_log_level"=>0])
 
 nlp_solvers = Any[]
 push!(nlp_solvers, bonmin)

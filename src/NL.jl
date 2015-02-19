@@ -11,13 +11,13 @@ include("nl_convert.jl")
 
 export NLSolver
 immutable NLSolver <: AbstractMathProgSolver
-    solver_command
-    options
+    solver_command::String
+    options::Dict{ASCIIString, Any}
 end
-NLSolver(solver_command; kwargs...) = NLSolver(solver_command, kwargs)
+NLSolver(solver_command) = NLSolver(solver_command, Dict{ASCIIString, Any}())
 
 type NLMathProgModel <: AbstractMathProgModel
-    options
+    options::Dict{ASCIIString, Any}
 
     solver_command::String
 
@@ -62,7 +62,8 @@ type NLMathProgModel <: AbstractMathProgModel
 
     d::AbstractNLPEvaluator
 
-    function NLMathProgModel(solver_command;options...)
+    function NLMathProgModel(solver_command::String,
+                             options::Dict{ASCIIString, Any})
         new(options,
             solver_command,
             zeros(0),
@@ -98,7 +99,7 @@ end
 
 include("nl_write.jl")
 
-MathProgBase.model(s::NLSolver) = NLMathProgModel(s.solver_command;s.options...)
+MathProgBase.model(s::NLSolver) = NLMathProgModel(s.solver_command, s.options)
 
 verify_support(c) = c
 
