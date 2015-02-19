@@ -12,7 +12,7 @@ const func_to_nl = Compat.@compat Dict(
 # :ceil => 14,
 :abs => 15,
 :neg => 16,
-# :or => 20,
+:|| => 20,
 :&& => 21,
 :< => 22,
 :<= => 23,

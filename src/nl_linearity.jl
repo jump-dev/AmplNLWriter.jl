@@ -17,7 +17,6 @@ function LinearityExpr(c::Expr)
       c.args[i] = LinearityExpr(c.args[i])
     end
 
-    linearity = :unknown
     args = c.args[2:end]
     if c.args[1] in [:+, :-]
       if check_for_linearity(:nonlinear, args)
@@ -86,6 +85,16 @@ function LinearityExpr(c::Expr)
     end
     if check_for_linearity(:linear, c.args[indices]) ||
         check_for_linearity(:nonlinear, c.args[indices])
+      linearity = :nonlinear
+    else
+      linearity = :const
+    end
+  elseif c.head in [:&&, :||]
+    for i = 1:length(c.args)
+      c.args[i] = LinearityExpr(c.args[i])
+    end
+    if check_for_linearity(:linear, c.args) ||
+        check_for_linearity(:nonlinear, c.args)
       linearity = :nonlinear
     else
       linearity = :const

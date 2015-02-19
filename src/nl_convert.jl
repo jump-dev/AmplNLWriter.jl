@@ -22,6 +22,10 @@ function convert_formula(c::Expr)
       end
       c = new_expr
     end
+  elseif c.head in [:&&, :||]
+    for i in 1:length(c.args)
+      c.args[i] = convert_formula(c.args[i])
+    end
 
   elseif c.head == :call
     for i in 2:length(c.args)
