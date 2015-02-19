@@ -4,7 +4,8 @@ convert_formula(c::LinearityExpr) = convert_formula(c.c)
 
 function convert_formula(c::Expr)
   if c.head == :comparison
-    for i in 2:length(c.args)
+    # Assuming `expr rel expr`
+    for i in [1, 3]
       c.args[i] = convert_formula(c.args[i])
     end
 

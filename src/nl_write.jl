@@ -225,6 +225,12 @@ function write_nl_expr(f, m, c::Expr)
         for arg in c.args[2:end]
             write_nl_expr(f, m, arg)
         end
+    elseif c.head == :comparison
+        # Assuming `expr rel expr`
+        println(f, string("o", func_to_nl[c.args[2]]))
+        for arg in c.args[[1, 3]]
+            write_nl_expr(f, m, arg)
+        end
     else
         error("Unrecognized expression $c")
     end

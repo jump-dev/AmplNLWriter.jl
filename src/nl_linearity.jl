@@ -54,6 +54,20 @@ function LinearityExpr(c::Expr)
       else
         linearity = c.args[2].linearity
       end
+    elseif c.args[1] == :ifelse
+      if c.args[2].linearity == :const
+        # We know which branch to take already - simplify
+        c.args[2] = pull_up_constants(c.args[2])
+        if bool(c.args[2].c)
+          linearity = c.args[3].linearity
+          c = c.args[3].c
+        else
+          linearity = c.args[4].linearity
+          c = c.args[4].c
+        end
+      else
+        linearity = :nonlinear
+      end
     else
       if check_for_linearity(:linear, args) ||
           check_for_linearity(:nonlinear, args)
@@ -62,11 +76,22 @@ function LinearityExpr(c::Expr)
         linearity = :const
       end
     end
-    return LinearityExpr(c, linearity)
 
   elseif c.head == :ref
-    return LinearityExpr(c, :linear)
+    linearity = :linear
+  elseif c.head == :comparison
+    # This assumes `expr rel expr` for now
+    for i in [1, 3]
+      c.args[i] = LinearityExpr(c.args[i])
+    end
+    if check_for_linearity(:linear, c.args[[1, 3]]) ||
+        check_for_linearity(:nonlinear, c.args[[1, 3]])
+      linearity = :nonlinear
+    else
+      linearity = :const
+    end
   end
+  return LinearityExpr(c, linearity)
 end
 
 check_linearity(linearity::Symbol, c::LinearityExpr) = c.linearity == linearity
@@ -77,8 +102,15 @@ end
 
 get_expr(c) = c
 function get_expr(c::Expr)
-  for i in 2:length(c.args)
-    c.args[i] = get_expr(c.args[i].c)
+  if c.head == :call
+    for i in 2:length(c.args)
+      c.args[i] = get_expr(c.args[i].c)
+    end
+  elseif c.head == :comparison
+    # This assumes `expr rel expr` for now
+    for i in [1, 3]
+      c.args[i] = get_expr(c.args[i].c)
+    end
   end
   return c
 end
@@ -86,9 +118,16 @@ end
 function pull_up_constants(c::LinearityExpr)
   if c.linearity == :const
     c.c = eval(get_expr(c.c))
-  elseif isa(c.c, Expr) && c.c.head == :call
-    for i in 2:length(c.c.args)
-      c.c.args[i] = pull_up_constants(c.c.args[i])
+  elseif isa(c.c, Expr)
+    if c.c.head == :call
+      for i in 2:length(c.c.args)
+        c.c.args[i] = pull_up_constants(c.c.args[i])
+      end
+    elseif c.c.head == :comparison
+      # This assumes `expr rel expr` for now
+      for i in [1, 3]
+        c.c.args[i] = pull_up_constants(c.c.args[i])
+      end
     end
   end
   return c
