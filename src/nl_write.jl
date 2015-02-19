@@ -198,12 +198,8 @@ end
 write_nl_expr(f, m, c) = println(f, string(c))
 # Handle numerical constants e.g. pi
 write_nl_expr(f, m, c::Symbol) =  write_nl_expr(f, m, float(eval(c)))
-# Output numeric as `n$value`
 function write_nl_expr(f, m, c::Real)
-    if c == int(c)
-        c = iround(c)
-    end
-    println(f, "n$c")
+  println(f, nl_number(c == int(c) ? iround(c) : c))
 end
 write_nl_expr(f, m, c::LinearityExpr) = write_nl_expr(f, m, c.c)
 function write_nl_expr(f, m, c::Expr)
@@ -211,13 +207,13 @@ function write_nl_expr(f, m, c::Expr)
         # Output variable as `v$index`
         if c.args[1] == :x
             @assert isa(c.args[2], Int)
-            println(f, string("v", m.v_index_map[c.args[2]]))
+            println(f, nl_variable(m.v_index_map[c.args[2]]))
         else
             error("Unrecognized reference expression $c")
         end
     elseif c.head == :call
         # Output function as `o$opcode`
-        println(f, string("o", func_to_nl[c.args[1]]))
+        println(f, nl_operator(c.args[1]))
         if c.args[1] in nary_functions
             # Output nargs on subsequent line if n-ary function
             println(f, (string(length(c.args) - 1)))
@@ -229,14 +225,14 @@ function write_nl_expr(f, m, c::Expr)
         # .nl only handles binary comparison
         @assert length(c.args) == 3
         # Output comparison type first, followed by args
-        println(f, string("o", func_to_nl[c.args[2]]))
+        println(f, nl_operator(c.args[2]))
         for arg in c.args[1:2:end]
             write_nl_expr(f, m, arg)
         end
     elseif c.head in [:&&, :||]
       # Only support binary and/or for now
       @assert length(c.args) == 2
-      println(f, string("o", func_to_nl[c.head]))
+      println(f, nl_operator(c.head))
       for arg in c.args
           write_nl_expr(f, m, arg)
       end
@@ -244,3 +240,7 @@ function write_nl_expr(f, m, c::Expr)
         error("Unrecognized expression $c")
     end
 end
+
+nl_variable(index::Int64) = "v$index"
+nl_number(value::Real) = "n$value"
+nl_operator(operator::Symbol) = "o$(func_to_nl[operator])"
