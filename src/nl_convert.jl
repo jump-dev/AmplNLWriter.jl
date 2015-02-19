@@ -3,13 +3,11 @@ convert_formula(c) = c
 convert_formula(c::LinearityExpr) = convert_formula(c.c)
 
 function convert_formula(c::Expr)
+  map!(convert_formula, c.args)
+
   if c.head == :comparison
     n = length(c.args)
     @assert isodd(n)
-
-    for i in 1:2:n
-      c.args[i] = convert_formula(c.args[i])
-    end
 
     # If more than binary comparison, we need to chain them together
     # Get binary comparisons in sequence and chain with nested &&
@@ -22,16 +20,8 @@ function convert_formula(c::Expr)
       end
       c = new_expr
     end
-  elseif c.head in [:&&, :||]
-    for i in 1:length(c.args)
-      c.args[i] = convert_formula(c.args[i])
-    end
 
   elseif c.head == :call
-    for i in 2:length(c.args)
-      c.args[i] = convert_formula(c.args[i])
-    end
-
     op = c.args[1]
     # Distinguish n-ary and binary plus
     if op == :+
