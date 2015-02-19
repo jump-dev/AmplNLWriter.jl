@@ -123,7 +123,6 @@ function pull_up_constants(c::LinearityExpr)
         c.c.args[i] = pull_up_constants(c.c.args[i])
       end
     elseif c.c.head == :comparison
-      # This assumes `expr rel expr` for now
       for i in 1:2:length(c.c.args)
         c.c.args[i] = pull_up_constants(c.c.args[i])
       end
