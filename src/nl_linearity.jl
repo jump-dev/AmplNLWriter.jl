@@ -6,6 +6,7 @@ end
 
 LinearityExpr(c, linearity) = LinearityExpr(c, linearity, 1)
 
+eval(c::LinearityExpr) = eval(get_expr(c))
 Base.print(io::IO, c::LinearityExpr) = print(io::IO, "($(c.c),$(c.linearity))")
 Base.show(io::IO, c::LinearityExpr) = print(io::IO, "($(c.c),$(c.linearity))")
 
@@ -110,32 +111,18 @@ function check_for_linearity(linearity::Symbol, args::Array)
 end
 
 get_expr(c) = c
+get_expr(c::LinearityExpr) = get_expr(c.c)
 function get_expr(c::Expr)
-  if c.head == :call
-    for i in 2:length(c.args)
-      c.args[i] = get_expr(c.args[i].c)
-    end
-  elseif c.head == :comparison
-    for i in 1:2:length(c.args)
-      c.args[i] = get_expr(c.args[i].c)
-    end
-  end
+  map!(get_expr, c.args)
   return c
 end
 
+pull_up_constants(c) = c
 function pull_up_constants(c::LinearityExpr)
   if c.linearity == :const
-    c.c = eval(get_expr(c.c))
+    c.c = eval(c)
   elseif isa(c.c, Expr)
-    if c.c.head == :call
-      for i in 2:length(c.c.args)
-        c.c.args[i] = pull_up_constants(c.c.args[i])
-      end
-    elseif c.c.head == :comparison
-      for i in 1:2:length(c.c.args)
-        c.c.args[i] = pull_up_constants(c.c.args[i])
-      end
-    end
+    map!(pull_up_constants, c.c.args)
   end
   return c
 end
@@ -223,9 +210,7 @@ negate(c::LinearityExpr) = multiply(c::LinearityExpr, -1)
 function multiply(c::LinearityExpr, a::Real)
   if isa(c.c, Expr) && c.c.head == :call
     @assert c.c.args[1] == :+
-    for i in 2:length(c.c.args)
-      c.c.args[i] = multiply(c.c.args[i], a)
-    end
+    map!(arg -> multiply(arg, a), c.c.args[2:end])
   elseif c.linearity == :const
     c.c *= a
   else

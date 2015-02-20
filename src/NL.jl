@@ -290,21 +290,15 @@ extract_variables!(lin_constr::Dict{Int64, Float64}, c) = c
 extract_variables!(lin_constr::Dict{Int64, Float64}, c::LinearityExpr) =
     extract_variables!(lin_constr, c.c)
 function extract_variables!(lin_constr::Dict{Int64, Float64}, c::Expr)
-    if c.head == :call
-        for i = 2:length(c.args)
-            extract_variables!(lin_constr, c.args[i])
-        end
-    elseif c.head == :ref
+    if c.head == :ref
         if c.args[1] == :x
             @assert isa(c.args[2], Int)
             lin_constr[c.args[2]] = 0
         else
             error("Unrecognized reference expression $c")
         end
-    elseif c.head == :comparison
-        for i in 1:2:length(c.args)
-            extract_variables!(lin_constr, c.args[i])
-        end
+    else
+        map(arg -> extract_variables!(lin_constr, arg), c.args)
     end
 end
 
@@ -423,26 +417,17 @@ function substitute_vars!(c::Expr, x::Array{Float64})
         else
             error("Unrecognized reference expression $c")
         end
-    elseif c.head == :call
-        # Convert .nl unary minus (:neg) back to :-
-        if c.args[1] == :neg
-            c.args[1] = :-
-        # Convert .nl :sum back to :+
-        elseif c.args[1] == :sum
-            c.args[1] = :+
+    else
+        if c.head == :call
+            # Convert .nl unary minus (:neg) back to :-
+            if c.args[1] == :neg
+                c.args[1] = :-
+            # Convert .nl :sum back to :+
+            elseif c.args[1] == :sum
+                c.args[1] = :+
+            end
         end
-
-        for i in 2:length(c.args)
-            c.args[i] = substitute_vars!(c.args[i], x)
-        end
-    elseif c.head == :comparison
-        for i in 1:2:length(c.args)
-            c.args[i] = substitute_vars!(c.args[i], x)
-        end
-    elseif c.head in [:&&, :||]
-        for i in 1:length(c.args)
-            c.args[i] = substitute_vars!(c.args[i], x)
-        end
+        map!(arg -> substitute_vars!(arg, x), c.args)
     end
     c
 end

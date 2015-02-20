@@ -218,24 +218,20 @@ function write_nl_expr(f, m, c::Expr)
             # Output nargs on subsequent line if n-ary function
             println(f, (string(length(c.args) - 1)))
         end
-        for arg in c.args[2:end]
-            write_nl_expr(f, m, arg)
-        end
+        map(arg -> write_nl_expr(f, m, arg), c.args[2:end])
+
     elseif c.head == :comparison
         # .nl only handles binary comparison
         @assert length(c.args) == 3
         # Output comparison type first, followed by args
         println(f, nl_operator(c.args[2]))
-        for arg in c.args[1:2:end]
-            write_nl_expr(f, m, arg)
-        end
+        map(arg -> write_nl_expr(f, m, arg), c.args[1:2:end])
+
     elseif c.head in [:&&, :||]
       # Only support binary and/or for now
       @assert length(c.args) == 2
       println(f, nl_operator(c.head))
-      for arg in c.args
-          write_nl_expr(f, m, arg)
-      end
+      map(arg -> write_nl_expr(f, m, arg), c.args)
     else
         error("Unrecognized expression $c")
     end
