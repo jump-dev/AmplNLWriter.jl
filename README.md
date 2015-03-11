@@ -1,12 +1,8 @@
 # AmplNlWriter.jl
 
-This [Julia](https://github.com/JuliaLang/julia) package is an interface between [MathProgBase.jl](https://github.com/JuliaOpt/MathProgBase.jl) and [AMPL-enabled](http://www.ampl.com) [solvers](http://ampl.com/products/solvers/all-solvers-for-ampl/), translating between the [Julia-expression-tree MathProgBase format](http://mathprogbasejl.readthedocs.org/en/latest/nlp.html#obj_expr) for nonlinear objective and constraint functions and AMPL's low-level [.nl](https://en.wikipedia.org/wiki/Nl_%28format%29) optimization problem interchange format.
+This [Julia](https://github.com/JuliaLang/julia) package is an interface between [MathProgBase.jl](https://github.com/JuliaOpt/MathProgBase.jl) and [AMPL-enabled](http://www.ampl.com) [solvers](http://ampl.com/products/solvers/all-solvers-for-ampl/). It is similar in nature to [CoinOptServices.jl](https://github.com/tkelman/CoinOptServices.jl), but instead uses AMPL's low-level [.nl](https://en.wikipedia.org/wiki/Nl_%28format%29) file format.
 
-By writing .nl files this package allows Julia optimization modeling languages such as [JuMP](https://github.com/JuliaOpt/JuMP.jl) to access any solver that has an AMPL interface. This includes the COIN-OR solvers [Clp](https://projects.coin-or.org/Clp) (linear programming), [Cbc](https://projects.coin-or.org/Cbc) (mixed-integer linear programming), [Ipopt](https://projects.coin-or.org/Ipopt) (nonlinear programming), [Bonmin](https://projects.coin-or.org/Bonmin) (evaluation-based mixed-integer nonlinear programming), [Couenne](https://projects.coin-or.org/Couenne) (expression-tree-based mixed-integer nonlinear programming), and several others.
-
-You can obtain AMPL-enabled versions of the COIN-OR solvers from [AMPL](http://ampl.com/products/solvers/open-source/).
-
-Note that [Clp](https://github.com/JuliaOpt/Clp.jl), [Cbc](https://github.com/JuliaOpt/Cbc.jl), and [Ipopt](https://github.com/JuliaOpt/Ipopt.jl) already have Julia packages that interface directly with their respective in-memory C API's. Particularly for Clp.jl and Cbc.jl, the existing packages should be faster than the CoinOptServices.jl approach of going through a .nl file on disk.Ipopt may or may not be faster using AmplNlWriter.jl than Ipopt.jl, which uses the pure-Julia [ReverseDiffSparse.jl](https://github.com/mlubin/ReverseDiffSparse.jl) package used for nonlinear programming in JuMP. TODO: benchmarking!
+A list of AMPL-enabled solvers is available [here](http://ampl.com/products/solvers/all-solvers-for-ampl/).
 
 ## Installation
 
