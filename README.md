@@ -29,5 +29,7 @@ The ``AmplNlSolver()`` constructor requires as the first argument the name of th
 
 The second (optional) argument to ``AmplNlSolver()`` is a ``Dict{String, Any}`` of solver options. These should be specified with the name of the option as the key, and the desired value as the value. For example, to set the NLP log level to 0 in Bonmin, you would run ``AmplNlSolver("bonmin", ["bonmin.nlp_log_level"=>0])``. For a list of options supported by your solver, check the solver's documentation, or run ``/path/to/solver -=`` at the command line e.g. run ``bonmin -=`` for a list of all Bonmin options.
 
+In the `examples` folder you can see a range of problems solved using this package via JuMP.
+
 The AmplNlSolver should also work with any other MathProgBase-compliant linear or nonlinear optimization modeling tools, though this has not been tested.
 
