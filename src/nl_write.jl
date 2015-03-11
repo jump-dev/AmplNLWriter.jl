@@ -1,4 +1,4 @@
-function write_nl_file(m::AmplNlMathProgModel)
+function write_nl_file(m::AmplNLMathProgModel)
   f = open(m.probfile, "w")
 
   write_nl_header(f, m)
@@ -35,7 +35,7 @@ function write_nl_file(m::AmplNlMathProgModel)
   close(f)
 end
 
-function write_nl_header(f, m::AmplNlMathProgModel)
+function write_nl_header(f, m::AmplNLMathProgModel)
   # Line 1: Always the same
   println(f, "g3 1 1 0")
   # Line 2: vars, constraints, objectives, ranges, eqns, logical constraints
@@ -79,7 +79,7 @@ function write_nl_header(f, m::AmplNlMathProgModel)
 end
 
 # Nonlinear constraint trees
-function write_nl_c_blocks(f, m::AmplNlMathProgModel)
+function write_nl_c_blocks(f, m::AmplNLMathProgModel)
   for index in 0:(m.ncon - 1)
     i = m.c_index_map_rev[index]
     println(f, "C$index")
@@ -88,13 +88,13 @@ function write_nl_c_blocks(f, m::AmplNlMathProgModel)
 end
 
 # Nonlinear objective tree
-function write_nl_o_block(f, m::AmplNlMathProgModel)
+function write_nl_o_block(f, m::AmplNLMathProgModel)
   println(f, string("O0 ", sense_to_nl[m.sense]))
   write_nl_expr(f, m, m.obj)
 end
 
 # Initial dual guesses - unused
-function write_nl_d_block(f, m::AmplNlMathProgModel)
+function write_nl_d_block(f, m::AmplNLMathProgModel)
   println(f, "d$(m.ncon)")
   for index in 0:(m.ncon - 1)
     i = m.c_index_map_rev[index]
@@ -103,7 +103,7 @@ function write_nl_d_block(f, m::AmplNlMathProgModel)
 end
 
 # Initial primal guesses
-function write_nl_x_block(f, m::AmplNlMathProgModel)
+function write_nl_x_block(f, m::AmplNLMathProgModel)
   println(f, "x$(m.nvar)")
   for index in 0:(m.nvar - 1)
     i = m.v_index_map_rev[index]
@@ -112,7 +112,7 @@ function write_nl_x_block(f, m::AmplNlMathProgModel)
 end
 
 # Constraint bounds
-function write_nl_r_block(f, m::AmplNlMathProgModel)
+function write_nl_r_block(f, m::AmplNLMathProgModel)
   println(f, "r")
   for index in 0:(m.ncon - 1)
     i = m.c_index_map_rev[index]
@@ -134,7 +134,7 @@ function write_nl_r_block(f, m::AmplNlMathProgModel)
 end
 
 # Variable bounds
-function write_nl_b_block(f, m::AmplNlMathProgModel)
+function write_nl_b_block(f, m::AmplNLMathProgModel)
   println(f, "b")
   for index in 0:(m.nvar - 1)
     i = m.v_index_map_rev[index]
@@ -159,7 +159,7 @@ function write_nl_b_block(f, m::AmplNlMathProgModel)
 end
 
 # Jacobian counts
-function write_nl_k_block(f, m::AmplNlMathProgModel)
+function write_nl_k_block(f, m::AmplNLMathProgModel)
   println(f, "k$(m.nvar - 1)")
   total = 0
   for index = 0:(m.nvar - 2)
@@ -170,7 +170,7 @@ function write_nl_k_block(f, m::AmplNlMathProgModel)
 end
 
 # Linear constraint expressions
-function write_nl_j_blocks(f, m::AmplNlMathProgModel)
+function write_nl_j_blocks(f, m::AmplNLMathProgModel)
   for index in 0:(m.ncon - 1)
     i = m.c_index_map_rev[index]
     println(f, string("J$index ", length(m.lin_constrs[i])))
@@ -184,7 +184,7 @@ function write_nl_j_blocks(f, m::AmplNlMathProgModel)
 end
 
 # Linear objective expression
-function write_nl_g_block(f, m::AmplNlMathProgModel)
+function write_nl_g_block(f, m::AmplNLMathProgModel)
   println(f, string("G0 ", length(m.lin_obj)))
   for index in 0:(m.nvar - 1)
     i = m.v_index_map_rev[index]

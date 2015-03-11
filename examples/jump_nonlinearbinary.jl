@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNlWriter
+using JuMP, FactCheck, AmplNLWriter
 
 ## Solve test problem with non-linear binary variables
  #
@@ -8,7 +8,7 @@ using JuMP, FactCheck, AmplNlWriter
  #  The solution is (0, 0).
  ##
 
-m = Model(solver=AmplNlSolver("bonmin"))
+m = Model(solver=AmplNLSolver("bonmin"))
 @defVar(m, x[1:2], Bin)
 
 # Set some non-binary bounds on x1 and x2. These should be ignored.
