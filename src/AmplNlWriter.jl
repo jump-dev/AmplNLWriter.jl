@@ -1,4 +1,4 @@
-module NL
+module AmplNlWriter
 
 using MathProgBase
 importall MathProgBase.SolverInterface
@@ -9,14 +9,15 @@ include("nl_linearity.jl")
 include("nl_params.jl")
 include("nl_convert.jl")
 
-export NLSolver
-immutable NLSolver <: AbstractMathProgSolver
+export AmplNlSolver
+immutable AmplNlSolver <: AbstractMathProgSolver
     solver_command::String
     options::Dict{ASCIIString, Any}
 end
-NLSolver(solver_command) = NLSolver(solver_command, Dict{ASCIIString, Any}())
+AmplNlSolver(solver_command) = AmplNlSolver(solver_command,
+                                            Dict{ASCIIString, Any}())
 
-type NLMathProgModel <: AbstractMathProgModel
+type AmplNlMathProgModel <: AbstractMathProgModel
     options::Dict{ASCIIString, Any}
 
     solver_command::String
@@ -62,8 +63,8 @@ type NLMathProgModel <: AbstractMathProgModel
 
     d::AbstractNLPEvaluator
 
-    function NLMathProgModel(solver_command::String,
-                             options::Dict{ASCIIString, Any})
+    function AmplNlMathProgModel(solver_command::String,
+                                 options::Dict{ASCIIString, Any})
         new(options,
             solver_command,
             zeros(0),
@@ -99,7 +100,8 @@ end
 
 include("nl_write.jl")
 
-MathProgBase.model(s::NLSolver) = NLMathProgModel(s.solver_command, s.options)
+MathProgBase.model(s::AmplNlSolver) = AmplNlMathProgModel(s.solver_command,
+                                                          s.options)
 
 verify_support(c) = c
 
@@ -125,7 +127,7 @@ end
 #     return c
 # end
 
-function MathProgBase.loadnonlinearproblem!(m::NLMathProgModel,
+function MathProgBase.loadnonlinearproblem!(m::AmplNlMathProgModel,
     nvar, ncon, x_l, x_u, g_l, g_u, sense, d::MathProgBase.AbstractNLPEvaluator)
 
     @assert nvar == length(x_l) == length(x_u)
@@ -157,19 +159,21 @@ function MathProgBase.loadnonlinearproblem!(m::NLMathProgModel,
         verify_support(MathProgBase.constr_expr(d, c))
     end
 
-    m.probfile = joinpath(Pkg.dir("NL"), ".solverdata", "model.nl")
-    m.solfile = joinpath(Pkg.dir("NL"), ".solverdata", "model.sol")
+    m.probfile = joinpath(Pkg.dir("AmplNlWriter"), ".solverdata", "model.nl")
+    m.solfile = joinpath(Pkg.dir("AmplNlWriter"), ".solverdata", "model.sol")
     m
 end
 
-function MathProgBase.setvartype!(m::NLMathProgModel, cat::Vector{Symbol})
+function MathProgBase.setvartype!(m::AmplNlMathProgModel, cat::Vector{Symbol})
     @assert all(x-> (x in [:Cont,:Bin,:Int]), cat)
     m.vartypes = copy(cat)
 end
 
-MathProgBase.setwarmstart!(m::NLMathProgModel, v::Vector{Float64}) = m.x_0 = v
+function MathProgBase.setwarmstart!(m::AmplNlMathProgModel, v::Vector{Float64})
+    m.x_0 = v
+end
 
-function MathProgBase.optimize!(m::NLMathProgModel)
+function MathProgBase.optimize!(m::AmplNlMathProgModel)
     for (i, c) in enumerate(m.constrs)
         # Remove relations and bounds from constraint expressions
         @assert c.head == :comparison
@@ -281,9 +285,9 @@ function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int64, Float64},
     return nonlin_expr, constant, linearity
 end
 
-MathProgBase.status(m::NLMathProgModel) = m.status
-MathProgBase.getsolution(m::NLMathProgModel) = copy(m.solution)
-MathProgBase.getobjval(m::NLMathProgModel) = m.objval
+MathProgBase.status(m::AmplNlMathProgModel) = m.status
+MathProgBase.getsolution(m::AmplNlMathProgModel) = copy(m.solution)
+MathProgBase.getobjval(m::AmplNlMathProgModel) = m.objval
 
 # We need to track linear coeffs of all variables present in the expression tree
 extract_variables!(lin_constr::Dict{Int64, Float64}, c) = c
@@ -305,7 +309,7 @@ end
 add_constant(c, constant::Real) = c + constant
 add_constant(c::Expr, constant::Real) = Expr(:call, :+, c, constant)
 
-function make_var_index!(m::NLMathProgModel)
+function make_var_index!(m::AmplNlMathProgModel)
     nonlin_cont = Int64[]
     nonlin_int = Int64[]
     lin_cont = Int64[]
@@ -337,7 +341,7 @@ function make_var_index!(m::NLMathProgModel)
     end
 end
 
-function make_con_index!(m::NLMathProgModel)
+function make_con_index!(m::AmplNlMathProgModel)
     nonlin_cons = Int64[]
     lin_cons = Int64[]
 
@@ -364,7 +368,7 @@ function add_to_index_maps!(forward_map::Dict{Int64, Int64},
     end
 end
 
-function read_results(m::NLMathProgModel)
+function read_results(m::AmplNlMathProgModel)
     f = open(m.solfile, "r")
     stat = :Undefined
 

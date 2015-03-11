@@ -1,4 +1,4 @@
-using JuMP, FactCheck, NL
+using JuMP, FactCheck, AmplNlWriter
 
 ## Solve test problem with lots of expressions to prune
  #
@@ -16,7 +16,7 @@ using JuMP, FactCheck, NL
  #  The optimal objective value is 400, solutions can vary.
  ##
 
-m = Model(solver=NLSolver("bonmin"))
+m = Model(solver=AmplNlSolver("bonmin"))
 @defVar(m, x[1:2] >= 0)
 
 @setNLObjective(m, Max, x[1]^2 * x[2]^2)

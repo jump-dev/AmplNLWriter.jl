@@ -1,12 +1,12 @@
 using FactCheck
-import NL
+import AmplNlWriter
 
 include("nl_convert.jl")
 include("nl_linearity.jl")
 
-bonmin = NL.NLSolver("bonmin", ["bonmin.nlp_log_level"=>0])
-couenne = NL.NLSolver("couenne", ["bonmin.lp_log_level"=>0,
-                                  "bonmin.nlp_log_level"=>0])
+bonmin = AmplNlWriter.AmplNlSolver("bonmin", ["bonmin.nlp_log_level"=>0])
+couenne = AmplNlWriter.AmplNlSolver("couenne", ["bonmin.lp_log_level"=>0,
+                                                "bonmin.nlp_log_level"=>0])
 
 nlp_solvers = Any[]
 push!(nlp_solvers, bonmin)
