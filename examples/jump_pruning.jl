@@ -30,6 +30,6 @@ m = Model(solver=AmplNLSolver("bonmin"))
 @addNLConstraint(m, x[2] - x[1] + x[1] * x[2] <= 0)
 
 facts("[jump_pruning] Test optimal solutions") do
-  @fact solve(m) => :Optimal
-  @fact getObjectiveValue(m) => roughly(400, 1e-5)
+    @fact solve(m) => :Optimal
+    @fact getObjectiveValue(m) => roughly(400, 1e-5)
 end

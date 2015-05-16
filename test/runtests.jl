@@ -26,8 +26,8 @@ include(joinpath(Pkg.dir("JuMP"), "test", "hockschittkowski", "runhs.jl"))
 
 examples_path = joinpath(dirname(dirname(@__FILE__)), "examples")
 for solver in minlp_solvers
-  println("With $(solver.solver_command)")
-  for example in readdir(examples_path)
-    include(joinpath(examples_path, example))
-  end
+    println("With $(solver.solver_command)")
+    for example in readdir(examples_path)
+        include(joinpath(examples_path, example))
+    end
 end
