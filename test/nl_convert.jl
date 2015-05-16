@@ -25,7 +25,9 @@ facts("[nl_convert] check numeric values") do
   @fact AmplNLWriter.convert_formula(:($x)) => :($x)
 end
 
-facts("[nl_convert] check binary and n-ary plus") do
+facts("[nl_convert] check unary, binary and n-ary plus") do
+  expr = :(+(1))
+  @fact AmplNLWriter.convert_formula(expr) => :(1)
   expr = :(1 + 2)
   @fact AmplNLWriter.convert_formula(expr) => :(1 + 2)
   expr = :(1 + 2 + 3)

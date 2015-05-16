@@ -23,10 +23,14 @@ function convert_formula(c::Expr)
 
   elseif c.head == :call
     op = c.args[1]
-    # Distinguish n-ary and binary plus
+    # Distinguish unary, binary and n-ary plus
     if op == :+
       if length(c.args) > 3
+        # n-ary plus to sum
         c.args[1] = :sum
+      elseif length(c.args) == 2
+        # Remove unary plus
+        c = c.args[2]
       end
     # Distinguish unary and binary minus
     elseif op == :-
