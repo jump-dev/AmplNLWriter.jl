@@ -17,6 +17,8 @@ end
 AmplNLSolver(solver_command) = AmplNLSolver(solver_command,
                                             Dict{ASCIIString, Any}())
 
+getsolvername(s::AmplNLSolver) = basename(s.solver_command)
+
 type AmplNLMathProgModel <: AbstractMathProgModel
     options::Dict{ASCIIString, Any}
 
