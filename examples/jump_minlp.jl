@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNLWriter
+using JuMP, FactCheck, AmplNLWriter, CoinOptServices
 
 ## Solve test problem 1 (Synthesis of processing system) in
  #  M. Duran & I.E. Grossmann, "An outer approximation algorithm for
@@ -24,7 +24,7 @@ using JuMP, FactCheck, AmplNLWriter
  #  The solution is (1.30098, 0, 1, 0, 1, 0).
  ##
 
-m = Model(solver=AmplNLSolver("bonmin"))
+m = Model(solver=AmplNLSolver(CoinOptServices.bonmin))
 x_U = [2,2,1]
 @defVar(m, x_U[i] >= x[i=1:3] >= 0)
 @defVar(m, y[4:6], Bin)

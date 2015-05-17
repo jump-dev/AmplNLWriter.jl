@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNLWriter
+using JuMP, FactCheck, AmplNLWriter, CoinOptServices
 
 ## Solve test problem with sind and cosd functions
  #
@@ -8,7 +8,7 @@ using JuMP, FactCheck, AmplNLWriter
  #  The optimal objective value is 0
  ##
 
-m = Model(solver=AmplNLSolver("bonmin"))
+m = Model(solver=AmplNLSolver(CoinOptServices.bonmin))
 @defVar(m, x[1:2])
 
 @setNLObjective(m, Min, (7 - (3*cosd(x[1]) + 5*cosd(x[2])))^2 + (0 - (3*sind(x[1]) + 5*sind(x[2])))^2)

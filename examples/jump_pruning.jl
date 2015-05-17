@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNLWriter
+using JuMP, FactCheck, AmplNLWriter, CoinOptServices
 
 ## Solve test problem with lots of expressions to prune
  #
@@ -16,7 +16,7 @@ using JuMP, FactCheck, AmplNLWriter
  #  The optimal objective value is 400, solutions can vary.
  ##
 
-m = Model(solver=AmplNLSolver("bonmin"))
+m = Model(solver=AmplNLSolver(CoinOptServices.bonmin))
 @defVar(m, x[1:2] >= 0)
 
 @setNLObjective(m, Max, x[1]^2 * x[2]^2)
