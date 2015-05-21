@@ -23,12 +23,12 @@ You can then model and solve your optimization problem as usual. See [JuMP's doc
 
 The ``AmplNLSolver()`` constructor requires as the first argument the name of the solver command needed to run the desired solver. For example, if the ``bonmin`` executable is on the system path, you can use this solver using ``AmplNLSolver("bonmin")``. If the solver is not on the path, the full path to the solver will need to be passed in. This solver executable must be an AMPL-compatible solver.
 
-If you have [CoinOptServices.jl](https://github.com/JuliaOpt/CoinOptServices.jl) installed, you can easily use the Bonmin or Couenne solvers installed by this package (make sure you also have ``import CoinOptServices`` or ``using CoinOptServices``):
-
-- Bonmin: ``AmplNLSolver(CoinOptServices.bonmin)``
-- Couenne: ``AmplNLSolver(CoinOptServices.couenne)``
-
 The second (optional) argument to ``AmplNLSolver()`` is a ``Dict{String, Any}`` of solver options. These should be specified with the name of the option as the key, and the desired value as the value. For example, to set the NLP log level to 0 in Bonmin, you would run ``AmplNLSolver("bonmin", ["bonmin.nlp_log_level"=>0])``. For a list of options supported by your solver, check the solver's documentation, or run ``/path/to/solver -=`` at the command line e.g. run ``bonmin -=`` for a list of all Bonmin options.
+
+If you have [CoinOptServices.jl](https://github.com/JuliaOpt/CoinOptServices.jl) installed, you can easily use the Bonmin or Couenne solvers installed by this package:
+
+- Bonmin: ``BonminNLSolver(options)``
+- Couenne: ``CouenneNLSolver(options)``
 
 In the `examples` folder you can see a range of problems solved using this package via JuMP.
 
