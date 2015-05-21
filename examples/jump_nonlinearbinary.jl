@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNLWriter, CoinOptServices
+using JuMP, FactCheck, AmplNLWriter
 
 ## Solve test problem with non-linear binary variables
  #
@@ -8,7 +8,7 @@ using JuMP, FactCheck, AmplNLWriter, CoinOptServices
  #  The solution is (0, 0).
  ##
 
-m = Model(solver=AmplNLSolver(CoinOptServices.bonmin))
+m = Model(solver=BonminNLSolver())
 @defVar(m, x[1:2], Bin)
 
 # Set some non-binary bounds on x1 and x2. These should be ignored.
@@ -18,7 +18,7 @@ setUpper(x[2], 2)
 
 @setNLObjective(m, Min, 100*(x[2] - (0.5 + x[1])^2)^2 + (1 - x[1])^2)
 
-facts("[jump_nonlinearbinary] Test optimal solutions") do
+context("example: jump_nonlinearbinary") do
     @fact solve(m) => :Optimal
     @fact getValue(x)[:] => [0.0, 0.0]
     @fact getObjectiveValue(m) => 7.25

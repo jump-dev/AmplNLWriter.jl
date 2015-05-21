@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNLWriter, CoinOptServices
+using JuMP, FactCheck, AmplNLWriter
 
 ## Solve test problem with sind and cosd functions
  #
@@ -8,12 +8,14 @@ using JuMP, FactCheck, AmplNLWriter, CoinOptServices
  #  The optimal objective value is 0
  ##
 
-m = Model(solver=AmplNLSolver(CoinOptServices.bonmin))
+if !isdefined(:solver); solver = CouenneNLSolver(); end
+
+m = Model(solver=solver)
 @defVar(m, x[1:2])
 
 @setNLObjective(m, Min, (7 - (3*cosd(x[1]) + 5*cosd(x[2])))^2 + (0 - (3*sind(x[1]) + 5*sind(x[2])))^2)
 
-facts("[jump_nltrig] Test optimal solutions") do
+context("example: jump_nltrig") do
     setValue(x[1], 30)
     setValue(x[2], -50)
     @fact solve(m) => :Optimal

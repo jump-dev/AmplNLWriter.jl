@@ -9,13 +9,38 @@ include("nl_linearity.jl")
 include("nl_params.jl")
 include("nl_convert.jl")
 
-export AmplNLSolver
+export AmplNLSolver, BonminNLSolver, CouenneNLSolver,
+       getsolvername
+
 immutable AmplNLSolver <: AbstractMathProgSolver
     solver_command::String
     options::Dict{ASCIIString, Any}
 end
 AmplNLSolver(solver_command) = AmplNLSolver(solver_command,
                                             Dict{ASCIIString, Any}())
+
+osl = isdir(Pkg.dir("CoinOptServices"))
+ipt = isdir(Pkg.dir("Ipopt"))
+
+if osl; import CoinOptServices; end
+if osl; import Ipopt; end
+
+function BonminNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
+    osl || error("CoinOptServices not installed. Please run\n",
+                 "Pkg.add(\"CoinOptServices\")")
+    AmplNLSolver(CoinOptServices.bonmin, options)
+end
+
+function CouenneNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
+    osl || error("CoinOptServices not installed. Please run\n",
+                 "Pkg.add(\"CoinOptServices\")")
+    AmplNLSolver(CoinOptServices.couenne, options)
+end
+
+# function IpoptNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
+#     ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
+#     AmplNLSolver(Ipopt.amplexe, options)
+# end
 
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)
 

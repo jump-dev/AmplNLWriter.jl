@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNLWriter, CoinOptServices
+using JuMP, FactCheck, AmplNLWriter
 
 ## Solve test problem 1 (Synthesis of processing system) in
  #  M. Duran & I.E. Grossmann, "An outer approximation algorithm for
@@ -24,7 +24,7 @@ using JuMP, FactCheck, AmplNLWriter, CoinOptServices
  #  The solution is (1.30098, 0, 1, 0, 1, 0).
  ##
 
-m = Model(solver=AmplNLSolver(CoinOptServices.bonmin))
+m = Model(solver=BonminNLSolver())
 x_U = [2,2,1]
 @defVar(m, x_U[i] >= x[i=1:3] >= 0)
 @defVar(m, y[4:6], Bin)
@@ -37,7 +37,7 @@ x_U = [2,2,1]
 @addNLConstraint(m, x[1] - x[2] - 2*y[5] <= 0)
 @addNLConstraint(m, y[4] + y[5] <= 1)
 
-facts("[jump_minlp] Test optimal solutions") do
+context("example: jump_minlp") do
     @fact solve(m) => :Optimal
     @fact getValue(x)[:] => roughly([1.30098, 0.0, 1.0], 1e-5)
     @fact getValue(y)[:] => roughly([0.0, 1.0, 0.0], 1e-5)

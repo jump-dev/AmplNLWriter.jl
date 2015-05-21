@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNLWriter, CoinOptServices
+using JuMP, FactCheck, AmplNLWriter
 
 ## Solve test problem with lots of expressions to prune
  #
@@ -16,7 +16,7 @@ using JuMP, FactCheck, AmplNLWriter, CoinOptServices
  #  The optimal objective value is 400, solutions can vary.
  ##
 
-m = Model(solver=AmplNLSolver(CoinOptServices.bonmin))
+m = Model(solver=BonminNLSolver())
 @defVar(m, x[1:2] >= 0)
 
 @setNLObjective(m, Max, x[1]^2 * x[2]^2)
@@ -29,7 +29,7 @@ m = Model(solver=AmplNLSolver(CoinOptServices.bonmin))
 @addNLConstraint(m, x[2] - x[1] * x[2] + x[1] <= 60)
 @addNLConstraint(m, x[2] - x[1] + x[1] * x[2] <= 0)
 
-facts("[jump_pruning] Test optimal solutions") do
+context("example: jump_pruning") do
     @fact solve(m) => :Optimal
     @fact getObjectiveValue(m) => roughly(400, 1e-5)
 end
