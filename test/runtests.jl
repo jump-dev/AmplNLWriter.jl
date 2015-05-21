@@ -19,4 +19,6 @@ for solver in solvers
     end
 end
 
+include(Pkg.dir("JuMP","test","runtests.jl"))
+
 FactCheck.exitstatus()
