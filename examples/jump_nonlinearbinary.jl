@@ -8,7 +8,9 @@ using JuMP, FactCheck, AmplNLWriter
  #  The solution is (0, 0).
  ##
 
-m = Model(solver=BonminNLSolver())
+if !isdefined(:solver); solver = BonminNLSolver(); end
+
+m = Model(solver=solver)
 @defVar(m, x[1:2], Bin)
 
 # Set some non-binary bounds on x1 and x2. These should be ignored.

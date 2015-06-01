@@ -24,7 +24,9 @@ using JuMP, FactCheck, AmplNLWriter
  #  The solution is (1.30098, 0, 1, 0, 1, 0).
  ##
 
-m = Model(solver=BonminNLSolver())
+if !isdefined(:solver); solver = BonminNLSolver(); end
+
+m = Model(solver=solver)
 x_U = [2,2,1]
 @defVar(m, x_U[i] >= x[i=1:3] >= 0)
 @defVar(m, y[4:6], Bin)

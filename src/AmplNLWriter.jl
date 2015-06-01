@@ -9,7 +9,7 @@ include("nl_linearity.jl")
 include("nl_params.jl")
 include("nl_convert.jl")
 
-export AmplNLSolver, BonminNLSolver, CouenneNLSolver,
+export AmplNLSolver, BonminNLSolver, CouenneNLSolver, IpoptNLSolver,
        getsolvername
 
 immutable AmplNLSolver <: AbstractMathProgSolver
@@ -37,10 +37,10 @@ function CouenneNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
     AmplNLSolver(CoinOptServices.couenne, options)
 end
 
-# function IpoptNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
-#     ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
-#     AmplNLSolver(Ipopt.amplexe, options)
-# end
+function IpoptNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
+    ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
+    AmplNLSolver(Ipopt.amplexe, options)
+end
 
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)
 
