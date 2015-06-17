@@ -23,7 +23,7 @@ osl = isdir(Pkg.dir("CoinOptServices"))
 ipt = isdir(Pkg.dir("Ipopt"))
 
 if osl; import CoinOptServices; end
-if osl; import Ipopt; end
+if ipt; import Ipopt; end
 
 function BonminNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
     osl || error("CoinOptServices not installed. Please run\n",
