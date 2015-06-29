@@ -30,6 +30,8 @@ If you have [CoinOptServices.jl](https://github.com/JuliaOpt/CoinOptServices.jl)
 - Bonmin: ``BonminNLSolver(options)``
 - Couenne: ``CouenneNLSolver(options)``
 
+Similarly, if you have [Ipopt.jl](https://github.com/JuliaOpt/Ipopt.jl) installed, you can use Ipopt by using the solver `IpoptNLSolver(options)`.
+
 In the `examples` folder you can see a range of problems solved using this package via JuMP.
 
 The AmplNLSolver should also work with any other MathProgBase-compliant linear or nonlinear optimization modeling tools, though this has not been tested.
