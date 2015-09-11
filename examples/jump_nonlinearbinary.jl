@@ -21,7 +21,7 @@ setUpper(x[2], 2)
 @setNLObjective(m, Min, 100*(x[2] - (0.5 + x[1])^2)^2 + (1 - x[1])^2)
 
 context("example: jump_nonlinearbinary") do
-    @fact solve(m) => :Optimal
-    @fact getValue(x)[:] => [0.0, 0.0]
-    @fact getObjectiveValue(m) => 7.25
+    @fact solve(m) --> :Optimal
+    @fact getValue(x)[:] --> [0.0, 0.0]
+    @fact getObjectiveValue(m) --> 7.25
 end

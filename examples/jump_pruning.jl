@@ -32,6 +32,6 @@ m = Model(solver=solver)
 @addNLConstraint(m, x[2] - x[1] + x[1] * x[2] <= 0)
 
 context("example: jump_pruning") do
-    @fact solve(m) => :Optimal
-    @fact getObjectiveValue(m) => roughly(400, 1e-5)
+    @fact solve(m) --> :Optimal
+    @fact getObjectiveValue(m) --> roughly(400, 1e-5)
 end
