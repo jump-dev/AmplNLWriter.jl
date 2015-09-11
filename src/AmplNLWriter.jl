@@ -415,26 +415,47 @@ function read_results(m::AmplNLMathProgModel)
         stat = :Error
     end
     m.status = stat
+    stat == :Optimal || return nothing
 
-    # Throw away lines 3-12
-    for i = 3:12
+    # Throw away lines 3-8
+    for i = 3:8
         eof(f) && error()
         readline(f)
+    end
+
+    # Read number of constraints
+    num_cons = int(chomp(readline(f)))
+    @assert(num_cons == m.ncon)
+
+    # Read number of duals to read in
+    num_dual_values = int(chomp(readline(f)))
+
+    # Read number of variables
+    num_vars = int(chomp(readline(f)))
+    @assert(num_vars == m.nvar)
+
+    # Read number of variables to read in
+    num_var_values = int(chomp(readline(f)))
+    @assert(num_var_values == m.nvar)
+
+    # Skip over duals
+    # TODO do something with these?
+    for index in 0:(num_dual_values - 1)
+        eof(f) && error("End of file while reading variables.")
+        line = readline(f)
     end
 
     # Next, read for the variable values
     x = fill(NaN, m.nvar)
     m.objval = NaN
-    if stat == :Optimal
-        for index in 0:(m.nvar - 1)
-            eof(f) && error("End of file while reading variables.")
-            line = readline(f)
+    for index in 0:(m.nvar - 1)
+        eof(f) && error("End of file while reading variables.")
+        line = readline(f)
 
-            i = m.v_index_map_rev[index]
-            x[i] = float(chomp(line))
-        end
-        m.solution = x
+        i = m.v_index_map_rev[index]
+        x[i] = float(chomp(line))
     end
+    m.solution = x
     nothing
 end
 
