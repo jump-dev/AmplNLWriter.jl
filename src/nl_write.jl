@@ -43,7 +43,7 @@ function write_nl_header(f, m::AmplNLMathProgModel)
     println(f, " $(m.nvar) $(m.ncon) 1 $num_ranges $(m.ncon - num_ranges) 0")
     # Line 3: nonlinear constraints, objectives
     nlc = sum(m.conlinearities .== :Nonlin)
-    nlo = int(m.objlinearity == :Nonlin)
+    nlo = m.objlinearity == :Nonlin ? 1 : 0
     println(f, " $nlc $nlo")
     # Line 4: network constraints: nonlinear, linear
     println(f, " 0 0")
@@ -199,7 +199,7 @@ write_nl_expr(f, m, c) = println(f, string(c))
 # Handle numerical constants e.g. pi
 write_nl_expr(f, m, c::Symbol) =  write_nl_expr(f, m, float(eval(c)))
 function write_nl_expr(f, m, c::Real)
-    println(f, nl_number(c == int(c) ? iround(c) : c))
+    println(f, nl_number(c == round(Integer, c) ? round(Integer, c) : c))
 end
 write_nl_expr(f, m, c::LinearityExpr) = write_nl_expr(f, m, c.c)
 function write_nl_expr(f, m, c::Expr)

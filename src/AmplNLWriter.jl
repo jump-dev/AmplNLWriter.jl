@@ -424,18 +424,18 @@ function read_results(m::AmplNLMathProgModel)
     end
 
     # Read number of constraints
-    num_cons = int(chomp(readline(f)))
+    num_cons = parse(Int, chomp(readline(f)))
     @assert(num_cons == m.ncon)
 
     # Read number of duals to read in
-    num_dual_values = int(chomp(readline(f)))
+    num_dual_values = parse(Int, chomp(readline(f)))
 
     # Read number of variables
-    num_vars = int(chomp(readline(f)))
+    num_vars = parse(Int, chomp(readline(f)))
     @assert(num_vars == m.nvar)
 
     # Read number of variables to read in
-    num_var_values = int(chomp(readline(f)))
+    num_var_values = parse(Int, chomp(readline(f)))
     @assert(num_var_values == m.nvar)
 
     # Skip over duals

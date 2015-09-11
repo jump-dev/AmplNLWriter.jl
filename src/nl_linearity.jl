@@ -58,7 +58,7 @@ function LinearityExpr(c::Expr)
             if c.args[2].linearity == :const
                 # We know which branch to take already - simplify
                 c.args[2] = pull_up_constants(c.args[2])
-                if bool(c.args[2].c)
+                if c.args[2].c != 0
                     linearity = c.args[3].linearity
                     c = c.args[3].c
                 else
@@ -144,7 +144,7 @@ function prune_linear_terms!(c::LinearityExpr, lin_constr::Dict{Int64, Float64},
                         expr.args[i], lin_constr, constant, negative_tree)
                 end
                 if sum(!pruned) > 1
-                    inds = vcat([1], [2:n][!pruned])
+                    inds = vcat([1], collect(2:n)[!pruned])
                     c.c.args = expr.args[inds]
                 else
                     c = expr.args[findfirst(!pruned) + 1]
