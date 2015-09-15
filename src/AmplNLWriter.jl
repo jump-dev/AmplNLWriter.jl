@@ -133,27 +133,15 @@ MathProgBase.model(s::AmplNLSolver) = AmplNLMathProgModel(s.solver_command,
 function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
     nvar, ncon, x_l, x_u, g_l, g_u, sense, d::MathProgBase.AbstractNLPEvaluator)
 
-    @assert nvar == length(x_l) == length(x_u)
-    @assert ncon == length(g_l) == length(g_u)
-
-    m.x_l, m.x_u = x_l, x_u
-    m.g_l, m.g_u = g_l, g_u
-    m.sense = sense
     m.nvar, m.ncon = nvar, ncon
+    loadcommon!(m, x_l, x_u, g_l, g_u, sense)
+
     m.d = d
-
-    m.vartypes = fill(:Cont, nvar)
-
-    MathProgBase.initialize(d, [:ExprGraph])
+    MathProgBase.initialize(m.d, [:ExprGraph])
 
     # Process constraints
-    m.lin_constrs = Array(Dict{Int64, Float64}, ncon)
-    m.r_codes = Array(Int64, ncon)
-    m.varlinearities_con = fill(:Lin, nvar)
-    m.conlinearities = fill(:Lin, ncon)
-    m.j_counts = zeros(Int64, nvar)
-    m.constrs = map(1:ncon) do i
-        c = MathProgBase.constr_expr(d, i)
+    m.constrs = map(1:m.ncon) do i
+        c = MathProgBase.constr_expr(m.d, i)
 
         # Remove relations and bounds from constraint expressions
         @assert c.head == :comparison
@@ -176,7 +164,6 @@ function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
         end
 
         # Convert non-linear expression to non-linear, linear and constant
-        m.lin_constrs[i] = Dict{Int64, Float64}()
         c, constant, m.conlinearities[i] = process_expression!(
             c, m.lin_constrs[i], m.varlinearities_con)
 
@@ -192,8 +179,7 @@ function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
     end
 
     # Process objective
-    m.varlinearities_obj = fill(:Lin, nvar)
-    m.obj = MathProgBase.obj_expr(d)
+    m.obj = MathProgBase.obj_expr(m.d)
     if length(m.obj.args) < 2
         m.obj = nothing
     else
@@ -206,12 +192,90 @@ function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
             m.obj = add_constant(m.obj, constant)
         end
     end
-
-    m.probfile = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata", "model.nl")
-    m.solfile = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata", "model.sol")
     m
 end
 
+function MathProgBase.loadproblem!(m::AmplNLMathProgModel, A, x_l, x_u, c, g_l,
+                                   g_u, sense)
+    m.ncon, m.nvar = size(A)
+
+    loadcommon!(m, x_l, x_u, g_l, g_u, sense)
+
+    # Load A into the linear constraints
+    load_A!(m, A)
+    m.constrs = zeros(m.ncon)  # Dummy constraint expression trees
+
+    # Load c
+    for (index, val) in enumerate(c)
+        m.lin_obj[index] = val
+    end
+    m.obj = 0  # Dummy objective expression tree
+
+    # Process variables bounds
+    for j = 1:m.ncon
+        lower = m.g_l[j]
+        upper = m.g_u[j]
+        if lower == -Inf
+            if upper == Inf
+                error("Neither lower nor upper bound on constraint $j")
+            else
+                m.r_codes[j] = 1
+            end
+        else
+            if lower == upper
+                m.r_codes[j] = 4
+            elseif upper == Inf
+                m.r_codes[j] = 2
+            else
+                m.r_codes[j] = 0
+            end
+        end
+    end
+    m
+end
+
+function load_A!(m::AmplNLMathProgModel, A::SparseMatrixCSC{Float64})
+    @assert (m.ncon, m.nvar) == size(A)
+    for var = 1:A.n, k = A.colptr[var] : (A.colptr[var + 1] - 1)
+        m.lin_constrs[A.rowval[k]][var] = A.nzval[k]
+        m.j_counts[var] += 1
+    end
+end
+
+function load_A!(m::AmplNLMathProgModel, A::Matrix{Float64})
+    @assert (m.ncon, m.nvar) == size(A)
+    for con = 1:m.ncon, var = 1:m.nvar
+        val = A[con, var]
+        if val != 0
+            m.lin_constrs[A.rowval[k]][var] = A.nzval[k]
+            m.j_counts[var] += 1
+        end
+    end
+end
+
+function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
+    @assert m.nvar == length(x_l) == length(x_u)
+    @assert m.ncon == length(g_l) == length(g_u)
+
+    m.x_l, m.x_u = x_l, x_u
+    m.g_l, m.g_u = g_l, g_u
+    m.sense = sense
+
+    m.lin_constrs = [Dict{Int64, Float64}() for _ in 1:m.ncon]
+    m.j_counts = zeros(Int64, m.nvar)
+
+    m.r_codes = Array(Int64, m.ncon)
+
+    m.varlinearities_con = fill(:Lin, m.nvar)
+    m.varlinearities_obj = fill(:Lin, m.nvar)
+    m.conlinearities = fill(:Lin, m.ncon)
+    m.objlinearity = :Lin
+
+    m.vartypes = fill(:Cont, m.nvar)
+    m.x_0 = zeros(m.nvar)
+end
+
+MathProgBase.getvartype(m::AmplNLMathProgModel) = copy(m.vartypes)
 function MathProgBase.setvartype!(m::AmplNLMathProgModel, cat::Vector{Symbol})
     @assert all(x-> (x in [:Cont,:Bin,:Int]), cat)
     m.vartypes = copy(cat)
@@ -238,10 +302,13 @@ function MathProgBase.optimize!(m::AmplNLMathProgModel)
     make_var_index!(m)
     make_con_index!(m)
 
+    m.probfile = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata", "model.nl")
+    m.solfile = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata", "model.sol")
+
     write_nl_file(m)
 
     options_string = join(["$name=$value" for (name, value) in m.options], " ")
-    run(`$(m.solver_command) -s $(m.probfile) $options_string`)
+    run(`$(m.solver_command) -s $(m.probfile) $options_string` |> DevNull)
 
     read_results(m)
 
