@@ -33,5 +33,5 @@ m = Model(solver=solver)
 
 context("example: jump_pruning") do
     @fact solve(m) --> :Optimal
-    @fact getObjectiveValue(m) --> roughly(400, 1e-5)
+    @fact getObjectiveValue(m) --> roughly(400, 1e-2)
 end
