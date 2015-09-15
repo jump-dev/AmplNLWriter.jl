@@ -130,30 +130,6 @@ include("nl_write.jl")
 MathProgBase.model(s::AmplNLSolver) = AmplNLMathProgModel(s.solver_command,
                                                           s.options)
 
-verify_support(c) = c
-
-function verify_support(c::Expr)
-    c
-end
-
-# function verify_support(c::Expr)
-#     if c.head == :comparison
-#         map(verify_support, c.args)
-#         return c
-#     end
-#     if c.head == :call
-#         if c.args[1] in [:+, :-, :*, :/, :exp, :log]
-#             return c
-#         elseif c.args[1] == :^
-#             @assert isa(c.args[2], Real) || isa(c.args[3], Real)
-#             return c
-#         else
-#             error("Unsupported expression $c")
-#         end
-#     end
-#     return c
-# end
-
 function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
     nvar, ncon, x_l, x_u, g_l, g_u, sense, d::MathProgBase.AbstractNLPEvaluator)
 
@@ -166,24 +142,69 @@ function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
     m.nvar, m.ncon = nvar, ncon
     m.d = d
 
+    m.vartypes = fill(:Cont, nvar)
+
     MathProgBase.initialize(d, [:ExprGraph])
 
-    m.obj = verify_support(MathProgBase.obj_expr(d))
+    # Process constraints
+    m.lin_constrs = Array(Dict{Int64, Float64}, ncon)
+    m.r_codes = Array(Int64, ncon)
+    m.varlinearities_con = fill(:Lin, nvar)
+    m.conlinearities = fill(:Lin, ncon)
+    m.j_counts = zeros(Int64, nvar)
+    m.constrs = map(1:ncon) do i
+        c = MathProgBase.constr_expr(d, i)
+
+        # Remove relations and bounds from constraint expressions
+        @assert c.head == :comparison
+        if length(c.args) == 3
+            # Single relation constraint: expr rel bound
+            m.r_codes[i] = relation_to_nl[c.args[2]]
+            if c.args[2] == [:<=, :(==)]
+                m.g_u[i] = c.args[3]
+            end
+            if c.args[2] in [:>=, :(==)]
+                m.g_l[i] = c.args[3]
+            end
+            c = c.args[1]
+        else
+            # Double relation constraint: bound <= expr <= bound
+            m.r_codes[i] = relation_to_nl[:multiple]
+            m.g_u[i] = c.args[5]
+            m.g_l[i] = c.args[1]
+            c = c.args[3]
+        end
+
+        # Convert non-linear expression to non-linear, linear and constant
+        m.lin_constrs[i] = Dict{Int64, Float64}()
+        c, constant, m.conlinearities[i] = process_expression!(
+            c, m.lin_constrs[i], m.varlinearities_con)
+
+        # Update bounds on constraint
+        m.g_l[i] -= constant
+        m.g_u[i] -= constant
+
+        # Update jacobian counts using the linear constraint variables
+        for j in keys(m.lin_constrs[i])
+            m.j_counts[j] += 1
+        end
+        c
+    end
+
+    # Process objective
+    m.varlinearities_obj = fill(:Lin, nvar)
+    m.obj = MathProgBase.obj_expr(d)
     if length(m.obj.args) < 2
         m.obj = nothing
-    end
-    m.vartypes = fill(:Cont, nvar)
-    m.varlinearities_con = fill(:Lin, nvar)
-    m.varlinearities_obj = fill(:Lin, nvar)
-    m.conlinearities = fill(:Lin, ncon)
+    else
+        # Convert non-linear expression to non-linear, linear and constant
+        m.obj, constant, m.objlinearity = process_expression!(
+            m.obj, m.lin_obj, m.varlinearities_obj)
 
-    m.j_counts = zeros(Int64, nvar)
-
-    m.r_codes = Array(Int64, ncon)
-    m.lin_constrs = Array(Dict{Int64, Float64}, ncon)
-
-    m.constrs = map(1:ncon) do c
-        verify_support(MathProgBase.constr_expr(d, c))
+        # Add constant back into non-linear expression
+        if constant != 0
+            m.obj = add_constant(m.obj, constant)
+        end
     end
 
     m.probfile = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata", "model.nl")
@@ -201,56 +222,6 @@ function MathProgBase.setwarmstart!(m::AmplNLMathProgModel, v::Vector{Float64})
 end
 
 function MathProgBase.optimize!(m::AmplNLMathProgModel)
-    for (i, c) in enumerate(m.constrs)
-        # Remove relations and bounds from constraint expressions
-        @assert c.head == :comparison
-        if length(c.args) == 3
-            # Single relation constraint: expr rel bound
-            m.constrs[i] = c.args[1]
-            m.r_codes[i] = relation_to_nl[c.args[2]]
-            if c.args[2] == [:<=, :(==)]
-                m.g_u[i] = c.args[3]
-            end
-            if c.args[2] in [:>=, :(==)]
-                m.g_l[i] = c.args[3]
-            end
-        else
-            # Double relation constraint: bound <= expr <= bound
-            m.constrs[i] = c.args[3]
-            m.r_codes[i] = relation_to_nl[:multiple]
-            m.g_u[i] = c.args[5]
-            m.g_l[i] = c.args[1]
-        end
-    end
-
-    for i in 1:m.ncon
-        # Convert non-linear expression to non-linear, linear and constant
-        m.lin_constrs[i] = Dict{Int64, Float64}()
-        m.constrs[i], constant, m.conlinearities[i] = process_expression!(
-            m.constrs[i], m.lin_constrs[i], m.varlinearities_con)
-
-        # Update bounds on constraint
-        m.g_l[i] -= constant
-        m.g_u[i] -= constant
-
-        # Update jacobian counts using the linear constraint variables
-        for j in keys(m.lin_constrs[i])
-            m.j_counts[j] += 1
-        end
-    end
-
-    # Process objective
-    if m.obj != nothing
-        # Convert non-linear expression to non-linear, linear and constant
-        m.obj, constant, m.objlinearity = process_expression!(
-            m.obj, m.lin_obj, m.varlinearities_obj)
-
-        # Add constant back into non-linear expression
-        if constant != 0
-            m.obj = add_constant(m.obj, constant)
-        end
-    end
-
     # There is no non-linear binary type, only non-linear discrete, so make
     # sure binary vars have bounds in [0, 1]
     for i in 1:m.nvar
