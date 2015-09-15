@@ -251,7 +251,8 @@ function MathProgBase.optimize!(m::AmplNLMathProgModel)
         end
     end
 
-    # Make sure binary vars have bounds in [0, 1]
+    # There is no non-linear binary type, only non-linear discrete, so make
+    # sure binary vars have bounds in [0, 1]
     for i in 1:m.nvar
         if m.vartypes[i] == :Bin
             if m.x_l[i] < 0
