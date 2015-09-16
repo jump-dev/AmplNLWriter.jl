@@ -17,7 +17,7 @@ Pkg.add("AmplNLWriter")
 AmplNLWriter.jl provides ``AmplNLSolver`` as a usable solver in JuMP. The following Julia code uses the Bonmin solver in JuMP via AmplNLWriter.jl:
 
     julia> using JuMP, AmplNLWriter
-    julia> m = Model(solver=AmplNLSolver("bonmin"))
+    julia> m = Model(solver=AmplNLSolver("bonmin"), "-s")
 
 You can then model and solve your optimization problem as usual. See [JuMP's documentation](http://jump.readthedocs.org/en/latest/) for more details. 
 

@@ -14,10 +14,17 @@ export AmplNLSolver, BonminNLSolver, CouenneNLSolver, IpoptNLSolver,
 
 immutable AmplNLSolver <: AbstractMathProgSolver
     solver_command::String
+    pre_command::String
+    post_command::String
     options::Dict{ASCIIString, Any}
+
+    function AmplNLSolver(solver_command,
+                          pre_command::String="",
+                          post_command::String="",
+                          options=Dict{ASCIIString, Any}())
+        new(solver_command, pre_command, post_command, options)
+    end
 end
-AmplNLSolver(solver_command) = AmplNLSolver(solver_command,
-                                            Dict{ASCIIString, Any}())
 
 osl = isdir(Pkg.dir("CoinOptServices"))
 ipt = isdir(Pkg.dir("Ipopt"))
@@ -28,18 +35,18 @@ if ipt; import Ipopt; end
 function BonminNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
-    AmplNLSolver(CoinOptServices.bonmin, options)
+    AmplNLSolver(CoinOptServices.bonmin, "-s", "", options)
 end
 
 function CouenneNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
-    AmplNLSolver(CoinOptServices.couenne, options)
+    AmplNLSolver(CoinOptServices.couenne, "-s", "", options)
 end
 
 function IpoptNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
     ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
-    AmplNLSolver(Ipopt.amplexe, options)
+    AmplNLSolver(Ipopt.amplexe, "-s", "", options)
 end
 
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)
@@ -48,6 +55,8 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     options::Dict{ASCIIString, Any}
 
     solver_command::String
+    pre_command::String
+    post_command::String
 
     x_l::Vector{Float64}
     x_u::Vector{Float64}
@@ -91,9 +100,13 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     d::AbstractNLPEvaluator
 
     function AmplNLMathProgModel(solver_command::String,
+                                 pre_command::String,
+                                 post_command::String,
                                  options::Dict{ASCIIString, Any})
         new(options,
             solver_command,
+            pre_command,
+            post_command,
             zeros(0),
             zeros(0),
             zeros(0),
@@ -128,6 +141,8 @@ end
 include("nl_write.jl")
 
 MathProgBase.model(s::AmplNLSolver) = AmplNLMathProgModel(s.solver_command,
+                                                          s.pre_command,
+                                                          s.post_command,
                                                           s.options)
 
 function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
@@ -307,13 +322,20 @@ function MathProgBase.optimize!(m::AmplNLMathProgModel)
 
     write_nl_file(m)
 
-    options_string = join(["$name=$value" for (name, value) in m.options], " ")
-    run(`$(m.solver_command) -s $(m.probfile) $options_string`)
+    # Construct model command
+    model_command = String[]
+    for command in [m.pre_command, m.probfile, m.post_command]
+        command == "" || push!(model_command, command)
+    end
+
+    # Construct keyword params
+    options = ["$name=$value" for (name, value) in m.options]
+
+    run(`$(m.solver_command) $model_command $options`)
 
     read_results(m)
-
     if m.status in [:Optimal]
-        # Finally, calculate objective value for nonlinear and linear parts
+        # Finally, calculate objective value from nonlinear and linear parts
         obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
         obj_lin = evaluate_linear(m.lin_obj, m.solution)
         m.objval = obj_nonlin + obj_lin
