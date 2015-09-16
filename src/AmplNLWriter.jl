@@ -438,12 +438,15 @@ function read_results(m::AmplNLMathProgModel)
     f = open(m.solfile, "r")
     stat = :Undefined
 
-    # Throw away empty first line
-    line = readline(f)
-    eof(f) && error()
+    # Throw away any empty lines
+    while true
+        line = readline(f)
+        eof(f) && error()
+        strip(chomp(line)) == "" || break
+    end
 
-    # Get status from second line
-    line = lowercase(readline(f))
+    # Get status
+    line = lowercase(line)
     if contains(line, "optimal")
         stat = :Optimal
     elseif contains(line, "infeasible")
