@@ -192,11 +192,15 @@ function collate_linear_terms(c::LinearityExpr)
                 c.c.args[1] = :+
             end
         elseif func == :*
-            if c.c.args[2].linearity == :const
-                c = multiply(c.c.args[3], c.c.args[2].c)
-            else
-                c = multiply(c.c.args[2], c.c.args[3].c)
+            # This can be n-ary multiplication, but there is only one variable
+            # First, find index of variable in the args
+            x = findfirst(ex -> ex.linearity == :linear, c.c.args[2:end]) + 1
+            # Multiply variable term by each of the constants in the args
+            x_expr = c.c.args[x]
+            for i in setdiff(2:length(c.c.args), x)
+                x_expr = multiply(x_expr, c.c.args[i].c)
             end
+            c = x_expr
         elseif func == :/
             c = multiply(c.c.args[2], 1 / c.c.args[3].c)
         elseif func == :^
