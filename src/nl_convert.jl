@@ -68,7 +68,7 @@ function extract_binary_comparison(c::Expr, start::Int64)
     Expr(:comparison, c.args[start], c.args[start + 1], c.args[start + 2])
 end
 
-const unary_special_cases = Compat.@compat Dict(
+const unary_special_cases = @compat Dict(
 :cbrt  => (x) -> :($x ^ (1 / 3)),
 :abs2  => (x) -> :($x ^ 2),
 :inv   => (x) -> :(1 / $x),
