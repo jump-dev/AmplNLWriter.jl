@@ -37,7 +37,7 @@ x_U = [2,2,1]
 @addNLConstraint(m, x[2] - x[1] <= 0)
 @addNLConstraint(m, x[2] - 2*y[4] <= 0)
 @addNLConstraint(m, x[1] - x[2] - 2*y[5] <= 0)
-@addNLConstraint(m, y[4] + y[5] <= 1)
+@addNLConstraint(m, y[4] + 2*y[5]*0.5 <= 1)
 
 context("example: jump_minlp") do
     @fact solve(m) --> :Optimal
