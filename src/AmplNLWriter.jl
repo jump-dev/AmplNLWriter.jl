@@ -334,7 +334,7 @@ function MathProgBase.optimize!(m::AmplNLMathProgModel)
     run(`$(m.solver_command) $model_command $options`)
 
     read_results(m)
-    if m.status in [:Optimal]
+    if m.status in [:Optimal, :UserLimit]
         # Finally, calculate objective value from nonlinear and linear parts
         obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
         obj_lin = evaluate_linear(m.lin_obj, m.solution)
@@ -456,6 +456,15 @@ function add_to_index_maps!(forward_map::Dict{Int64, Int64},
     end
 end
 
+function check_userlimits(line::AbstractString)
+    for limit in POSSIBLE_USERLIMITS
+        if contains(line, limit)
+            return true
+        end
+    end
+    return false
+end
+
 function read_results(m::AmplNLMathProgModel)
     f = open(m.solfile, "r")
     stat = :Undefined
@@ -475,11 +484,14 @@ function read_results(m::AmplNLMathProgModel)
         stat = :Infeasible
     elseif contains(line, "unbounded")
         stat = :Unbounded
+    elseif check_userlimits(line)
+        # Ipopt can terminate due to a number of user limits
+        stat = :UserLimit
     elseif contains(line, "error")
         stat = :Error
     end
     m.status = stat
-    stat == :Optimal || return nothing
+    (stat == :Optimal || stat == :UserLimit) || return nothing
 
     # Throw away lines 3-8
     for i = 3:8
