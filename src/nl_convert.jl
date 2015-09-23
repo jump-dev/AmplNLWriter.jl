@@ -6,20 +6,20 @@ function convert_formula(c::Expr)
     map!(convert_formula, c.args)
 
     if c.head == :comparison
-    n = length(c.args)
-    @assert isodd(n)
+        n = length(c.args)
+        @assert isodd(n)
 
-    # If more than binary comparison, we need to chain them together
-    # Get binary comparisons in sequence and chain with nested &&
-    # It looks like we might be able to use an n-ary &&, but that's not how
-    # Julia parses chained && expressions.
-    if n > 3
-        new_expr = extract_binary_comparison(c, 1)
-        for i in 3:2:(n - 2)
-            new_expr = Expr(:&&, new_expr, extract_binary_comparison(c, i))
+        # If more than binary comparison, we need to chain them together
+        # Get binary comparisons in sequence and chain with nested &&
+        # It looks like we might be able to use an n-ary &&, but that's not how
+        # Julia parses chained && expressions.
+        if n > 3
+            new_expr = extract_binary_comparison(c, 1)
+            for i in 3:2:(n - 2)
+                new_expr = Expr(:&&, new_expr, extract_binary_comparison(c, i))
+            end
+            c = new_expr
         end
-        c = new_expr
-    end
 
     elseif c.head == :call
         op = c.args[1]
