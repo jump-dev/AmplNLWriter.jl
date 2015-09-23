@@ -334,12 +334,6 @@ function MathProgBase.optimize!(m::AmplNLMathProgModel)
     run(`$(m.solver_command) $model_command $options`)
 
     read_results(m)
-    if m.status in [:Optimal]
-        # Finally, calculate objective value from nonlinear and linear parts
-        obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
-        obj_lin = evaluate_linear(m.lin_obj, m.solution)
-        m.objval = obj_nonlin + obj_lin
-    end
 end
 
 function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int64, Float64},
@@ -479,7 +473,6 @@ function read_results(m::AmplNLMathProgModel)
         stat = :Error
     end
     m.status = stat
-    stat == :Optimal || return nothing
 
     # Throw away lines 3-8
     for i = 3:8
@@ -492,19 +485,20 @@ function read_results(m::AmplNLMathProgModel)
     @assert(num_cons == m.ncon)
 
     # Read number of duals to read in
-    num_dual_values = parse(Int, chomp(readline(f)))
+    num_duals_to_read = parse(Int, chomp(readline(f)))
+    @assert(num_duals_to_read in [0; m.ncon])
 
     # Read number of variables
     num_vars = parse(Int, chomp(readline(f)))
     @assert(num_vars == m.nvar)
 
     # Read number of variables to read in
-    num_var_values = parse(Int, chomp(readline(f)))
-    @assert(num_var_values == m.nvar)
+    num_vars_to_read = parse(Int, chomp(readline(f)))
+    @assert(num_vars_to_read in [0; m.nvar])
 
     # Skip over duals
     # TODO do something with these?
-    for index in 0:(num_dual_values - 1)
+    for index in 0:(num_duals_to_read - 1)
         eof(f) && error("End of file while reading variables.")
         line = readline(f)
     end
@@ -512,7 +506,7 @@ function read_results(m::AmplNLMathProgModel)
     # Next, read for the variable values
     x = fill(NaN, m.nvar)
     m.objval = NaN
-    for index in 0:(m.nvar - 1)
+    for index in 0:(num_vars_to_read - 1)
         eof(f) && error("End of file while reading variables.")
         line = readline(f)
 
@@ -520,6 +514,15 @@ function read_results(m::AmplNLMathProgModel)
         x[i] = float(chomp(line))
     end
     m.solution = x
+
+    # Calculate objective if a solution has been read in
+    if num_vars_to_read != 0
+        # Finally, calculate objective value from nonlinear and linear parts
+        obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
+        obj_lin = evaluate_linear(m.lin_obj, m.solution)
+        m.objval = obj_nonlin + obj_lin
+    end
+
     nothing
 end
 
