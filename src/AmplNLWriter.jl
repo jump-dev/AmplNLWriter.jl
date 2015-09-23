@@ -334,7 +334,7 @@ function MathProgBase.optimize!(m::AmplNLMathProgModel)
     run(`$(m.solver_command) $model_command $options`)
 
     read_results(m)
-    if m.status in [:Optimal]
+    if m.status in [:Optimal, :Undefined]
         # Finally, calculate objective value from nonlinear and linear parts
         obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
         obj_lin = evaluate_linear(m.lin_obj, m.solution)
@@ -479,7 +479,7 @@ function read_results(m::AmplNLMathProgModel)
         stat = :Error
     end
     m.status = stat
-    stat == :Optimal || return nothing
+    (stat == :Optimal || stat == :Undefined) || return nothing
 
     # Throw away lines 3-8
     for i = 3:8
