@@ -3,7 +3,7 @@ module AmplNLWriter
 using MathProgBase
 importall MathProgBase.SolverInterface
 
-import Compat
+using Compat
 
 include("nl_linearity.jl")
 include("nl_params.jl")
@@ -13,14 +13,14 @@ export AmplNLSolver, BonminNLSolver, CouenneNLSolver, IpoptNLSolver,
        getsolvername
 
 immutable AmplNLSolver <: AbstractMathProgSolver
-    solver_command::String
-    pre_command::String
-    post_command::String
+    solver_command::AbstractString
+    pre_command::AbstractString
+    post_command::AbstractString
     options::Dict{ASCIIString, Any}
 
     function AmplNLSolver(solver_command,
-                          pre_command::String="",
-                          post_command::String="",
+                          pre_command::AbstractString="",
+                          post_command::AbstractString="",
                           options=Dict{ASCIIString, Any}())
         new(solver_command, pre_command, post_command, options)
     end
@@ -54,9 +54,9 @@ getsolvername(s::AmplNLSolver) = basename(s.solver_command)
 type AmplNLMathProgModel <: AbstractMathProgModel
     options::Dict{ASCIIString, Any}
 
-    solver_command::String
-    pre_command::String
-    post_command::String
+    solver_command::AbstractString
+    pre_command::AbstractString
+    post_command::AbstractString
 
     x_l::Vector{Float64}
     x_u::Vector{Float64}
@@ -90,8 +90,8 @@ type AmplNLMathProgModel <: AbstractMathProgModel
 
     x_0::Vector{Float64}
 
-    probfile::String
-    solfile::String
+    probfile::AbstractString
+    solfile::AbstractString
 
     objval::Float64
     solution::Vector{Float64}
@@ -99,9 +99,9 @@ type AmplNLMathProgModel <: AbstractMathProgModel
 
     d::AbstractNLPEvaluator
 
-    function AmplNLMathProgModel(solver_command::String,
-                                 pre_command::String,
-                                 post_command::String,
+    function AmplNLMathProgModel(solver_command::AbstractString,
+                                 pre_command::AbstractString,
+                                 post_command::AbstractString,
                                  options::Dict{ASCIIString, Any})
         new(options,
             solver_command,
