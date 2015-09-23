@@ -39,7 +39,7 @@ So both `pre_command` and `post_command` are `""`.
 
 For other solvers, you will need to determine the appropriate form for invoking the solver and set `pre_command` and `post_command` yourself.
 
-The final (optional) argument to ``AmplNLSolver()`` is a ``Dict{String, Any}`` of solver options. These should be specified with the name of the option as the key, and the desired value as the value. For example, to set the NLP log level to 0 in Bonmin, you would run ``AmplNLSolver("bonmin", Dict("bonmin.nlp_log_level"=>0))``. For a list of options supported by your solver, check the solver's documentation, or run ``/path/to/solver -=`` at the command line e.g. run ``bonmin -=`` for a list of all Bonmin options.
+The final (optional) argument to ``AmplNLSolver()`` is a ``Dict{String, Any}`` of solver options. These should be specified with the name of the option as the key, and the desired value as the value. For example, to set the NLP log level to 0 in Bonmin, you would run ``AmplNLSolver("bonmin", "-s", "", Dict("bonmin.nlp_log_level"=>0))``. For a list of options supported by your solver, check the solver's documentation, or run ``/path/to/solver -=`` at the command line e.g. run ``bonmin -=`` for a list of all Bonmin options.
 
 If you have [CoinOptServices.jl](https://github.com/JuliaOpt/CoinOptServices.jl) installed, you can easily use the Bonmin or Couenne solvers installed by this package:
 
