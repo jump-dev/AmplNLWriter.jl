@@ -85,3 +85,9 @@ const nary_functions = Set{Symbol}([
 # :or_n,
 # :alldiff,
 ])
+
+const POSSIBLE_USERLIMITS = [
+    "iterations exceeded",  # Max iterations
+    "acceptable level",     # Acceptable tolerance/iterations
+    "cpu time exceeded"     # Max time
+]
