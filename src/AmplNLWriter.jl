@@ -10,19 +10,16 @@ include("nl_params.jl")
 include("nl_convert.jl")
 
 export AmplNLSolver, BonminNLSolver, CouenneNLSolver, IpoptNLSolver,
-       getsolvername
+       getsolvername, getsolveresult, getsolveresultnum, getsolvemessage,
+       getsolveexitcode
 
 immutable AmplNLSolver <: AbstractMathProgSolver
     solver_command::AbstractString
-    pre_command::AbstractString
-    post_command::AbstractString
     options::Dict{ASCIIString, Any}
 
     function AmplNLSolver(solver_command,
-                          pre_command::AbstractString="",
-                          post_command::AbstractString="",
                           options=Dict{ASCIIString, Any}())
-        new(solver_command, pre_command, post_command, options)
+        new(solver_command, options)
     end
 end
 
@@ -35,18 +32,18 @@ if ipt; import Ipopt; end
 function BonminNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
-    AmplNLSolver(CoinOptServices.bonmin, "-s", "", options)
+    AmplNLSolver(CoinOptServices.bonmin, options)
 end
 
 function CouenneNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
-    AmplNLSolver(CoinOptServices.couenne, "-s", "", options)
+    AmplNLSolver(CoinOptServices.couenne, options)
 end
 
 function IpoptNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
     ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
-    AmplNLSolver(Ipopt.amplexe, "-s", "", options)
+    AmplNLSolver(Ipopt.amplexe, options)
 end
 
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)
@@ -55,8 +52,6 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     options::Dict{ASCIIString, Any}
 
     solver_command::AbstractString
-    pre_command::AbstractString
-    post_command::AbstractString
 
     x_l::Vector{Float64}
     x_u::Vector{Float64}
@@ -95,18 +90,19 @@ type AmplNLMathProgModel <: AbstractMathProgModel
 
     objval::Float64
     solution::Vector{Float64}
+
     status::Symbol
+    solve_exitcode::Int64
+    solve_result_num::Int64
+    solve_result::AbstractString
+    solve_message::AbstractString
 
     d::AbstractNLPEvaluator
 
     function AmplNLMathProgModel(solver_command::AbstractString,
-                                 pre_command::AbstractString,
-                                 post_command::AbstractString,
                                  options::Dict{ASCIIString, Any})
         new(options,
             solver_command,
-            pre_command,
-            post_command,
             zeros(0),
             zeros(0),
             zeros(0),
@@ -134,15 +130,17 @@ type AmplNLMathProgModel <: AbstractMathProgModel
             "",
             NaN,
             zeros(0),
-            :NotSolved)
+            :NotSolved,
+            -1,
+            -1,
+            "?",
+            "")
     end
 end
 
 include("nl_write.jl")
 
 MathProgBase.model(s::AmplNLSolver) = AmplNLMathProgModel(s.solver_command,
-                                                          s.pre_command,
-                                                          s.post_command,
                                                           s.options)
 
 function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
@@ -301,6 +299,12 @@ function MathProgBase.setwarmstart!(m::AmplNLMathProgModel, v::Vector{Float64})
 end
 
 function MathProgBase.optimize!(m::AmplNLMathProgModel)
+    m.status = :NotSolved
+    m.solve_exitcode = -1
+    m.solve_result_num = -1
+    m.solve_result = "?"
+    m.solve_message = ""
+
     # There is no non-linear binary type, only non-linear discrete, so make
     # sure binary vars have bounds in [0, 1]
     for i in 1:m.nvar
@@ -322,18 +326,22 @@ function MathProgBase.optimize!(m::AmplNLMathProgModel)
 
     write_nl_file(m)
 
-    # Construct model command
-    model_command = String[]
-    for command in [m.pre_command, m.probfile, m.post_command]
-        command == "" || push!(model_command, command)
-    end
-
     # Construct keyword params
     options = ["$name=$value" for (name, value) in m.options]
 
-    run(`$(m.solver_command) $model_command $options`)
+    # Run solver and save exitcode
+    proc = spawn(pipeline(`$(m.solver_command) $(m.probfile) -AMPL $options`, stdout=STDOUT))
+    wait(proc)
+    kill(proc)
+    m.solve_exitcode = proc.exitcode
 
-    read_results(m)
+    if m.solve_exitcode == 0
+        read_results(m)
+    else
+        m.status = :Error
+        m.solve_result = "failure"
+        m.solve_result_num = 999
+    end
 end
 
 function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int64, Float64},
@@ -370,6 +378,12 @@ end
 MathProgBase.status(m::AmplNLMathProgModel) = m.status
 MathProgBase.getsolution(m::AmplNLMathProgModel) = copy(m.solution)
 MathProgBase.getobjval(m::AmplNLMathProgModel) = m.objval
+
+# Access to AMPL solve result items
+get_solve_result(m::AmplNLMathProgModel) = m.solve_result
+get_solve_result_num(m::AmplNLMathProgModel) = m.solve_result_num
+get_solve_message(m::AmplNLMathProgModel) = m.solve_message
+get_solve_exitcode(m::AmplNLMathProgModel) = m.solve_exitcode
 
 # We need to track linear coeffs of all variables present in the expression tree
 extract_variables!(lin_constr::Dict{Int64, Float64}, c) = c
@@ -451,33 +465,92 @@ function add_to_index_maps!(forward_map::Dict{Int64, Int64},
 end
 
 function read_results(m::AmplNLMathProgModel)
+    did_read_solution = read_sol(m)
+
+    # Convert solve_result
+    if 0 <= m.solve_result_num < 100
+        m.status = :Optimal
+        m.solve_result = "solved"
+    elseif 100 <= m.solve_result_num < 200
+        # Used to indicate solution present but likely incorrect.
+        m.status = :Optimal
+        m.solve_result = "solved?"
+        warn("The solver has returned the status :Optimal, but indicated that there might be an error in the solution. The status code returned by the solver was $(m.solve_result_num). Check the solver documentation for more info.""")
+    elseif 200 <= m.solve_result_num < 300
+        m.status = :Infeasible
+        m.solve_result = "infeasible"
+    elseif 300 <= m.solve_result_num < 400
+        m.status = :Unbounded
+        m.solve_result = "unbounded"
+    elseif 400 <= m.solve_result_num < 500
+        m.status = :UserLimit
+        m.solve_result = "limit"
+    elseif 500 <= m.solve_result_num < 600
+        m.status = :Error
+        m.solve_result = "failure"
+    end
+
+    # If we didn't get a valid solve_result_num, try to get the status from the
+    # solve_message string.
+    # Some solvers (e.g. SCIP) don't ever print the suffixes so we need this.
+    if m.status == :NotSolved
+        message = lowercase(m.solve_message)
+        if contains(message, "optimal")
+            m.status = :Optimal
+        elseif contains(message, "infeasible")
+            m.status = :Infeasible
+        elseif contains(message, "unbounded")
+            m.status = :Unbounded
+        elseif contains(message, "limit")
+            m.status = :UserLimit
+        elseif contains(message, "error")
+            m.status = :Error
+        end
+    end
+
+    if did_read_solution
+        # Calculate objective value from nonlinear and linear parts
+        obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
+        obj_lin = evaluate_linear(m.lin_obj, m.solution)
+        m.objval = obj_nonlin + obj_lin
+    end
+end
+
+function read_sol(m::AmplNLMathProgModel)
+    # Reference implementation:
+    # https://github.com/ampl/mp/tree/master/src/asl/solvers/readsol.c
+
     f = open(m.solfile, "r")
     stat = :Undefined
 
-    # Throw away any empty lines
+    # Throw away any empty lines at start
+    line = ""
     while true
         line = readline(f)
-        eof(f) && error()
-        strip(chomp(line)) == "" || break
+        strip(chomp(line)) != "" && break
     end
 
-    # Get status
-    line = lowercase(line)
-    if contains(line, "optimal")
-        stat = :Optimal
-    elseif contains(line, "infeasible")
-        stat = :Infeasible
-    elseif contains(line, "unbounded")
-        stat = :Unbounded
-    elseif contains(line, "error")
-        stat = :Error
+    # Keep building solver message by reading until empty line
+    while true
+        m.solve_message *= line
+        line = readline(f)
+        strip(chomp(line)) == "" && break
     end
-    m.status = stat
 
-    # Throw away lines 3-8
-    for i = 3:8
+    # Read through all the options. Direct copy of reference implementation.
+    @assert chomp(readline(f)) == "Options"
+    options = [parse(Int, chomp(readline(f))) for _ in 1:3]
+    num_options = options[1]
+    3 <= num_options <= 9 || error("expected num_options between 3 and 9; " *
+                                   "got $num_options")
+    need_vbtol = false
+    if options[3] == 3
+        num_options -= 2
+        need_vbtol = true
+    end
+    for j = 3:num_options
         eof(f) && error()
-        readline(f)
+        push!(options, parse(Int, chomp(readline(f))))
     end
 
     # Read number of constraints
@@ -496,10 +569,13 @@ function read_results(m::AmplNLMathProgModel)
     num_vars_to_read = parse(Int, chomp(readline(f)))
     @assert(num_vars_to_read in [0; m.nvar])
 
+    # Skip over vbtol line if present
+    need_vbtol && readline(f)
+
     # Skip over duals
     # TODO do something with these?
     for index in 0:(num_duals_to_read - 1)
-        eof(f) && error("End of file while reading variables.")
+        eof(f) && error("End of file while reading duals.")
         line = readline(f)
     end
 
@@ -515,15 +591,22 @@ function read_results(m::AmplNLMathProgModel)
     end
     m.solution = x
 
-    # Calculate objective if a solution has been read in
-    if num_vars_to_read != 0
-        # Finally, calculate objective value from nonlinear and linear parts
-        obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
-        obj_lin = evaluate_linear(m.lin_obj, m.solution)
-        m.objval = obj_nonlin + obj_lin
-    end
+    # Check for status code
+    while !eof(f)
+        line = readline(f)
+        linevals = split(chomp(line), " ")
+        num_vals = length(linevals)
+        if num_vals > 0 && linevals[1] == "objno"
+            # Check for objno == 0
+            @assert @compat parse(Int, linevals[2]) == 0
+            # Get solve_result
+            m.solve_result_num = @compat parse(Int, linevals[3])
 
-    nothing
+            # We can stop looking for the 'objno' line
+            break
+        end
+    end
+    return num_vars_to_read > 0
 end
 
 substitute_vars!(c, x::Array{Float64}) = c
