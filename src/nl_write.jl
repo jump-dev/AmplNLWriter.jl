@@ -57,7 +57,7 @@ function write_nl_header(f, m::AmplNLMathProgModel)
     nlvb = sum(nonlinear_both)
     println(f, " $nlvc $nlvo $nlvb")
     # Line 6: linear network variables; functions; arith, flags
-    println(f, " 0 0 0 0")
+    println(f, " 0 0 0 1")  # flags set to 1 to get suffixes in .sol file
     # Line 7: discrete variables: binary, integer, nonlinear (b,c,o)
     binary = m.vartypes .== :Bin
     integer = m.vartypes .== :Int
