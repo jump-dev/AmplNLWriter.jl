@@ -6,8 +6,8 @@ const func_to_nl = @compat Dict(
 # :rem => 4,
 :^ => 5,
 # :less => 6,
-# :min => 11,
-# :max => 12,
+:min => 11,
+:max => 12,
 # :floor => 13,
 # :ceil => 14,
 :abs => 15,
@@ -75,8 +75,8 @@ const reverse_relation = @compat Dict(
 )
 
 const nary_functions = Set{Symbol}([
-# :min,
-# :max,
+:min,
+:max,
 :sum,
 # :count,
 # :numberof,
