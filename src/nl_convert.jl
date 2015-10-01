@@ -62,7 +62,7 @@ function convert_formula(c::Expr)
 end
 
 # Extracts `expression relation expression` from a larger comparison expression
-function extract_binary_comparison(c::Expr, start::Int64)
+function extract_binary_comparison(c::Expr, start::Integer)
     @assert c.head == :comparison
     @assert start <= length(c.args) - 2
     Expr(:comparison, c.args[start], c.args[start + 1], c.args[start + 2])

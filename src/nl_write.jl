@@ -237,6 +237,6 @@ function write_nl_expr(f, m, c::Expr)
     end
 end
 
-nl_variable(index::Int64) = "v$index"
+nl_variable(index::Integer) = "v$index"
 nl_number(value::Real) = "n$value"
 nl_operator(operator::Symbol) = "o$(func_to_nl[operator])"

@@ -127,7 +127,7 @@ function pull_up_constants(c::LinearityExpr)
     return c
 end
 
-function prune_linear_terms!(c::LinearityExpr, lin_constr::Dict{Int64, Float64},
+function prune_linear_terms!(c::LinearityExpr, lin_constr::Dict{Int, Float64},
                              constant::Float64=0.0, negative_tree::Bool=false)
     if c.linearity != :nonlinear
         constant = add_linear_tree!(c, lin_constr, constant, negative_tree)
@@ -168,7 +168,7 @@ function prune_linear_terms!(c::LinearityExpr, lin_constr::Dict{Int64, Float64},
     end
 end
 
-function add_linear_tree!(c::LinearityExpr, lin_constr::Dict{Int64, Float64},
+function add_linear_tree!(c::LinearityExpr, lin_constr::Dict{Int, Float64},
                           constant::Float64=0.0, negative_tree::Bool=false)
     c = collate_linear_terms(c)
     negative_tree && negate(c)
@@ -223,7 +223,7 @@ function multiply(c::LinearityExpr, a::Real)
     return c
 end
 
-function add_tree_to_constr!(c::LinearityExpr, lin_constr::Dict{Int64, Float64},
+function add_tree_to_constr!(c::LinearityExpr, lin_constr::Dict{Int, Float64},
                              constant::Float64)
     if isa(c.c, Expr) && c.c.head == :call
         @assert c.c.args[1] == :+

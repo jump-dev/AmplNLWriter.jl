@@ -64,11 +64,11 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     obj
     constrs::Array{Any}
 
-    lin_constrs::Array{Dict{Int64, Float64}}
-    lin_obj::Dict{Int64, Float64}
+    lin_constrs::Array{Dict{Int, Float64}}
+    lin_obj::Dict{Int, Float64}
 
-    r_codes::Vector{Int64}
-    j_counts::Vector{Int64}
+    r_codes::Vector{Int}
+    j_counts::Vector{Int}
 
     vartypes::Vector{Symbol}
     varlinearities_con::Vector{Symbol}
@@ -76,10 +76,10 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     conlinearities::Vector{Symbol}
     objlinearity::Symbol
 
-    v_index_map::Dict{Int64, Int64}
-    v_index_map_rev::Dict{Int64, Int64}
-    c_index_map::Dict{Int64, Int64}
-    c_index_map_rev::Dict{Int64, Int64}
+    v_index_map::Dict{Int, Int}
+    v_index_map_rev::Dict{Int, Int}
+    c_index_map::Dict{Int, Int}
+    c_index_map_rev::Dict{Int, Int}
 
     sense::Symbol
 
@@ -92,8 +92,8 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     solution::Vector{Float64}
 
     status::Symbol
-    solve_exitcode::Int64
-    solve_result_num::Int64
+    solve_exitcode::Int
+    solve_result_num::Int
     solve_result::AbstractString
     solve_message::AbstractString
 
@@ -111,19 +111,19 @@ type AmplNLMathProgModel <: AbstractMathProgModel
             0,
             :(0),
             [],
-            Dict{Int64, Float64}[],
-            Dict{Int64, Float64}(),
-            Int64[],
-            Int64[],
+            Dict{Int, Float64}[],
+            Dict{Int, Float64}(),
+            Int[],
+            Int[],
             Symbol[],
             Symbol[],
             Symbol[],
             Symbol[],
             :Lin,
-            Dict{Int64, Int64}(),
-            Dict{Int64, Int64}(),
-            Dict{Int64, Int64}(),
-            Dict{Int64, Int64}(),
+            Dict{Int, Int}(),
+            Dict{Int, Int}(),
+            Dict{Int, Int}(),
+            Dict{Int, Int}(),
             :Min,
             zeros(0),
             "",
@@ -274,10 +274,10 @@ function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
     m.g_l, m.g_u = g_l, g_u
     m.sense = sense
 
-    m.lin_constrs = [Dict{Int64, Float64}() for _ in 1:m.ncon]
-    m.j_counts = zeros(Int64, m.nvar)
+    m.lin_constrs = [Dict{Int, Float64}() for _ in 1:m.ncon]
+    m.j_counts = zeros(Int, m.nvar)
 
-    m.r_codes = Array(Int64, m.ncon)
+    m.r_codes = Array(Int, m.ncon)
 
     m.varlinearities_con = fill(:Lin, m.nvar)
     m.varlinearities_obj = fill(:Lin, m.nvar)
@@ -344,7 +344,7 @@ function MathProgBase.optimize!(m::AmplNLMathProgModel)
     end
 end
 
-function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int64, Float64},
+function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int, Float64},
                              varlinearities::Vector{Symbol})
     # Get list of all variables in the expression
     extract_variables!(lin_expr, nonlin_expr)
@@ -356,7 +356,7 @@ function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int64, Float64},
     nonlin_expr = convert_formula(tree)
 
     # Track which variables appear nonlinearly
-    nonlin_vars = Dict{Int64, Float64}()
+    nonlin_vars = Dict{Int, Float64}()
     extract_variables!(nonlin_vars, nonlin_expr)
     for j in keys(nonlin_vars)
         varlinearities[j] = :Nonlin
@@ -386,10 +386,10 @@ get_solve_message(m::AmplNLMathProgModel) = m.solve_message
 get_solve_exitcode(m::AmplNLMathProgModel) = m.solve_exitcode
 
 # We need to track linear coeffs of all variables present in the expression tree
-extract_variables!(lin_constr::Dict{Int64, Float64}, c) = c
-extract_variables!(lin_constr::Dict{Int64, Float64}, c::LinearityExpr) =
+extract_variables!(lin_constr::Dict{Int, Float64}, c) = c
+extract_variables!(lin_constr::Dict{Int, Float64}, c::LinearityExpr) =
     extract_variables!(lin_constr, c.c)
-function extract_variables!(lin_constr::Dict{Int64, Float64}, c::Expr)
+function extract_variables!(lin_constr::Dict{Int, Float64}, c::Expr)
     if c.head == :ref
         if c.args[1] == :x
             @assert isa(c.args[2], Int)
@@ -406,11 +406,11 @@ add_constant(c, constant::Real) = c + constant
 add_constant(c::Expr, constant::Real) = Expr(:call, :+, c, constant)
 
 function make_var_index!(m::AmplNLMathProgModel)
-    nonlin_cont = Int64[]
-    nonlin_int = Int64[]
-    lin_cont = Int64[]
-    lin_int = Int64[]
-    lin_bin = Int64[]
+    nonlin_cont = Int[]
+    nonlin_int = Int[]
+    lin_cont = Int[]
+    lin_int = Int[]
+    lin_bin = Int[]
 
     for i in 1:m.nvar
         if m.varlinearities_obj[i] == :Nonlin ||
@@ -438,8 +438,8 @@ function make_var_index!(m::AmplNLMathProgModel)
 end
 
 function make_con_index!(m::AmplNLMathProgModel)
-    nonlin_cons = Int64[]
-    lin_cons = Int64[]
+    nonlin_cons = Int[]
+    lin_cons = Int[]
 
     for i in 1:m.ncon
         if m.conlinearities[i] == :Nonlin
@@ -453,9 +453,9 @@ function make_con_index!(m::AmplNLMathProgModel)
     end
 end
 
-function add_to_index_maps!(forward_map::Dict{Int64, Int64},
-                            backward_map::Dict{Int64, Int64},
-                            inds::Array{Int64})
+function add_to_index_maps!(forward_map::Dict{Int, Int},
+                            backward_map::Dict{Int, Int},
+                            inds::Array{Int})
     for i in inds
         # Indices are 0-prefixed so the next index is the current dict length
         index = length(forward_map)
@@ -634,7 +634,7 @@ function substitute_vars!(c::Expr, x::Array{Float64})
     c
 end
 
-function evaluate_linear(linear_coeffs::Dict{Int64, Float64}, x::Array{Float64})
+function evaluate_linear(linear_coeffs::Dict{Int, Float64}, x::Array{Float64})
     total = 0.0
     for (i, coeff) in linear_coeffs
         total += coeff * x[i]
