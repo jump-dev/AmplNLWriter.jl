@@ -1,0 +1,30 @@
+language: julia
+os:
+  - linux
+  - osx
+julia:
+  - 0.3
+  - 0.4
+  - nightly
+notifications:
+  email: false
+sudo: false
+cache:
+  directories:
+  - $HOME/usr
+addons:
+  apt_packages:
+  - gfortran
+env:
+  - MAKEFLAGS="-j3"
+    LD_LIBRARY_PATH=$HOME/usr/lib
+# Override the default test script
+# We need to add `Cbc`, `Ipopt` and `CoinOptServices` manually so we can cache
+# them after the tests have run
+script:
+ - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+ - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.add("Cbc"); Pkg.add("Ipopt"); Pkg.add("CoinOptServices"); Pkg.test("AmplNLWriter")'
+before_cache:
+  - cp -R $HOME/.julia/*/Cbc/deps/usr $HOME
+  - cp -R $HOME/.julia/*/Ipopt/deps/usr $HOME
+  - cp -R $HOME/.julia/*/CoinOptServices/deps/usr $HOME
