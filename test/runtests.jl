@@ -25,6 +25,11 @@ for solver in solvers
                 include(joinpath(examples_path, example))
             end
         end
+        if solvername == "ipopt"
+            for example in ["jump_maxmin.jl"]
+                include(joinpath(examples_path, example))
+            end
+        end
     end
 end
 
