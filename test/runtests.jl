@@ -6,11 +6,11 @@ include("nl_linearity.jl")
 
 solver = JuMP.UnsetSolver()
 solvers = Any[]
-push!(solvers, BonminNLSolver(@compat Dict("bonmin.nlp_log_level"=>0,
+push!(solvers, BonminNLSolver(Dict("bonmin.nlp_log_level"=>0,
                                            "bonmin.bb_log_level"=>0)))
-push!(solvers, CouenneNLSolver(@compat Dict("bonmin.nlp_log_level"=>0,
+push!(solvers, CouenneNLSolver(Dict("bonmin.nlp_log_level"=>0,
                                             "bonmin.bb_log_level"=>0)))
-push!(solvers, IpoptNLSolver(@compat Dict("print_level"=>0)))
+push!(solvers, IpoptNLSolver(Dict("print_level"=>0)))
 
 examples_path = joinpath(dirname(dirname(@__FILE__)), "examples")
 for solver in solvers
@@ -33,7 +33,7 @@ for solver in solvers
     end
 end
 
-include(Pkg.dir("JuMP","test","solvers.jl"))
+include(Pkg.dir("JuMP","test","solvers.jl")) # on JuMP 0.10, these assume Compat is loaded
 include(Pkg.dir("JuMP","test","nonlinear.jl"))
 
 FactCheck.exitstatus()

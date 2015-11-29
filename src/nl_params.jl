@@ -1,4 +1,4 @@
-const func_to_nl = @compat Dict(
+const func_to_nl = Dict(
 :+ => 0,
 :- => 1,
 :* => 2,
@@ -55,19 +55,19 @@ const func_to_nl = @compat Dict(
 # :alldiff => 74,
 )
 
-const sense_to_nl = @compat Dict(
+const sense_to_nl = Dict(
 :Min => 0,
 :Max => 1,
 )
 
-const relation_to_nl = @compat Dict(
+const relation_to_nl = Dict(
 :multiple => 0,
 :<=       => 1,
 :>=       => 2,
 :(==)     => 4,
 )
 
-const reverse_relation = @compat Dict(
+const reverse_relation = Dict(
 :0 => 0,
 :1 => 2,
 :2 => 1,

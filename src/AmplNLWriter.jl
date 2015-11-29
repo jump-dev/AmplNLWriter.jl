@@ -3,8 +3,6 @@ module AmplNLWriter
 using MathProgBase
 importall MathProgBase.SolverInterface
 
-using Compat
-
 include("nl_linearity.jl")
 include("nl_params.jl")
 include("nl_convert.jl")
@@ -598,9 +596,9 @@ function read_sol(m::AmplNLMathProgModel)
         num_vals = length(linevals)
         if num_vals > 0 && linevals[1] == "objno"
             # Check for objno == 0
-            @assert @compat parse(Int, linevals[2]) == 0
+            @assert parse(Int, linevals[2]) == 0
             # Get solve_result
-            m.solve_result_num = @compat parse(Int, linevals[3])
+            m.solve_result_num = parse(Int, linevals[3])
 
             # We can stop looking for the 'objno' line
             break
