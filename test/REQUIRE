@@ -2,3 +2,4 @@ FactCheck
 JuMP
 CoinOptServices 0.0.5
 Ipopt 0.1.15
+Compat
