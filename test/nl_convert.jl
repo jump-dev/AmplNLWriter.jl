@@ -54,5 +54,5 @@ facts("[nl_convert] check comparison expansion") do
     expr = :(1 < 2 < 3)
     @fact AmplNLWriter.convert_formula(expr) --> :(1 < 2 && 2 < 3)
     expr = :(1 < 2 < 3 < 4)
-    @fact AmplNLWriter.convert_formula(expr) --> :(1 < 2 && 2 < 3 && 3 < 4)
+    @fact AmplNLWriter.convert_formula(expr) --> :((1 < 2 && 2 < 3) && 3 < 4)
 end
