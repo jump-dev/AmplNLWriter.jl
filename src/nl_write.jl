@@ -1,6 +1,4 @@
-function write_nl_file(m::AmplNLMathProgModel)
-    f = open(m.probfile, "w")
-
+function write_nl_file(f::IO, m::AmplNLMathProgModel)
     write_nl_header(f, m)
 
     if m.ncon > 0
@@ -31,8 +29,6 @@ function write_nl_file(m::AmplNLMathProgModel)
     if m.obj != nothing
         write_nl_g_block(f, m)
     end
-
-    close(f)
 end
 
 function write_nl_header(f, m::AmplNLMathProgModel)

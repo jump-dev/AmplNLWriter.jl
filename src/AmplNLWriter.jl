@@ -3,6 +3,9 @@ module AmplNLWriter
 using MathProgBase
 importall MathProgBase.SolverInterface
 
+debug = false
+solverdata_dir = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata")
+
 include("nl_linearity.jl")
 include("nl_params.jl")
 include("nl_convert.jl")
@@ -335,26 +338,39 @@ function optimize!(m::AmplNLMathProgModel)
     make_var_index!(m)
     make_con_index!(m)
 
-    m.probfile = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata", "model.nl")
-    m.solfile = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata", "model.sol")
+    # Write the problem to a randomly named file
+    file_basepath, probfile_temp = mktemp(solverdata_dir)
+    write_nl_file(probfile_temp, m)
+    close(probfile_temp)
 
-    write_nl_file(m)
+    # Rename file to have .nl extension (this is required by solvers)
+    m.probfile = "$file_basepath.nl"
+    mv(file_basepath, m.probfile)
 
     # Construct keyword params
     options = ["$name=$value" for (name, value) in m.options]
 
     # Run solver and save exitcode
-    proc = spawn(pipeline(`$(m.solver_command) $(m.probfile) -AMPL $options`, stdout=STDOUT))
+    proc = spawn(pipeline(`$(m.solver_command) $(m.probfile) -AMPL $options`,
+                          stdout=STDOUT))
     wait(proc)
     kill(proc)
     m.solve_exitcode = proc.exitcode
 
     if m.solve_exitcode == 0
+        m.solfile = "$file_basepath.sol"
         read_results(m)
     else
         m.status = :Error
         m.solve_result = "failure"
         m.solve_result_num = 999
+    end
+
+    # Clean up temp files
+    if !debug
+        for temp_file in [m.probfile; m.solfile]
+            isfile(temp_file) && rm(temp_file)
+        end
     end
 end
 
@@ -622,6 +638,8 @@ function read_sol(m::AmplNLMathProgModel)
             break
         end
     end
+
+    close(f)
     return num_vars_to_read > 0
 end
 
@@ -666,6 +684,14 @@ end
 for f in [:setvartype!,:setsense!,:setwarmstart!]
     @eval $f(m::AmplNLNonlinearModel, x) = $f(m.inner, x)
     @eval $f(m::AmplNLLinearQuadraticModel, x) = $f(m.inner, x)
+end
+
+# Utility method for deleting any leftover debug files
+function clean_solverdata()
+    for file in readdir(solverdata_dir)
+        ext = splitext(file)[2]
+        (ext == ".nl" || ext == ".sol") && rm(joinpath(solverdata_dir, file))
+    end
 end
 
 end
