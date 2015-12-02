@@ -3,6 +3,7 @@ using Base.Test
 
 include("nl_convert.jl")
 include("nl_linearity.jl")
+include("nl_write.jl")
 
 solver = JuMP.UnsetSolver()
 solvers = Any[]
