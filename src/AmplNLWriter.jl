@@ -135,24 +135,36 @@ type AmplNLMathProgModel <: AbstractMathProgModel
             "")
     end
 end
+type AmplNLLinearQuadraticModel <: AbstractLinearQuadraticModel
+    inner::AmplNLMathProgModel
+end
+type AmplNLNonlinearModel <: AbstractNonlinearModel
+    inner::AmplNLMathProgModel
+end
 
 include("nl_write.jl")
 
-MathProgBase.model(s::AmplNLSolver) = AmplNLMathProgModel(s.solver_command,
-                                                          s.options)
+NonlinearModel(s::AmplNLSolver) = AmplNLNonlinearModel(
+    AmplNLMathProgModel(s.solver_command, s.options)
+)
+LinearQuadraticModel(s::AmplNLSolver) = AmplNLLinearQuadraticModel(
+    AmplNLMathProgModel(s.solver_command, s.options)
+)
 
-function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
-    nvar, ncon, x_l, x_u, g_l, g_u, sense, d::MathProgBase.AbstractNLPEvaluator)
+function loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer, ncon::Integer,
+                      x_l, x_u, g_l, g_u, sense::Symbol,
+                      d::AbstractNLPEvaluator)
+    m = outer.inner
 
     m.nvar, m.ncon = nvar, ncon
     loadcommon!(m, x_l, x_u, g_l, g_u, sense)
 
     m.d = d
-    MathProgBase.initialize(m.d, [:ExprGraph])
+    initialize(m.d, [:ExprGraph])
 
     # Process constraints
     m.constrs = map(1:m.ncon) do i
-        c = MathProgBase.constr_expr(m.d, i)
+        c = constr_expr(m.d, i)
 
         # Remove relations and bounds from constraint expressions
         @assert c.head == :comparison
@@ -190,7 +202,7 @@ function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
     end
 
     # Process objective
-    m.obj = MathProgBase.obj_expr(m.d)
+    m.obj = obj_expr(m.d)
     if length(m.obj.args) < 2
         m.obj = nothing
     else
@@ -206,13 +218,15 @@ function MathProgBase.loadnonlinearproblem!(m::AmplNLMathProgModel,
     m
 end
 
-function MathProgBase.loadproblem!(m::AmplNLMathProgModel, A, x_l, x_u, c, g_l,
-                                   g_u, sense)
+function loadproblem!(outer::AmplNLLinearQuadraticModel, A::AbstractMatrix,
+                      x_l, x_u, c, g_l, g_u, sense)
+    m = outer.inner
     m.ncon, m.nvar = size(A)
 
     loadcommon!(m, x_l, x_u, g_l, g_u, sense)
 
     # Load A into the linear constraints
+    @assert (m.ncon, m.nvar) == size(A)
     load_A!(m, A)
     m.constrs = zeros(m.ncon)  # Dummy constraint expression trees
 
@@ -246,7 +260,6 @@ function MathProgBase.loadproblem!(m::AmplNLMathProgModel, A, x_l, x_u, c, g_l,
 end
 
 function load_A!(m::AmplNLMathProgModel, A::SparseMatrixCSC{Float64})
-    @assert (m.ncon, m.nvar) == size(A)
     for var = 1:A.n, k = A.colptr[var] : (A.colptr[var + 1] - 1)
         m.lin_constrs[A.rowval[k]][var] = A.nzval[k]
         m.j_counts[var] += 1
@@ -254,7 +267,6 @@ function load_A!(m::AmplNLMathProgModel, A::SparseMatrixCSC{Float64})
 end
 
 function load_A!(m::AmplNLMathProgModel, A::Matrix{Float64})
-    @assert (m.ncon, m.nvar) == size(A)
     for con = 1:m.ncon, var = 1:m.nvar
         val = A[con, var]
         if val != 0
@@ -270,7 +282,7 @@ function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
 
     m.x_l, m.x_u = x_l, x_u
     m.g_l, m.g_u = g_l, g_u
-    m.sense = sense
+    setsense!(m, sense)
 
     m.lin_constrs = [Dict{Int, Float64}() for _ in 1:m.ncon]
     m.j_counts = zeros(Int, m.nvar)
@@ -286,17 +298,21 @@ function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
     m.x_0 = zeros(m.nvar)
 end
 
-MathProgBase.getvartype(m::AmplNLMathProgModel) = copy(m.vartypes)
-function MathProgBase.setvartype!(m::AmplNLMathProgModel, cat::Vector{Symbol})
+getvartype(m::AmplNLMathProgModel) = copy(m.vartypes)
+function setvartype!(m::AmplNLMathProgModel, cat::Vector{Symbol})
     @assert all(x-> (x in [:Cont,:Bin,:Int]), cat)
     m.vartypes = copy(cat)
 end
 
-function MathProgBase.setwarmstart!(m::AmplNLMathProgModel, v::Vector{Float64})
-    m.x_0 = v
+getsense(m::AmplNLMathProgModel) = m.sense
+function setsense!(m::AmplNLMathProgModel, sense::Symbol)
+    @assert sense == :Min || sense == :Max
+    m.sense = sense
 end
 
-function MathProgBase.optimize!(m::AmplNLMathProgModel)
+setwarmstart!(m::AmplNLMathProgModel, v::Vector{Float64}) = m.x_0 = v
+
+function optimize!(m::AmplNLMathProgModel)
     m.status = :NotSolved
     m.solve_exitcode = -1
     m.solve_result_num = -1
@@ -373,9 +389,11 @@ function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int, Float64},
     return nonlin_expr, constant, linearity
 end
 
-MathProgBase.status(m::AmplNLMathProgModel) = m.status
-MathProgBase.getsolution(m::AmplNLMathProgModel) = copy(m.solution)
-MathProgBase.getobjval(m::AmplNLMathProgModel) = m.objval
+status(m::AmplNLMathProgModel) = m.status
+getsolution(m::AmplNLMathProgModel) = copy(m.solution)
+getobjval(m::AmplNLMathProgModel) = m.objval
+numvar(m::AmplNLMathProgModel) = m.nvar
+numconstr(m::AmplNLMathProgModel) = m.ncon
 
 # Access to AMPL solve result items
 get_solve_result(m::AmplNLMathProgModel) = m.solve_result
@@ -638,6 +656,16 @@ function evaluate_linear(linear_coeffs::Dict{Int, Float64}, x::Array{Float64})
         total += coeff * x[i]
     end
     total
+end
+
+# Wrapper functions
+for f in [:getvartype,:getsense,:optimize!,:status,:getsolution,:getobjval,:numvar,:numconstr,:get_solve_result,:get_solve_result_num,:get_solve_message,:get_solve_exitcode]
+    @eval $f(m::AmplNLNonlinearModel) = $f(m.inner)
+    @eval $f(m::AmplNLLinearQuadraticModel) = $f(m.inner)
+end
+for f in [:setvartype!,:setsense!,:setwarmstart!]
+    @eval $f(m::AmplNLNonlinearModel, x) = $f(m.inner, x)
+    @eval $f(m::AmplNLLinearQuadraticModel, x) = $f(m.inner, x)
 end
 
 end
