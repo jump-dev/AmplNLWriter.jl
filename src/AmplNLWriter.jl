@@ -34,20 +34,17 @@ function AmplNLSolver(solver_command::AbstractString,
     AmplNLSolver(solver_command, options, filename)
 end
 
-function BonminNLSolver(options::Vector{ASCIIString}=ASCIIString[];
-                        filename::AbstractString="")
+function BonminNLSolver(options=ASCIIString[]; filename::AbstractString="")
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
     AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
 end
-function CouenneNLSolver(options::Vector{ASCIIString}=ASCIIString[];
-                         filename::AbstractString="")
+function CouenneNLSolver(options=ASCIIString[]; filename::AbstractString="")
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
     AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
 end
-function IpoptNLSolver(options::Vector{ASCIIString}=ASCIIString[];
-                       filename::AbstractString="")
+function IpoptNLSolver(options=ASCIIString[]; filename::AbstractString="")
     ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
     AmplNLSolver(Ipopt.amplexe, options; filename=filename)
 end
@@ -154,6 +151,7 @@ type AmplNLNonlinearModel <: AbstractNonlinearModel
 end
 
 include("nl_write.jl")
+include("deprecated.jl")
 
 NonlinearModel(s::AmplNLSolver) = AmplNLNonlinearModel(
     AmplNLMathProgModel(s.solver_command, s.options, s.filename)
