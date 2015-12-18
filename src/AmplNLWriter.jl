@@ -3,6 +3,11 @@ module AmplNLWriter
 using MathProgBase
 importall MathProgBase.SolverInterface
 
+debug = false
+setdebug(b::Bool) = global debug = b
+
+solverdata_dir = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata")
+
 include("nl_linearity.jl")
 include("nl_params.jl")
 include("nl_convert.jl")
@@ -14,11 +19,7 @@ export AmplNLSolver, BonminNLSolver, CouenneNLSolver, IpoptNLSolver,
 immutable AmplNLSolver <: AbstractMathProgSolver
     solver_command::AbstractString
     options::Dict{ASCIIString, Any}
-
-    function AmplNLSolver(solver_command,
-                          options=Dict{ASCIIString, Any}())
-        new(solver_command, options)
-    end
+    filename::AbstractString
 end
 
 osl = isdir(Pkg.dir("CoinOptServices"))
@@ -27,21 +28,28 @@ ipt = isdir(Pkg.dir("Ipopt"))
 if osl; import CoinOptServices; end
 if ipt; import Ipopt; end
 
-function BonminNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
-    osl || error("CoinOptServices not installed. Please run\n",
-                 "Pkg.add(\"CoinOptServices\")")
-    AmplNLSolver(CoinOptServices.bonmin, options)
+function AmplNLSolver(solver_command::AbstractString,
+                      options=Dict{ASCIIString, Any}();
+                      filename::AbstractString="")
+    AmplNLSolver(solver_command, options, filename)
 end
 
-function CouenneNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
+function BonminNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}();
+                        filename::AbstractString="")
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
-    AmplNLSolver(CoinOptServices.couenne, options)
+    AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
 end
-
-function IpoptNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}())
+function CouenneNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}();
+                         filename::AbstractString="")
+    osl || error("CoinOptServices not installed. Please run\n",
+                 "Pkg.add(\"CoinOptServices\")")
+    AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
+end
+function IpoptNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}();
+                       filename::AbstractString="")
     ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
-    AmplNLSolver(Ipopt.amplexe, options)
+    AmplNLSolver(Ipopt.amplexe, options; filename=filename)
 end
 
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)
@@ -83,6 +91,7 @@ type AmplNLMathProgModel <: AbstractMathProgModel
 
     x_0::Vector{Float64}
 
+    file_basename::AbstractString
     probfile::AbstractString
     solfile::AbstractString
 
@@ -98,7 +107,8 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     d::AbstractNLPEvaluator
 
     function AmplNLMathProgModel(solver_command::AbstractString,
-                                 options::Dict{ASCIIString, Any})
+                                 options::Dict{ASCIIString, Any},
+                                 filename::AbstractString)
         new(options,
             solver_command,
             zeros(0),
@@ -124,6 +134,7 @@ type AmplNLMathProgModel <: AbstractMathProgModel
             Dict{Int, Int}(),
             :Min,
             zeros(0),
+            filename,
             "",
             "",
             NaN,
@@ -145,10 +156,10 @@ end
 include("nl_write.jl")
 
 NonlinearModel(s::AmplNLSolver) = AmplNLNonlinearModel(
-    AmplNLMathProgModel(s.solver_command, s.options)
+    AmplNLMathProgModel(s.solver_command, s.options, s.filename)
 )
 LinearQuadraticModel(s::AmplNLSolver) = AmplNLLinearQuadraticModel(
-    AmplNLMathProgModel(s.solver_command, s.options)
+    AmplNLMathProgModel(s.solver_command, s.options, s.filename)
 )
 
 function loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer, ncon::Integer,
@@ -335,16 +346,28 @@ function optimize!(m::AmplNLMathProgModel)
     make_var_index!(m)
     make_con_index!(m)
 
-    m.probfile = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata", "model.nl")
-    m.solfile = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata", "model.sol")
+    if length(m.file_basename) == 0
+        # No filename specified - write to a randomly named file
+        file_basepath, f_prob = mktemp(solverdata_dir)
+    else
+        file_basepath = joinpath(solverdata_dir, "$(m.file_basename)")
+        f_prob = open(file_basepath, "w")
+    end
+    m.probfile = "$file_basepath.nl"
+    m.solfile = "$file_basepath.sol"
 
-    write_nl_file(m)
+    write_nl_file(f_prob, m)
+    close(f_prob)
+
+    # Rename file to have .nl extension (this is required by solvers)
+    mv(file_basepath, m.probfile)
 
     # Construct keyword params
     options = ["$name=$value" for (name, value) in m.options]
 
     # Run solver and save exitcode
-    proc = spawn(pipeline(`$(m.solver_command) $(m.probfile) -AMPL $options`, stdout=STDOUT))
+    proc = spawn(pipeline(`$(m.solver_command) $(m.probfile) -AMPL $options`,
+                          stdout=STDOUT))
     wait(proc)
     kill(proc)
     m.solve_exitcode = proc.exitcode
@@ -355,6 +378,13 @@ function optimize!(m::AmplNLMathProgModel)
         m.status = :Error
         m.solve_result = "failure"
         m.solve_result_num = 999
+    end
+
+    # Clean up temp files
+    if !debug
+        for temp_file in [m.probfile; m.solfile]
+            isfile(temp_file) && rm(temp_file)
+        end
     end
 end
 
@@ -622,6 +652,8 @@ function read_sol(m::AmplNLMathProgModel)
             break
         end
     end
+
+    close(f)
     return num_vars_to_read > 0
 end
 
@@ -666,6 +698,14 @@ end
 for f in [:setvartype!,:setsense!,:setwarmstart!]
     @eval $f(m::AmplNLNonlinearModel, x) = $f(m.inner, x)
     @eval $f(m::AmplNLLinearQuadraticModel, x) = $f(m.inner, x)
+end
+
+# Utility method for deleting any leftover debug files
+function clean_solverdata()
+    for file in readdir(solverdata_dir)
+        ext = splitext(file)[2]
+        (ext == ".nl" || ext == ".sol") && rm(joinpath(solverdata_dir, file))
+    end
 end
 
 end
