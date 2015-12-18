@@ -18,7 +18,7 @@ export AmplNLSolver, BonminNLSolver, CouenneNLSolver, IpoptNLSolver,
 
 immutable AmplNLSolver <: AbstractMathProgSolver
     solver_command::AbstractString
-    options::Dict{ASCIIString, Any}
+    options::Vector{ASCIIString}
     filename::AbstractString
 end
 
@@ -29,24 +29,24 @@ if osl; import CoinOptServices; end
 if ipt; import Ipopt; end
 
 function AmplNLSolver(solver_command::AbstractString,
-                      options=Dict{ASCIIString, Any}();
+                      options::Vector{ASCIIString}=ASCIIString[];
                       filename::AbstractString="")
     AmplNLSolver(solver_command, options, filename)
 end
 
-function BonminNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}();
+function BonminNLSolver(options::Vector{ASCIIString}=ASCIIString[];
                         filename::AbstractString="")
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
     AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
 end
-function CouenneNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}();
+function CouenneNLSolver(options::Vector{ASCIIString}=ASCIIString[];
                          filename::AbstractString="")
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
     AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
 end
-function IpoptNLSolver(options::Dict{ASCIIString,}=Dict{ASCIIString, Any}();
+function IpoptNLSolver(options::Vector{ASCIIString}=ASCIIString[];
                        filename::AbstractString="")
     ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
     AmplNLSolver(Ipopt.amplexe, options; filename=filename)
@@ -55,7 +55,7 @@ end
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)
 
 type AmplNLMathProgModel <: AbstractMathProgModel
-    options::Dict{ASCIIString, Any}
+    options::Vector{ASCIIString}
 
     solver_command::AbstractString
 
@@ -107,7 +107,7 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     d::AbstractNLPEvaluator
 
     function AmplNLMathProgModel(solver_command::AbstractString,
-                                 options::Dict{ASCIIString, Any},
+                                 options::Vector{ASCIIString},
                                  filename::AbstractString)
         new(options,
             solver_command,
@@ -362,12 +362,9 @@ function optimize!(m::AmplNLMathProgModel)
     # Rename file to have .nl extension (this is required by solvers)
     mv(file_basepath, m.probfile)
 
-    # Construct keyword params
-    options = ["$name=$value" for (name, value) in m.options]
-
     # Run solver and save exitcode
-    proc = spawn(pipeline(`$(m.solver_command) $(m.probfile) -AMPL $options`,
-                          stdout=STDOUT))
+    proc = spawn(pipeline(
+        `$(m.solver_command) $(m.probfile) -AMPL $(m.options)`, stdout=STDOUT))
     wait(proc)
     kill(proc)
     m.solve_exitcode = proc.exitcode
