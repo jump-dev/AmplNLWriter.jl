@@ -1,5 +1,10 @@
 # AmplNLWriter.jl
 
+Linux, OSX: [![Build Status](https://travis-ci.org/JuliaOpt/AmplNLWriter.jl.svg?branch=master)](https://travis-ci.org/JuliaOpt/AmplNLWriter.jl)
+
+Windows: [![Build Status](https://ci.appveyor.com/api/projects/status/github/JuliaOpt/AmplNLWriter.jl?branch=master&svg=true)](https://ci.appveyor.com/project/jackdunnnz/amplnlwriter-jl/branch/master)
+
+
 This [Julia](https://github.com/JuliaLang/julia) package is an interface between [MathProgBase.jl](https://github.com/JuliaOpt/MathProgBase.jl) and [AMPL-enabled](http://www.ampl.com) [solvers](http://ampl.com/products/solvers/all-solvers-for-ampl/). It is similar in nature to [CoinOptServices.jl](https://github.com/tkelman/CoinOptServices.jl), but instead uses AMPL's low-level [.nl](https://en.wikipedia.org/wiki/Nl_%28format%29) file format.
 
 A list of AMPL-enabled solvers is available [here](http://ampl.com/products/solvers/all-solvers-for-ampl/).
