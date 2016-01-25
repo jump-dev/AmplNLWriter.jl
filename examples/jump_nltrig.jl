@@ -8,6 +8,9 @@ using JuMP, FactCheck, AmplNLWriter
  #  The optimal objective value is 0
  ##
 
+# Allow resolving the model from multiple starts after NLP changes in JuMP 0.12
+EnableNLPResolve()
+
 if !isdefined(:solver); solver = CouenneNLSolver(); end
 
 m = Model(solver=solver)
