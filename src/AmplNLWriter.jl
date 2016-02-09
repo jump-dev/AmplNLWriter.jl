@@ -572,7 +572,7 @@ function read_sol(m::AmplNLMathProgModel)
     end
 
     # line == "Options" if solver messagae is empty or white space.
-    if line == "Options"
+    if strip(chomp(line)) == "Options"
         # Keep building solver message by reading until empty line
         while true
             m.solve_message *= line
