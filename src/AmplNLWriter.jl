@@ -563,23 +563,23 @@ function read_sol(m::AmplNLMathProgModel)
 
     f = open(m.solfile, "r")
     stat = :Undefined
-
-    # Throw away any empty lines at start
     line = ""
+
+    # Keep building solver message by reading until first truly empty line
     while true
         line = readline(f)
-        strip(chomp(line)) != "" && break
+        isempty(chomp(line)) && break
+        m.solve_message *= line
     end
 
-    # Keep building solver message by reading until empty line
+    # Skip over empty lines
     while true
-        m.solve_message *= line
         line = readline(f)
-        strip(chomp(line)) == "" && break
+        !isempty(chomp(line)) && break
     end
 
     # Read through all the options. Direct copy of reference implementation.
-    @assert chomp(readline(f)) == "Options"
+    @assert line[1:7] == "Options"
     options = [parse(Int, chomp(readline(f))) for _ in 1:3]
     num_options = options[1]
     3 <= num_options <= 9 || error("expected num_options between 3 and 9; " *
