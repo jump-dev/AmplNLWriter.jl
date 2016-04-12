@@ -10,8 +10,9 @@ eval(c::LinearityExpr) = eval(get_expr(c))
 Base.print(io::IO, c::LinearityExpr) = print(io::IO, "($(c.c),$(c.linearity))")
 Base.show(io::IO, c::LinearityExpr) = print(io::IO, "($(c.c),$(c.linearity))")
 
-LinearityExpr(c) = LinearityExpr(c, :unknown)
+LinearityExpr(c) = throw("Couldn't determine linearity of expression:\n$c")
 LinearityExpr(c::Real) = LinearityExpr(c, :const)
+LinearityExpr(c::LinearityExpr) = c  # Already processed; ignore!
 function LinearityExpr(c::Expr)
     if c.head == :call
         for i = 2:length(c.args)
