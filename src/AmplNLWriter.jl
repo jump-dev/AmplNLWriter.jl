@@ -28,6 +28,13 @@ ipt = isdir(Pkg.dir("Ipopt"))
 if osl; import CoinOptServices; end
 if ipt; import Ipopt; end
 
+function AmplNLSolver(solver_command::AbstractString;
+                      filename::AbstractString="")
+  AmplNLSolver(solver_command,
+               ASCIIString[],
+               filename=filename)
+end
+
 function AmplNLSolver(solver_command::AbstractString,
                       options::Vector{ASCIIString}=ASCIIString[];
                       filename::AbstractString="")
@@ -151,7 +158,6 @@ type AmplNLNonlinearModel <: AbstractNonlinearModel
 end
 
 include("nl_write.jl")
-include("deprecated.jl")
 
 NonlinearModel(s::AmplNLSolver) = AmplNLNonlinearModel(
     AmplNLMathProgModel(s.solver_command, s.options, s.filename)
