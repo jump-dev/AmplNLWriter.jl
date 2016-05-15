@@ -14,20 +14,20 @@ EnableNLPResolve()
 if !isdefined(:solver); solver = CouenneNLSolver(); end
 
 m = Model(solver=solver)
-@defVar(m, x[1:2])
+@variable(m, x[1:2])
 
-@setNLObjective(m, Min, (7 - (3*cosd(x[1]) + 5*cosd(x[2])))^2 + (0 - (3*sind(x[1]) + 5*sind(x[2])))^2)
+@NLobjective(m, Min, (7 - (3*cosd(x[1]) + 5*cosd(x[2])))^2 + (0 - (3*sind(x[1]) + 5*sind(x[2])))^2)
 
 context("example: jump_nltrig") do
-    setValue(x[1], 30)
-    setValue(x[2], -50)
+    setvalue(x[1], 30)
+    setvalue(x[2], -50)
     @fact solve(m) --> :Optimal
-    @fact getValue(x)[:] --> roughly([38.21321, -21.78678], 1e-5)
-    @fact getObjectiveValue(m) --> roughly(0.0, 1e-5)
+    @fact getvalue(x)[:] --> roughly([38.21321, -21.78678], 1e-5)
+    @fact getobjectivevalue(m) --> roughly(0.0, 1e-5)
     # Now try from the other side
-    setValue(x[1], -30)
-    setValue(x[2], 50)
+    setvalue(x[1], -30)
+    setvalue(x[2], 50)
     @fact solve(m) --> :Optimal
-    @fact getValue(x)[:] --> roughly([-38.21321, 21.78678], 1e-5)
-    @fact getObjectiveValue(m) --> roughly(0.0, 1e-5)
+    @fact getvalue(x)[:] --> roughly([-38.21321, 21.78678], 1e-5)
+    @fact getobjectivevalue(m) --> roughly(0.0, 1e-5)
 end

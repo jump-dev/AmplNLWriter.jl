@@ -9,24 +9,24 @@ m = Model(solver=solver)
 n = 30
 l = -ones(n); l[1] = 0
 u = ones(n)
-@defVar(m, l[i] <= x[i=1:n] <= u[i])
-@defNLExpr(m, f1, x[1])
-@defNLExpr(m, g, 1 + 9 * sum{x[j] ^ 2, j = 2:n} / (n - 1))
-@defNLExpr(m, h, 1 - (f1 / g) ^ 2)
-@defNLExpr(m, f2, g * h)
+@variable(m, l[i] <= x[i=1:n] <= u[i])
+@NLexpression(m, f1, x[1])
+@NLexpression(m, g, 1 + 9 * sum{x[j] ^ 2, j = 2:n} / (n - 1))
+@NLexpression(m, h, 1 - (f1 / g) ^ 2)
+@NLexpression(m, f2, g * h)
 
-setValue(x[1], 1)
-setValue(x[2:n], zeros(n - 1))
-@setNLObjective(m, :Min, f2)
+setvalue(x[1], 1)
+setvalue(x[2:n], zeros(n - 1))
+@NLobjective(m, :Min, f2)
 
 context("example: jump_nlexpr") do
     @fact solve(m) --> :Optimal
-    @fact getValue(x[1]) --> roughly(1.0, 1e-5)
-    @fact getValue(x[2:end]) --> roughly(zeros(n - 1), 1e-5)
-    @fact getValue(f1) --> roughly(1.0, 1e-5)
-    @fact getValue(f2) --> roughly(0.0, 1e-5)
-    @fact getValue(g) --> roughly(1.0, 1e-5)
-    @fact getValue(h) --> roughly(0.0, 1e-5)
-    @fact getObjectiveValue(m) --> roughly(0.0, 1e-5)
+    @fact getvalue(x[1]) --> roughly(1.0, 1e-5)
+    @fact getvalue(x[2:end]) --> roughly(zeros(n - 1), 1e-5)
+    @fact getvalue(f1) --> roughly(1.0, 1e-5)
+    @fact getvalue(f2) --> roughly(0.0, 1e-5)
+    @fact getvalue(g) --> roughly(1.0, 1e-5)
+    @fact getvalue(h) --> roughly(0.0, 1e-5)
+    @fact getobjectivevalue(m) --> roughly(0.0, 1e-5)
 end
 
