@@ -15,8 +15,8 @@ facts("[nl_write] Temp file handling") do
 
     solver = BonminNLSolver(filename=filename)
     m = Model(solver=solver)
-    @defVar(m, x >= 0)
-    @setObjective(m, Min, x)
+    @variable(m, x >= 0)
+    @objective(m, Min, x)
     solve(m)
 
     context("temp files present after solve in debug mode") do
