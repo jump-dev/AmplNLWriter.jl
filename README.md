@@ -9,7 +9,7 @@ This [Julia](https://github.com/JuliaLang/julia) package is an interface between
 
 A list of AMPL-enabled solvers is available [here](http://ampl.com/products/solvers/all-solvers-for-ampl/).
 
-*Development of AmplNLWriter.jl is community driven and not officially supported by AMPL.*
+*Development of AmplNLWriter.jl is community driven and has no official connection with the AMPL modeling language or AMPL Optimization Inc.*
 
 ## Installation
 
