@@ -30,6 +30,7 @@ m = Model(solver=solver)
 @NLconstraint(m, x[1] * x[2] - x[1] - x[2] <= 0)
 @NLconstraint(m, x[2] - x[1] * x[2] + x[1] <= 60)
 @NLconstraint(m, x[2] - x[1] + x[1] * x[2] <= 0)
+@NLconstraint(m, 0 <= 1.0)
 
 context("example: jump_pruning") do
     @fact solve(m) --> :Optimal
