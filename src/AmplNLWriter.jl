@@ -419,6 +419,11 @@ function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int, Float64},
 
     return nonlin_expr, constant, linearity
 end
+function process_expression!(nonlin_expr::Real, lin_expr, varlinearities)
+    # Special case where body of constraint is constant
+    # Return empty nonlinear and linear parts, and use the body as the constant
+    0, nonlin_expr, :Lin
+end
 
 status(m::AmplNLMathProgModel) = m.status
 getsolution(m::AmplNLMathProgModel) = copy(m.solution)

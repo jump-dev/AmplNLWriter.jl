@@ -169,11 +169,15 @@ end
 function write_nl_j_blocks(f, m::AmplNLMathProgModel)
     for index in 0:(m.ncon - 1)
         i = m.c_index_map_rev[index]
-        println(f, string("J$index ", length(m.lin_constrs[i])))
-        for index2 = 0:(m.nvar - 1)
-            j = m.v_index_map_rev[index2]
-            if j in keys(m.lin_constrs[i])
-                println(f, "$index2 $(m.lin_constrs[i][j])")
+        num_vars = length(m.lin_constrs[i])
+        # Only print linear blocks with vars, .nl file is malformed otherwise
+        if num_vars > 0
+            println(f, "J$index $num_vars")
+            for index2 = 0:(m.nvar - 1)
+                j = m.v_index_map_rev[index2]
+                if j in keys(m.lin_constrs[i])
+                    println(f, "$index2 $(m.lin_constrs[i][j])")
+                end
             end
         end
     end
