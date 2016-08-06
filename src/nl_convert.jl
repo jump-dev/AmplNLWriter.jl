@@ -9,6 +9,12 @@ function convert_formula(c::Expr)
         n = length(c.args)
         @assert isodd(n)
 
+        if VERSION >= v"0.5-"
+            # All :comparison now have more than two comparisons.
+            # When this becomes default, the `n > 3` test below can be removed
+            @assert(n > 3)
+        end
+
         # If more than binary comparison, we need to chain them together
         # Get binary comparisons in sequence and chain with nested &&
         # It looks like we might be able to use an n-ary &&, but that's not how
@@ -65,7 +71,12 @@ end
 function extract_binary_comparison(c::Expr, start::Integer)
     @assert c.head == :comparison
     @assert start <= length(c.args) - 2
-    Expr(:comparison, c.args[start], c.args[start + 1], c.args[start + 2])
+
+    if VERSION < v"0.5-"
+        Expr(:comparison, c.args[start], c.args[start + 1], c.args[start + 2])
+    else
+        Expr(:call, c.args[start + 1], c.args[start], c.args[start + 2])
+    end
 end
 
 const unary_special_cases = Dict(

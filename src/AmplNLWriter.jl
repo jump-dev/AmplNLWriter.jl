@@ -182,19 +182,31 @@ function loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer, ncon::Integer,
         c = constr_expr(m.d, i)
 
         # Remove relations and bounds from constraint expressions
-        @assert c.head == :comparison
         if length(c.args) == 3
+            if VERSION < v"0.5-"
+                expected_head = :comparison
+                expr_index = 1
+                rel_index = 2
+            else
+                expected_head = :call
+                expr_index = 2
+                rel_index = 1
+            end
+
+            @assert c.head == expected_head
             # Single relation constraint: expr rel bound
-            m.r_codes[i] = relation_to_nl[c.args[2]]
-            if c.args[2] == [:<=, :(==)]
+            rel = c.args[rel_index]
+            m.r_codes[i] = relation_to_nl[rel]
+            if rel == [:<=, :(==)]
                 m.g_u[i] = c.args[3]
             end
-            if c.args[2] in [:>=, :(==)]
+            if rel in [:>=, :(==)]
                 m.g_l[i] = c.args[3]
             end
-            c = c.args[1]
+            c = c.args[expr_index]
         else
             # Double relation constraint: bound <= expr <= bound
+            @assert c.head == :comparison
             m.r_codes[i] = relation_to_nl[:multiple]
             m.g_u[i] = c.args[5]
             m.g_l[i] = c.args[1]
