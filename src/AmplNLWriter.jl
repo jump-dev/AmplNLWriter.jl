@@ -107,6 +107,7 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     solve_result_num::Int
     solve_result::AbstractString
     solve_message::AbstractString
+    solve_time::Float64
 
     d::AbstractNLPEvaluator
 
@@ -147,7 +148,8 @@ type AmplNLMathProgModel <: AbstractMathProgModel
             -1,
             -1,
             "?",
-            "")
+            "",
+            NaN)
     end
 end
 type AmplNLLinearQuadraticModel <: AbstractLinearQuadraticModel
@@ -379,11 +381,13 @@ function optimize!(m::AmplNLMathProgModel)
     mv(file_basepath, m.probfile)
 
     # Run solver and save exitcode
+    t = time()
     proc = spawn(pipeline(
         `$(m.solver_command) $(m.probfile) -AMPL $(m.options)`, stdout=STDOUT))
     wait(proc)
     kill(proc)
     m.solve_exitcode = proc.exitcode
+    m.solve_time = time() - t
 
     if m.solve_exitcode == 0
         read_results(m)
@@ -442,6 +446,7 @@ getsolution(m::AmplNLMathProgModel) = copy(m.solution)
 getobjval(m::AmplNLMathProgModel) = m.objval
 numvar(m::AmplNLMathProgModel) = m.nvar
 numconstr(m::AmplNLMathProgModel) = m.ncon
+getsolvetime(m::AmplNLMathProgModel) = m.solve_time
 
 # Access to AMPL solve result items
 get_solve_result(m::AmplNLMathProgModel) = m.solve_result
@@ -709,7 +714,7 @@ function evaluate_linear(linear_coeffs::Dict{Int, Float64}, x::Array{Float64})
 end
 
 # Wrapper functions
-for f in [:getvartype,:getsense,:optimize!,:status,:getsolution,:getobjval,:numvar,:numconstr,:get_solve_result,:get_solve_result_num,:get_solve_message,:get_solve_exitcode]
+for f in [:getvartype,:getsense,:optimize!,:status,:getsolution,:getobjval,:numvar,:numconstr,:get_solve_result,:get_solve_result_num,:get_solve_message,:get_solve_exitcode,:getsolvetime]
     @eval $f(m::AmplNLNonlinearModel) = $f(m.inner)
     @eval $f(m::AmplNLLinearQuadraticModel) = $f(m.inner)
 end
