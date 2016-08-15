@@ -393,6 +393,7 @@ function optimize!(m::AmplNLMathProgModel)
         read_results(m)
     else
         m.status = :Error
+        m.solution = fill(NaN,m.nvar)
         m.solve_result = "failure"
         m.solve_result_num = 999
     end
