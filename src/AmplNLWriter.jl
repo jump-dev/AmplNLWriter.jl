@@ -72,9 +72,9 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     ncon::Int
 
     obj
-    constrs::Array{Any}
+    constrs::Vector{Any}
 
-    lin_constrs::Array{Dict{Int, Float64}}
+    lin_constrs::Vector{Dict{Int, Float64}}
     lin_obj::Dict{Int, Float64}
 
     r_codes::Vector{Int}
