@@ -173,11 +173,20 @@ function write_nl_j_blocks(f, m::AmplNLMathProgModel)
         # Only print linear blocks with vars, .nl file is malformed otherwise
         if num_vars > 0
             println(f, "J$index $num_vars")
-            for index2 = 0:(m.nvar - 1)
-                j = m.v_index_map_rev[index2]
-                if j in keys(m.lin_constrs[i])
-                    println(f, "$index2 $(m.lin_constrs[i][j])")
-                end
+
+            # We need to output .nl index and constraint coeff, ordered by .nl
+            # index. `lin_constrs` contains our variable index as the key and
+            # constraint coeff as the value
+
+            # Assemble tuples of (.nl index, constraint value)
+            output = collect(zip(
+                map(j->m.v_index_map[j], keys(m.lin_constrs[i])),
+                values(m.lin_constrs[i]))
+            )
+
+            # Loop through output in .nl index order
+            for (index2, value) in sort(output)
+                println(f, "$index2 $value")
             end
         end
     end
