@@ -5,7 +5,7 @@ function write_nl_file(f::IO, m::AmplNLMathProgModel)
         write_nl_c_blocks(f, m)
     end
 
-    if m.obj != nothing
+    if has_objective(m)
         write_nl_o_block(f, m)
     end
 
@@ -26,17 +26,23 @@ function write_nl_file(f::IO, m::AmplNLMathProgModel)
         write_nl_j_blocks(f, m)
     end
 
-    if m.obj != nothing
+    if has_objective(m)
         write_nl_g_block(f, m)
     end
+end
+
+function has_objective(m::AmplNLMathProgModel)
+    return !isempty(m.lin_obj) || (isa(m.obj, Expr))
 end
 
 function write_nl_header(f, m::AmplNLMathProgModel)
     # Line 1: Always the same
     println(f, "g3 1 1 0")
     # Line 2: vars, constraints, objectives, ranges, eqns, logical constraints
-    num_ranges = sum(m.r_codes .!= 4)
-    println(f, " $(m.nvar) $(m.ncon) 1 $num_ranges $(m.ncon - num_ranges) 0")
+    n_ranges = sum(m.r_codes .== 0)
+    n_eqns = sum(m.r_codes .== 4)
+    nobj = has_objective(m) ? 1 : 0
+    println(f, " $(m.nvar) $(m.ncon) $nobj $n_ranges $n_eqns 0")
     # Line 3: nonlinear constraints, objectives
     nlc = sum(m.conlinearities .== :Nonlin)
     nlo = m.objlinearity == :Nonlin ? 1 : 0
