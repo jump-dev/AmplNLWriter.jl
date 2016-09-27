@@ -234,7 +234,7 @@ function loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer, ncon::Integer,
     # Process objective
     m.obj = obj_expr(m.d)
     if length(m.obj.args) < 2
-        m.obj = nothing
+        m.obj = 0
     else
         # Convert non-linear expression to non-linear, linear and constant
         m.obj, constant, m.objlinearity = process_expression!(
