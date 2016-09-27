@@ -21,13 +21,13 @@ examples_path = joinpath(dirname(dirname(@__FILE__)), "examples")
 for solver in solvers
     solvername = getsolvername(solver)
     facts("[examples] test solver $solvername") do
-        for example in ["jump_nltrig.jl", "jump_nlexpr.jl", "jump_no_obj.jl",
-                        "jump_const_obj.jl"]
+        for example in ["jump_nltrig.jl", "jump_nlexpr.jl"]
             include(joinpath(examples_path, example))
         end
         if solvername != "ipopt"
             for example in ["jump_pruning.jl", "jump_minlp.jl",
-                            "jump_nonlinearbinary.jl"]
+                            "jump_nonlinearbinary.jl", "jump_no_obj.jl",
+                            "jump_const_obj.jl"]
                 include(joinpath(examples_path, example))
             end
         end
