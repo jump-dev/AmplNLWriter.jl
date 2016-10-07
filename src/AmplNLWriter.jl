@@ -580,6 +580,15 @@ function read_results(m::AmplNLMathProgModel)
     end
 
     if did_read_solution
+        if m.objlinearity == :Nonlin
+            # Try to use NLPEvaluator if we can.
+            # Can fail due to unsupported functions so fallback to eval
+            try
+                m.objval = eval_f(m.d, m.solution)
+                return
+            end
+        end
+
         # Calculate objective value from nonlinear and linear parts
         obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
         obj_lin = evaluate_linear(m.lin_obj, m.solution)
