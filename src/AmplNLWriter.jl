@@ -18,9 +18,9 @@ export AmplNLSolver, BonminNLSolver, CouenneNLSolver, IpoptNLSolver,
        getsolveexitcode
 
 immutable AmplNLSolver <: AbstractMathProgSolver
-    solver_command::AbstractString
-    options::Vector{ASCIIString}
-    filename::AbstractString
+    solver_command::String
+    options::Vector{String}
+    filename::String
 end
 
 osl = isdir(Pkg.dir("CoinOptServices"))
@@ -29,30 +29,23 @@ ipt = isdir(Pkg.dir("Ipopt"))
 if osl; import CoinOptServices; end
 if ipt; import Ipopt; end
 
-function AmplNLSolver(solver_command::AbstractString;
-                      filename::AbstractString="")
-  AmplNLSolver(solver_command,
-               ASCIIString[],
-               filename=filename)
-end
-
-function AmplNLSolver(solver_command::AbstractString,
-                      options::Vector{ASCIIString}=ASCIIString[];
-                      filename::AbstractString="")
+function AmplNLSolver(solver_command::String,
+                      options::Vector{String}=String[];
+                      filename::String="")
     AmplNLSolver(solver_command, options, filename)
 end
 
-function BonminNLSolver(options=ASCIIString[]; filename::AbstractString="")
+function BonminNLSolver(options=String[]; filename::String="")
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
     AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
 end
-function CouenneNLSolver(options=ASCIIString[]; filename::AbstractString="")
+function CouenneNLSolver(options=String[]; filename::String="")
     osl || error("CoinOptServices not installed. Please run\n",
                  "Pkg.add(\"CoinOptServices\")")
     AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
 end
-function IpoptNLSolver(options=ASCIIString[]; filename::AbstractString="")
+function IpoptNLSolver(options=String[]; filename::String="")
     ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
     AmplNLSolver(Ipopt.amplexe, options; filename=filename)
 end
@@ -60,9 +53,9 @@ end
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)
 
 type AmplNLMathProgModel <: AbstractMathProgModel
-    options::Vector{ASCIIString}
+    options::Vector{String}
 
-    solver_command::AbstractString
+    solver_command::String
 
     x_l::Vector{Float64}
     x_u::Vector{Float64}
@@ -96,9 +89,9 @@ type AmplNLMathProgModel <: AbstractMathProgModel
 
     x_0::Vector{Float64}
 
-    file_basename::AbstractString
-    probfile::AbstractString
-    solfile::AbstractString
+    file_basename::String
+    probfile::String
+    solfile::String
 
     objval::Float64
     solution::Vector{Float64}
@@ -106,15 +99,15 @@ type AmplNLMathProgModel <: AbstractMathProgModel
     status::Symbol
     solve_exitcode::Int
     solve_result_num::Int
-    solve_result::AbstractString
-    solve_message::AbstractString
+    solve_result::String
+    solve_message::String
     solve_time::Float64
 
     d::AbstractNLPEvaluator
 
-    function AmplNLMathProgModel(solver_command::AbstractString,
-                                 options::Vector{ASCIIString},
-                                 filename::AbstractString)
+    function AmplNLMathProgModel(solver_command::String,
+                                 options::Vector{String},
+                                 filename::String)
         new(options,
             solver_command,
             zeros(0),
