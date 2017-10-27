@@ -372,7 +372,7 @@ function optimize!(m::AmplNLMathProgModel)
     close(f_prob)
 
     # Rename file to have .nl extension (this is required by solvers)
-    mv(file_basepath, m.probfile, move_destination=true)
+    mv(file_basepath, m.probfile, remove_destination=true)
 
     # Run solver and save exitcode
     t = time()
