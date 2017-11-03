@@ -372,6 +372,8 @@ function optimize!(m::AmplNLMathProgModel)
     close(f_prob)
 
     # Rename file to have .nl extension (this is required by solvers)
+    # remove_destination flag added to fix issue in Windows, where temp file are not absolutely unique and file closing is not fast enough
+    #See https://github.com/JuliaOpt/AmplNLWriter.jl/pull/63
     mv(file_basepath, m.probfile, remove_destination=true)
 
     # Run solver and save exitcode
