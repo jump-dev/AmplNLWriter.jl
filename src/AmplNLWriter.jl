@@ -293,7 +293,7 @@ function load_A!(m::AmplNLMathProgModel, A::Matrix{Float64})
     for con = 1:m.ncon, var = 1:m.nvar
         val = A[con, var]
         if val != 0
-            m.lin_constrs[A.rowval[k]][var] = A.nzval[k]
+            m.lin_constrs[con][var] = val
             m.j_counts[var] += 1
         end
     end
@@ -310,7 +310,7 @@ function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
     m.lin_constrs = [Dict{Int, Float64}() for _ in 1:m.ncon]
     m.j_counts = zeros(Int, m.nvar)
 
-    m.r_codes = Array(Int, m.ncon)
+    m.r_codes = Array{Int}(m.ncon)
 
     m.varlinearities_con = fill(:Lin, m.nvar)
     m.varlinearities_obj = fill(:Lin, m.nvar)
@@ -531,7 +531,13 @@ function add_to_index_maps!(forward_map::Dict{Int, Int},
 end
 
 function read_results(m::AmplNLMathProgModel)
-    did_read_solution = read_sol(m)
+    open(m.solfile, "r") do io
+        read_results(io, m)
+    end
+end
+
+function read_results(resultio, m::AmplNLMathProgModel)
+    did_read_solution = read_sol(resultio, m)
 
     # Convert solve_result
     if 0 <= m.solve_result_num < 100
@@ -592,10 +598,14 @@ function read_results(m::AmplNLMathProgModel)
 end
 
 function read_sol(m::AmplNLMathProgModel)
+    open(m.solfile, "r") do io
+        readsol(io, m)
+    end
+end
+
+function read_sol(f::IO, m::AmplNLMathProgModel)
     # Reference implementation:
     # https://github.com/ampl/mp/tree/master/src/asl/solvers/readsol.c
-
-    f = open(m.solfile, "r")
     stat = :Undefined
     line = ""
 
@@ -681,8 +691,6 @@ function read_sol(m::AmplNLMathProgModel)
             break
         end
     end
-
-    close(f)
     return num_vars_to_read > 0
 end
 

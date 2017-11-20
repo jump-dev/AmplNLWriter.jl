@@ -64,8 +64,9 @@ function write_nl_header(f, m::AmplNLMathProgModel)
     binary = m.vartypes .== :Bin
     integer = m.vartypes .== :Int
     discrete = binary + integer .> 0
-    nbv = sum(binary + !nonlinear .> 1)
-    niv = sum(integer + !nonlinear .> 1)
+    # Julia 0.6 syntax
+    nbv = sum(binary + .!nonlinear .> 1)
+    niv = sum(integer + .!nonlinear .> 1)
     nlvbi = sum(nonlinear_both + discrete .> 1)
     nlvci = sum(nonlinear_con - nonlinear_obj + discrete .> 1)
     nlvoi = sum(nonlinear_obj - nonlinear_con + discrete .> 1)
