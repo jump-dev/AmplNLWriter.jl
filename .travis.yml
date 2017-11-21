@@ -21,8 +21,9 @@ env:
 # them after the tests have run
 script:
  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
- - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.add("Cbc"); Pkg.add("Ipopt"); Pkg.add("CoinOptServices"); Pkg.test("AmplNLWriter")'
+ - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.add("Ipopt"); Pkg.test("AmplNLWriter")'
 before_cache:
-  - cp -R $HOME/.julia/*/Cbc/deps/usr $HOME
   - cp -R $HOME/.julia/*/Ipopt/deps/usr $HOME
-  - cp -R $HOME/.julia/*/CoinOptServices/deps/usr $HOME
+after_success:
+  # push coverage results to Codecov
+  - julia -e 'cd(Pkg.dir("AmplNLWriter")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
