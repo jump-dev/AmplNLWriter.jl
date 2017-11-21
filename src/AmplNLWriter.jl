@@ -41,6 +41,9 @@ function BonminNLSolver(options=String[]; filename::String="")
 
         AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
 
+    alternatively, you can call
+
+        AmplNLSolver("path/to/bonmin", options; filename=filename)
     """)
 end
 
@@ -56,6 +59,9 @@ function CouenneNLSolver(options=String[]; filename::String="")
 
         AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
 
+    alternatively, you can call
+
+        AmplNLSolver("path/to/couenne", options; filename=filename)
     """)
 end
 
@@ -71,6 +77,9 @@ function IpoptNLSolver(options=String[]; filename::String="")
 
         AmplNLSolver(Ipopt.amplexe, options; filename=filename)
 
+    alternatively, you can call
+
+        AmplNLSolver("path/to/ipopt", options; filename=filename)
     """)
 end
 

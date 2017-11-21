@@ -13,7 +13,7 @@
         @test length(readdir(AmplNLWriter.solverdata_dir)) == 1
     end
 
-    solver = IpoptNLSolver(filename=filename)#BonminNLSolver(filename=filename)
+    solver = AmplNLSolver(Ipopt.amplexe, filename=filename)#BonminNLSolver(filename=filename)
     m = Model(solver=solver)
     @variable(m, x >= 0)
     @objective(m, Min, x)

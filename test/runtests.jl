@@ -5,8 +5,10 @@ include("nl_convert.jl")
 include("nl_linearity.jl")
 include("nl_write.jl")
 
+# needed for the scoping of `solver` in the examples
+solver = JuMP.UnsetSolver()
 solvers = Any[]
-push!(solvers, AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
+push!(solvers, AmplNLSolver(Ipopt.amplexe, ["print_level=0"]))
 
 examples_path = joinpath(dirname(dirname(@__FILE__)), "examples")
 
