@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNLWriter
+using JuMP, Base.Test, AmplNLWriter
 
 if !isdefined(:solver); solver = IpoptNLSolver(); end
 # Note min and max not implemented in Couenne
@@ -11,13 +11,13 @@ if !isdefined(:solver); solver = IpoptNLSolver(); end
  #  The optimal objective value is 0.25.
  #      x = 0.5
 ##
-context("example: maxmin") do
+@testset "example: maxmin" begin
     m = Model(solver=solver)
     @variable(m, -0.5 <= x <= 0.5, start = 0.25)
     @NLobjective(m, Max, min(x^2, 0.3, x))
-    @fact solve(m) --> :Optimal
-    @fact getobjectivevalue(m) --> roughly(0.25, 1e-2)
-    @fact getvalue(x) --> roughly(0.5, 1e-2)
+    @test solve(m) == :Optimal
+    @test isapprox(getobjectivevalue(m), 0.25, atol=1e-2)
+    @test isapprox(getvalue(x), 0.5, atol=1e-2)
 end
 
 ## Solve test problem with simple max functions
@@ -28,11 +28,11 @@ end
  #  The optimal objective value is 0.
  #      x = 0.
 ##
-context("example: minmax") do
+@testset "example: minmax" begin
     m = Model(solver=solver)
     @variable(m, -1 <= x <= 1, start=-1)
     @NLobjective(m, Min, max(x^2, x, -1))
-    @fact solve(m) --> :Optimal
-    @fact getobjectivevalue(m) --> roughly(0, 1e-2)
-    @fact getvalue(x) --> roughly(0, 1e-2)
+    @test solve(m) == :Optimal
+    @test isapprox(getobjectivevalue(m), 0, atol=1e-2)
+    @test isapprox(getvalue(x), 0, atol=1e-2)
 end

@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNLWriter
+using JuMP, Base.Test, AmplNLWriter
 
 ## Solve test problem 1 (Synthesis of processing system) in
  #  M. Duran & I.E. Grossmann, "An outer approximation algorithm for
@@ -26,22 +26,26 @@ using JuMP, FactCheck, AmplNLWriter
 
 if !isdefined(:solver); solver = BonminNLSolver(); end
 
-m = Model(solver=solver)
-x_U = [2,2,1]
-@variable(m, x_U[i] >= x[i=1:3] >= 0)
-@variable(m, y[4:6], Bin)
+@testset "example: jump_minlp" begin
+    m = Model(solver=solver)
+    x_U = [2,2,1]
+    @variable(m, x_U[i] >= x[i=1:3] >= 0)
+    @variable(m, y[i=4:6], Bin)
 
-@NLobjective(m, Min, 10 + 10*x[1] - 7*x[3] + 5*y[4] + 6*y[5] + 8*y[6] - 18*log(x[2]+1) - 19.2*log(x[1]-x[2]+1))
-@NLconstraint(m, 0.8*log(x[2] + 1) + 0.96*log(x[1] - x[2] + 1) - 0.8*x[3] >= 0)
-@NLconstraint(m, log(x[2] + 1) + 1.2*log(x[1] - x[2] + 1) - x[3] - 2*y[6] >= -2)
-@NLconstraint(m, x[2] - x[1] <= 0)
-@NLconstraint(m, x[2] - 2*y[4] <= 0)
-@NLconstraint(m, x[1] - x[2] - 2*y[5] <= 0)
-@NLconstraint(m, y[4] + 2*y[5]*0.5 <= 1)
+    @NLobjective(m, Min, 10 + 10*x[1] - 7*x[3] + 5*y[4] + 6*y[5] + 8*y[6] - 18*log(x[2]+1) - 19.2*log(x[1]-x[2]+1))
+    @NLconstraint(m, 0.8*log(x[2] + 1) + 0.96*log(x[1] - x[2] + 1) - 0.8*x[3] >= 0)
+    @NLconstraint(m, log(x[2] + 1) + 1.2*log(x[1] - x[2] + 1) - x[3] - 2*y[6] >= -2)
+    @NLconstraint(m, x[2] - x[1] <= 0)
+    @NLconstraint(m, x[2] - 2*y[4] <= 0)
+    @NLconstraint(m, x[1] - x[2] - 2*y[5] <= 0)
+    @NLconstraint(m, y[4] + 2*y[5]*0.5 <= 1)
 
-context("example: jump_minlp") do
-    @fact solve(m) --> :Optimal
-    @fact getvalue(x)[:] --> roughly([1.30098, 0.0, 1.0], 1e-5)
-    @fact getvalue(y)[:] --> roughly([0.0, 1.0, 0.0], 1e-5)
-    @fact getobjectivevalue(m) --> roughly(6.00975, 1e-5)
+    @test solve(m) == :Optimal
+    # Ipopt solves the relaxation
+    @test isapprox(getvalue(x)[:], [1.14652, 0.546596, 1.0], atol=1e-5)
+    @test isapprox(getvalue(y)[:], [0.27330, 0.299959, 0.0], atol=1e-5)
+    @test isapprox(getobjectivevalue(m), 0.75928, atol=1e-5)
+    # @test isapprox(getvalue(x)[:], [1.30098, 0.0, 1.0], atol=1e-5)
+    # @test isapprox(getvalue(y)[:], [0.0, 1.0, 0.0], atol=1e-5)
+    # @test isapprox(getobjectivevalue(m), 6.00975, atol=1e-5)
 end

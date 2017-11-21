@@ -531,7 +531,7 @@ function add_to_index_maps!(forward_map::Dict{Int, Int},
 end
 
 function read_results(m::AmplNLMathProgModel)
-    open(m.solfile, "r") do io
+    open(m.solfile, "r")do io
         read_results(io, m)
     end
 end
@@ -598,7 +598,7 @@ function read_results(resultio, m::AmplNLMathProgModel)
 end
 
 function read_sol(m::AmplNLMathProgModel)
-    open(m.solfile, "r") do io
+    open(m.solfile, "r")do io
         readsol(io, m)
     end
 end
@@ -714,7 +714,7 @@ function substitute_vars!(c::Expr, x::Array{Float64})
                 c.args[1] = :+
             end
         end
-        map!(arg -> substitute_vars!(arg, x), c.args)
+        map!(arg -> substitute_vars!(arg, x), c.args, c.args)
     end
     c
 end
