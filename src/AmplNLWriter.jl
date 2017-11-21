@@ -564,6 +564,11 @@ function add_to_index_maps!(forward_map::Dict{Int, Int},
 end
 
 function read_results(m::AmplNLMathProgModel)
+    if !isfile(m.solfile)
+        error("""Unable to open the solution file. The most likely cause of this
+        is the solver executable failing unexpectedly. Unfortunately we don't
+        have any other information about the solution or what went wrong.""")
+    end
     open(m.solfile, "r")do io
         read_results(io, m)
     end
@@ -631,7 +636,12 @@ function read_results(resultio, m::AmplNLMathProgModel)
 end
 
 function read_sol(m::AmplNLMathProgModel)
-    open(m.solfile, "r")do io
+    if !isfile(m.solfile)
+        error("""Unable to open the solution file. The most likely cause of this
+        is the solver executable failing unexpectedly. Unfortunately we don't
+        have any other information about the solution or what went wrong.""")
+    end
+    open(m.solfile, "r") do io
         readsol(io, m)
     end
 end
