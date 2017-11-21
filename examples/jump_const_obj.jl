@@ -2,7 +2,7 @@ using JuMP, Base.Test, AmplNLWriter
 
 # Example with no objective (#50)
 
-if !isdefined(:solver); solver = BonminNLSolver(); end
+# solver = AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
 
 @testset "example: jump_no_obj" begin
     m = Model(solver=solver)

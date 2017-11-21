@@ -16,7 +16,8 @@ using JuMP, Base.Test, AmplNLWriter
  #  The optimal objective value is 400, solutions can vary.
  ##
 
-if !isdefined(:solver); solver = IpoptNLSolver(); end
+# solver = AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
+
 @testset "example: jump_pruning" begin
     m = Model(solver=solver)
 

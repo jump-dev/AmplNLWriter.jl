@@ -8,7 +8,7 @@ using JuMP, Base.Test, AmplNLWriter
  #  The optimal objective value is 0
  ##
 
-if !isdefined(:solver); solver = CouenneNLSolver(); end
+# solver = AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
 
 @testset "example: jump_nltrig" begin
     m = Model(solver=solver)

@@ -24,7 +24,8 @@ using JuMP, Base.Test, AmplNLWriter
  #  The solution is (1.30098, 0, 1, 0, 1, 0).
  ##
 
-if !isdefined(:solver); solver = BonminNLSolver(); end
+ # solver = AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
+
 
 @testset "example: jump_minlp" begin
     m = Model(solver=solver)
@@ -41,11 +42,15 @@ if !isdefined(:solver); solver = BonminNLSolver(); end
     @NLconstraint(m, y[4] + 2*y[5]*0.5 <= 1)
 
     @test solve(m) == :Optimal
-    # Ipopt solves the relaxation
-    @test isapprox(getvalue(x)[:], [1.14652, 0.546596, 1.0], atol=1e-5)
-    @test isapprox(getvalue(y)[:], [0.27330, 0.299959, 0.0], atol=1e-5)
-    @test isapprox(getobjectivevalue(m), 0.75928, atol=1e-5)
-    # @test isapprox(getvalue(x)[:], [1.30098, 0.0, 1.0], atol=1e-5)
-    # @test isapprox(getvalue(y)[:], [0.0, 1.0, 0.0], atol=1e-5)
-    # @test isapprox(getobjectivevalue(m), 6.00975, atol=1e-5)
+
+    if getsolvername(solver) == "ipopt"
+        # Ipopt solves the relaxation
+        @test isapprox(getvalue(x)[:], [1.14652, 0.546596, 1.0], atol=1e-5)
+        @test isapprox(getvalue(y)[:], [0.27330, 0.299959, 0.0], atol=1e-5)
+        @test isapprox(getobjectivevalue(m), 0.75928, atol=1e-5)
+    else
+        @test isapprox(getvalue(x)[:], [1.30098, 0.0, 1.0], atol=1e-5)
+        @test isapprox(getvalue(y)[:], [0.0, 1.0, 0.0], atol=1e-5)
+        @test isapprox(getobjectivevalue(m), 6.00975, atol=1e-5)
+    end
 end

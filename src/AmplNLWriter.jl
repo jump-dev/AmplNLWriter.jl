@@ -13,7 +13,7 @@ include("nl_linearity.jl")
 include("nl_params.jl")
 include("nl_convert.jl")
 
-export AmplNLSolver, BonminNLSolver, CouenneNLSolver, IpoptNLSolver,
+export AmplNLSolver,
        getsolvername, getsolveresult, getsolveresultnum, getsolvemessage,
        getsolveexitcode
 
@@ -23,12 +23,6 @@ immutable AmplNLSolver <: AbstractMathProgSolver
     filename::String
 end
 
-osl = isdir(Pkg.dir("CoinOptServices"))
-ipt = isdir(Pkg.dir("Ipopt"))
-
-if osl; import CoinOptServices; end
-if ipt; import Ipopt; end
-
 function AmplNLSolver(solver_command::String,
                       options::Vector{String}=String[];
                       filename::String="")
@@ -36,18 +30,51 @@ function AmplNLSolver(solver_command::String,
 end
 
 function BonminNLSolver(options=String[]; filename::String="")
-    osl || error("CoinOptServices not installed. Please run\n",
-                 "Pkg.add(\"CoinOptServices\")")
-    AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
+    error("""
+        BonminNLSolver is no longer available by default through AmplNLWriter.
+
+        You should install CoinOptServices via
+
+            Pkg.add("CoinOptServices")
+
+        and then replace BonminNLSolver(options=String[]; filename::String="")
+        with
+
+            AmplNLWriter(CoinOptServices.bonmin, options; filename=filename)
+
+    """)
 end
+
 function CouenneNLSolver(options=String[]; filename::String="")
-    osl || error("CoinOptServices not installed. Please run\n",
-                 "Pkg.add(\"CoinOptServices\")")
-    AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
+    error("""
+        CouenneNLSolver is no longer available by default through AmplNLWriter.
+
+        You should install CoinOptServices via
+
+            Pkg.add("CoinOptServices")
+
+        and then replace CouenneNLSolver(options=String[]; filename::String="")
+        with
+
+            AmplNLWriter(CoinOptServices.couenne, options; filename=filename)
+
+    """)
 end
+
 function IpoptNLSolver(options=String[]; filename::String="")
-    ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
-    AmplNLSolver(Ipopt.amplexe, options; filename=filename)
+    error("""
+        CouenneNLSolver is no longer available by default through AmplNLWriter.
+
+        You should install Ipopt via
+
+            Pkg.add("Ipopt")
+
+        and then replace IpoptNLSolver(options=String[]; filename::String="")
+        with
+
+            AmplNLWriter(Ipopt.amplexe, options; filename=filename)
+
+    """)
 end
 
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)

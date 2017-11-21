@@ -2,7 +2,8 @@ using JuMP, Base.Test, AmplNLWriter
 
 # Example testing basic use of NLExpr with AmplNLWriter.jl
 
-if !isdefined(:solver); solver = IpoptNLSolver(); end
+# solver = AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
+
 
 @testset "example: jump_nlexpr" begin
     m = Model(solver=solver)

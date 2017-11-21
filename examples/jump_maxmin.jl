@@ -1,6 +1,7 @@
 using JuMP, Base.Test, AmplNLWriter
 
-if !isdefined(:solver); solver = IpoptNLSolver(); end
+# solver = AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
+
 # Note min and max not implemented in Couenne
 
 ## Solve test problem with simple min functions

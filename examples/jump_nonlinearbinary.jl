@@ -8,7 +8,7 @@ using JuMP, Base.Test, AmplNLWriter
  #  The solution is (0, 0).
  ##
 
-if !isdefined(:solver); solver = BonminNLSolver(); end
+# solver = AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
 
 @testset "example: jump_nonlinearbinary" begin
     m = Model(solver=solver)
@@ -22,9 +22,13 @@ if !isdefined(:solver); solver = BonminNLSolver(); end
     @NLobjective(m, Min, 100*(x[2] - (0.5 + x[1])^2)^2 + (1 - x[1])^2)
 
     @test solve(m) == :Optimal
-    # Ipopt solves the relaxation
-    @test isapprox(getvalue(x), [0.501245, 1.0], atol=1e-6)
-    @test isapprox(getobjectivevalue(m), 0.249377, atol=1e-6)
-    # @test getvalue(x)[:] == [0.0, 0.0]
-    # @test getobjectivevalue(m) == 7.25
+
+    if getsolvername(solver) == "ipopt"
+        # Ipopt solves the relaxation
+        @test isapprox(getvalue(x), [0.501245, 1.0], atol=1e-6)
+        @test isapprox(getobjectivevalue(m), 0.249377, atol=1e-6)
+    else
+        @test getvalue(x)[:] == [0.0, 0.0]
+        @test getobjectivevalue(m) == 7.25
+    end
 end
