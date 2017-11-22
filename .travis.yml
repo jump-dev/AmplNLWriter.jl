@@ -24,11 +24,16 @@ env:
 # Override the default test script
 # We need to add `Cbc`, `Ipopt` and `CoinOptServices` manually so we can cache
 # them after the tests have run
+
+before_install:
+  - julia -e 'Pkg.update()' #make sure we get the latest version of METADATA
+  - julia -e 'Pkg.add("Cbc"); Pkg.add("Ipopt"); Pkg.add("CoinOptServices");'
+
 script:
  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
- - julia --check-bounds=yes -e 'Pkg.add("Cbc"); Pkg.add("Ipopt"); Pkg.add("CoinOptServices"); Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.test("AmplNLWriter")'
+ - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.test("AmplNLWriter")'
+
 before_cache:
   - cp -R $HOME/.julia/*/Cbc/deps/usr $HOME
   - cp -R $HOME/.julia/*/Ipopt/deps/usr $HOME
   - cp -R $HOME/.julia/*/CoinOptServices/deps/usr $HOME
-
