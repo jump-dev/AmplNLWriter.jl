@@ -1,9 +1,17 @@
 # AmplNLWriter.jl
 
-Linux, OSX: [![Build Status](https://travis-ci.org/JuliaOpt/AmplNLWriter.jl.svg?branch=master)](https://travis-ci.org/JuliaOpt/AmplNLWriter.jl)
+| **Build Status (Linux, OSX)** | **Build Status (Windows)** | **Coverage** |
+|:-----------------:|:--------------------:|:----------------:|
+| [![][build-img]][build-url] | [![Build Status][app-build-img]][app-build-url] | [![Codecov branch][codecov-img]][codecov-url]
 
-Windows: [![Build Status](https://ci.appveyor.com/api/projects/status/github/JuliaOpt/AmplNLWriter.jl?branch=master&svg=true)](https://ci.appveyor.com/project/jackdunnnz/amplnlwriter-jl/branch/master)
+[build-img]: https://travis-ci.org/JuliaOpt/AmplNLWriter.jl.svg?branch=master
+[build-url]: https://travis-ci.org/JuliaOpt/AmplNLWriter.jl
 
+[app-build-img]: https://ci.appveyor.com/api/projects/status/github/JuliaOpt/AmplNLWriter.jl?branch=master&svg=true
+[app-build-url]: https://ci.appveyor.com/project/jackdunnnz/amplnlwriter-jl/branch/master
+
+[codecov-img]: https://codecov.io/github/JuliaOpt/AmplNLWriter.jl/coverage.svg?branch=master
+[codecov-url]: https://codecov.io/github/JuliaOpt/AmplNLWriter.jl?branch=master
 
 This [Julia](https://github.com/JuliaLang/julia) package is an interface between [MathProgBase.jl](https://github.com/JuliaOpt/MathProgBase.jl) and [AMPL-enabled](http://www.ampl.com) [solvers](http://ampl.com/products/solvers/all-solvers-for-ampl/). It is similar in nature to [CoinOptServices.jl](https://github.com/tkelman/CoinOptServices.jl), but instead uses AMPL's low-level [.nl](https://en.wikipedia.org/wiki/Nl_%28format%29) file format.
 
@@ -26,7 +34,7 @@ AmplNLWriter.jl provides ``AmplNLSolver`` as a usable solver in JuMP. The follow
     julia> using JuMP, AmplNLWriter
     julia> m = Model(solver=AmplNLSolver("bonmin"))
 
-You can then model and solve your optimization problem as usual. See [JuMP's documentation](http://jump.readthedocs.org/en/latest/) for more details.
+You can then model and solve your optimization problem as usual. See [JuMP.jl](https://github.com/JuliaOpt/JuMP.jl/blob/master/README.md) for more details.
 
 The ``AmplNLSolver()`` constructor requires as the first argument the name of the solver command needed to run the desired solver. For example, if the ``bonmin`` executable is on the system path, you can use this solver using ``AmplNLSolver("bonmin")``. If the solver is not on the path, the full path to the solver will need to be passed in. This solver executable must be an AMPL-compatible solver.
 
