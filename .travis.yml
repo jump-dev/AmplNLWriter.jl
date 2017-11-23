@@ -4,26 +4,30 @@ os:
   - osx
 julia:
   - 0.6
+  - nightly
+matrix:
+  allow_failures:
+    - julia: nightly
 notifications:
   email: false
 sudo: false
 cache:
   directories:
-  - $HOME/usr
+    - /home/travis/.julia
 addons:
   apt_packages:
-  - gfortran
-env:
-  - MAKEFLAGS="-j3"
-    LD_LIBRARY_PATH=$HOME/usr/lib
-# Override the default test script
-# We need to add `Cbc`, `Ipopt` and `CoinOptServices` manually so we can cache
-# them after the tests have run
+    - gfortran
+
+before_install:
+  - julia -e 'Pkg.rm("AmplNLWriter")'
+  - julia -e 'Pkg.update()' #make sure we get the latest version of METADATA
+  - julia -e 'Pkg.add("Ipopt")'
+
 script:
- - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
- - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.add("Ipopt"); Pkg.test("AmplNLWriter")'
-before_cache:
-  - cp -R $HOME/.julia/*/Ipopt/deps/usr $HOME
+  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter")'
+  - julia --check-bounds=yes -e 'Pkg.test("AmplNLWriter", coverage=true)'
+
 after_success:
-  # push coverage results to Codecov
   - julia -e 'cd(Pkg.dir("AmplNLWriter")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+  #  - julia -e 'cd(Pkg.dir("AmplNLWriter")); include(joinpath("docs", "make.jl"))'
