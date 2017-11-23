@@ -23,12 +23,6 @@ immutable AmplNLSolver <: AbstractMathProgSolver
     filename::String
 end
 
-osl = isdir(Pkg.dir("CoinOptServices"))
-ipt = isdir(Pkg.dir("Ipopt"))
-
-if osl; import CoinOptServices; end
-if ipt; import Ipopt; end
-
 function AmplNLSolver(solver_command::String,
                       options::Vector{String}=String[];
                       filename::String="")
@@ -36,18 +30,57 @@ function AmplNLSolver(solver_command::String,
 end
 
 function BonminNLSolver(options=String[]; filename::String="")
-    osl || error("CoinOptServices not installed. Please run\n",
-                 "Pkg.add(\"CoinOptServices\")")
-    AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
+    error("""BonminNLSolver is no longer available by default through AmplNLWriter.
+
+    You should install CoinOptServices via
+
+        Pkg.add("CoinOptServices")
+
+    and then replace BonminNLSolver(options=String[]; filename::String="")
+    with
+
+        AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
+
+    alternatively, you can call
+
+        AmplNLSolver("path/to/bonmin", options; filename=filename)
+    """)
 end
+
 function CouenneNLSolver(options=String[]; filename::String="")
-    osl || error("CoinOptServices not installed. Please run\n",
-                 "Pkg.add(\"CoinOptServices\")")
-    AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
+    error("""CouenneNLSolver is no longer available by default through AmplNLWriter.
+
+    You should install CoinOptServices via
+
+        Pkg.add("CoinOptServices")
+
+    and then replace CouenneNLSolver(options=String[]; filename::String="")
+    with
+
+        AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
+
+    alternatively, you can call
+
+        AmplNLSolver("path/to/couenne", options; filename=filename)
+    """)
 end
+
 function IpoptNLSolver(options=String[]; filename::String="")
-    ipt || error("Ipopt not installed. Please run\nPkg.add(\"Ipopt\")")
-    AmplNLSolver(Ipopt.amplexe, options; filename=filename)
+    error("""IpoptNLSolver is no longer available by default through AmplNLWriter.
+
+    You should install Ipopt via
+
+        Pkg.add("Ipopt")
+
+    and then replace IpoptNLSolver(options=String[]; filename::String="")
+    with
+
+        AmplNLSolver(Ipopt.amplexe, options; filename=filename)
+
+    alternatively, you can call
+
+        AmplNLSolver("path/to/ipopt", options; filename=filename)
+    """)
 end
 
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)
@@ -293,7 +326,7 @@ function load_A!(m::AmplNLMathProgModel, A::Matrix{Float64})
     for con = 1:m.ncon, var = 1:m.nvar
         val = A[con, var]
         if val != 0
-            m.lin_constrs[A.rowval[k]][var] = A.nzval[k]
+            m.lin_constrs[con][var] = val
             m.j_counts[var] += 1
         end
     end
@@ -310,7 +343,7 @@ function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
     m.lin_constrs = [Dict{Int, Float64}() for _ in 1:m.ncon]
     m.j_counts = zeros(Int, m.nvar)
 
-    m.r_codes = Array(Int, m.ncon)
+    m.r_codes = Array{Int}(m.ncon)
 
     m.varlinearities_con = fill(:Lin, m.nvar)
     m.varlinearities_obj = fill(:Lin, m.nvar)
@@ -531,7 +564,18 @@ function add_to_index_maps!(forward_map::Dict{Int, Int},
 end
 
 function read_results(m::AmplNLMathProgModel)
-    did_read_solution = read_sol(m)
+    if !isfile(m.solfile)
+        error("""Unable to open the solution file. The most likely cause of this
+        is the solver executable failing unexpectedly. Unfortunately we don't
+        have any other information about the solution or what went wrong.""")
+    end
+    open(m.solfile, "r")do io
+        read_results(io, m)
+    end
+end
+
+function read_results(resultio, m::AmplNLMathProgModel)
+    did_read_solution = read_sol(resultio, m)
 
     # Convert solve_result
     if 0 <= m.solve_result_num < 100
@@ -592,10 +636,19 @@ function read_results(m::AmplNLMathProgModel)
 end
 
 function read_sol(m::AmplNLMathProgModel)
+    if !isfile(m.solfile)
+        error("""Unable to open the solution file. The most likely cause of this
+        is the solver executable failing unexpectedly. Unfortunately we don't
+        have any other information about the solution or what went wrong.""")
+    end
+    open(m.solfile, "r") do io
+        readsol(io, m)
+    end
+end
+
+function read_sol(f::IO, m::AmplNLMathProgModel)
     # Reference implementation:
     # https://github.com/ampl/mp/tree/master/src/asl/solvers/readsol.c
-
-    f = open(m.solfile, "r")
     stat = :Undefined
     line = ""
 
@@ -681,8 +734,6 @@ function read_sol(m::AmplNLMathProgModel)
             break
         end
     end
-
-    close(f)
     return num_vars_to_read > 0
 end
 
@@ -706,7 +757,7 @@ function substitute_vars!(c::Expr, x::Array{Float64})
                 c.args[1] = :+
             end
         end
-        map!(arg -> substitute_vars!(arg, x), c.args)
+        map!(arg -> substitute_vars!(arg, x), c.args, c.args)
     end
     c
 end

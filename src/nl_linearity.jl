@@ -114,7 +114,7 @@ end
 get_expr(c) = c
 get_expr(c::LinearityExpr) = get_expr(c.c)
 function get_expr(c::Expr)
-    map!(get_expr, c.args)
+    map!(get_expr, c.args, c.args)
     return c
 end
 
@@ -123,7 +123,7 @@ function pull_up_constants(c::LinearityExpr)
     if c.linearity == :const
         c.c = eval(c)
     elseif isa(c.c, Expr)
-        map!(pull_up_constants, c.c.args)
+        map!(pull_up_constants, c.c.args, c.c.args)
     end
     return c
 end
@@ -144,11 +144,11 @@ function prune_linear_terms!(c::LinearityExpr, lin_constr::Dict{Int, Float64},
                     pruned[i - 1], expr.args[i], constant = prune_linear_terms!(
                         expr.args[i], lin_constr, constant, negative_tree)
                 end
-                if sum(!pruned) > 1
-                    inds = vcat([1], collect(2:n)[!pruned])
+                if sum(.!pruned) > 1
+                    inds = vcat([1], collect(2:n)[.!pruned])
                     c.c.args = expr.args[inds]
                 else
-                    c = expr.args[findfirst(!pruned) + 1]
+                    c = expr.args[findfirst(.!pruned) + 1]
                 end
             elseif expr.args[1] == :-
                 if length(expr.args) == 3
@@ -215,7 +215,7 @@ negate(c::LinearityExpr) = multiply(c::LinearityExpr, -1)
 function multiply(c::LinearityExpr, a::Real)
     if isa(c.c, Expr) && c.c.head == :call
         @assert c.c.args[1] == :+
-        map!(arg -> multiply(arg, a), c.c.args[2:end])
+        map!(arg -> multiply(arg, a), c.c.args[2:end], c.c.args[2:end])
     elseif c.linearity == :const
         c.c *= a
     else
