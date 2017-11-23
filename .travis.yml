@@ -18,9 +18,6 @@ cache:
 addons:
   apt_packages:
     - gfortran
-    - liblapack-dev
-    - libgmp-dev
-    - libglpk-dev
 
 before_install:
   - julia -e 'if "AmplNLWriter" in keys(Pkg.installed()) Pkg.rm("AmplNLWriter"); Pkg.rm("AmplNLWriter") end'
