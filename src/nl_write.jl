@@ -255,4 +255,11 @@ end
 
 nl_variable(index::Integer) = "v$index"
 nl_number(value::Real) = "n$value"
-nl_operator(operator::Symbol) = "o$(func_to_nl[operator])"
+
+function nl_operator(operator::Symbol)
+    if !haskey(func_to_nl, operator)
+        error("translation of the function \"$operator\" to NL is not defined")
+    end
+    return "o$(func_to_nl[operator])"
+end
+

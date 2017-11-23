@@ -54,3 +54,22 @@ end
     expr = :(1 < 2 < 3 < 4)
     @test AmplNLWriter.convert_formula(expr) == :((1 < 2 && 2 < 3) && 3 < 4)
 end
+
+@testset "[nl_convert] check user defined functions error" begin
+    m = Model(solver=AmplNLSolver("any_solver"))
+
+    myf(x,y) = (x-1)^2+(y-2)^2
+    JuMP.register(m, :myf, 2, myf, autodiff=true)
+
+    @variable(m, x[1:2] >= 0.5)
+    @NLobjective(m, Min, myf(x[1], x[2]))
+
+    @test_throws Exception solve(m)
+
+    # clean up temp file
+    for file in readdir(AmplNLWriter.solverdata_dir)
+        if file != ".gitignore"
+            rm(joinpath(AmplNLWriter.solverdata_dir, file))
+        end
+    end
+end
