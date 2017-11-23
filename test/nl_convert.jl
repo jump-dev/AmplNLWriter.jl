@@ -55,7 +55,7 @@ end
     @test AmplNLWriter.convert_formula(expr) == :((1 < 2 && 2 < 3) && 3 < 4)
 end
 
-facts("[nl_convert] check user defined functions error") do
+@testset "[nl_convert] check user defined functions error" begin
     m = Model(solver=AmplNLSolver("any_solver"))
 
     myf(x,y) = (x-1)^2+(y-2)^2
@@ -64,7 +64,7 @@ facts("[nl_convert] check user defined functions error") do
     @variable(m, x[1:2] >= 0.5)
     @NLobjective(m, Min, myf(x[1], x[2]))
 
-    @fact_throws ErrorException solve(m)
+    @test_throws ErrorException solve(m)
 
     # clean up temp file
     for file in readdir(AmplNLWriter.solverdata_dir)
