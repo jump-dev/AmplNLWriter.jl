@@ -19,10 +19,9 @@ addons:
     - gfortran
 
 before_install:
-  - julia -e 'if "AmplNLWriter" in keys(Pkg.installed()) Pkg.rm("AmplNLWriter") end'
+  - julia -e 'Pkg.rm("AmplNLWriter")'
   - julia -e 'Pkg.update()' #make sure we get the latest version of METADATA
-  - julia -e 'if !("Ipopt" in keys(Pkg.installed())) Pkg.add("Ipopt") end'
-  - julia -e 'if !("Coverage" in keys(Pkg.installed())) Pkg.add("Coverage") end'
+  - julia -e 'Pkg.add("Ipopt") end'
 
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
