@@ -14,26 +14,23 @@ notifications:
 sudo: false
 cache:
   directories:
-  - $HOME/usr
+    - /home/travis/.julia
 addons:
   apt_packages:
-  - gfortran
-env:
-  - MAKEFLAGS="-j3"
-    LD_LIBRARY_PATH=$HOME/usr/lib
-# Override the default test script
-# We need to add `Cbc`, `Ipopt` and `CoinOptServices` manually so we can cache
-# them after the tests have run
+    - gfortran
 
 before_install:
+  - julia -e 'if "AmplNLWriter" in keys(Pkg.installed()) Pkg.rm("AmplNLWriter"); Pkg.rm("AmplNLWriter") end'
   - julia -e 'Pkg.update()' #make sure we get the latest version of METADATA
-  - julia -e 'Pkg.add("Cbc"); Pkg.add("Ipopt"); Pkg.add("CoinOptServices");'
+  - julia -e 'if !("Cbc" in keys(Pkg.installed())) Pkg.add("Cbc") end'
+  - julia -e 'if !("Ipopt" in keys(Pkg.installed())) Pkg.add("Ipopt") end'
+  - julia -e 'if !("CoinOptServices" in keys(Pkg.installed())) Pkg.add("CoinOptServices") end'
 
 script:
- - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
- - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.test("AmplNLWriter")'
+  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.test("AmplNLWriter")'
 
-before_cache:
-  - cp -R $HOME/.julia/*/Cbc/deps/usr $HOME
-  - cp -R $HOME/.julia/*/Ipopt/deps/usr $HOME
-  - cp -R $HOME/.julia/*/CoinOptServices/deps/usr $HOME
+# TBD
+#after_success:
+#  - julia -e  'using Coverage; cd(Pkg.dir("AmplNLWriter")); LCOV.writefile("lcov.info", process_folder(".")); run(pipeline(`curl -s https://codecov.io/bash`, `bash`))'
+#  - julia -e 'cd(Pkg.dir("AmplNLWriter")); include(joinpath("docs", "make.jl"))'
