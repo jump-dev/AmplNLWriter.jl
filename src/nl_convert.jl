@@ -3,7 +3,7 @@ convert_formula(c) = c
 convert_formula(c::LinearityExpr) = convert_formula(c.c)
 
 function convert_formula(c::Expr)
-    map!(convert_formula, c.args)
+    map!(convert_formula, c.args, c.args)
 
     if c.head == :comparison
         n = length(c.args)

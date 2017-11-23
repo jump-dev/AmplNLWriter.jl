@@ -1,4 +1,4 @@
-using JuMP, FactCheck, AmplNLWriter
+using JuMP, Base.Test, AmplNLWriter
 
 ## Solve test problem with lots of expressions to prune
  #
@@ -16,23 +16,24 @@ using JuMP, FactCheck, AmplNLWriter
  #  The optimal objective value is 400, solutions can vary.
  ##
 
-if !isdefined(:solver); solver = IpoptNLSolver(); end
-m = Model(solver=solver)
+# solver = AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
 
-@variable(m, x[1:2] >= 0)
+@testset "example: jump_pruning" begin
+    m = Model(solver=solver)
 
-@NLobjective(m, Max, x[1]^2 * x[2]^2)
-@NLconstraint(m, x[1] * x[2] <= 20)
-@NLconstraint(m, x[1] + x[2] <= 40)
-@NLconstraint(m, x[1] * x[2] + x[1] + x[2] <= 60)
-@NLconstraint(m, x[1] + x[1] * x[2] + x[2] <= 60)
-@NLconstraint(m, x[1] * x[2] + x[1] + x[2] <= 60)
-@NLconstraint(m, x[1] * x[2] - x[1] - x[2] <= 0)
-@NLconstraint(m, x[2] - x[1] * x[2] + x[1] <= 60)
-@NLconstraint(m, x[2] - x[1] + x[1] * x[2] <= 0)
-@NLconstraint(m, 0 <= 1.0)
+    @variable(m, x[1:2] >= 0)
 
-context("example: jump_pruning") do
-    @fact solve(m) --> :Optimal
-    @fact getobjectivevalue(m) --> roughly(400, 1e-2)
+    @NLobjective(m, Max, x[1]^2 * x[2]^2)
+    @NLconstraint(m, x[1] * x[2] <= 20)
+    @NLconstraint(m, x[1] + x[2] <= 40)
+    @NLconstraint(m, x[1] * x[2] + x[1] + x[2] <= 60)
+    @NLconstraint(m, x[1] + x[1] * x[2] + x[2] <= 60)
+    @NLconstraint(m, x[1] * x[2] + x[1] + x[2] <= 60)
+    @NLconstraint(m, x[1] * x[2] - x[1] - x[2] <= 0)
+    @NLconstraint(m, x[2] - x[1] * x[2] + x[1] <= 60)
+    @NLconstraint(m, x[2] - x[1] + x[1] * x[2] <= 0)
+    @NLconstraint(m, 0 <= 1.0)
+
+    @test solve(m) == :Optimal
+    @test isapprox(getobjectivevalue(m), 400, atol=1e-2)
 end
