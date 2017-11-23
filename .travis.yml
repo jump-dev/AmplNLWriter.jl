@@ -26,7 +26,8 @@ before_install:
 
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.test("AmplNLWriter", coverage=true)'
+  - julia -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter")'
+  - julia --check-bounds=yes -e 'Pkg.test("AmplNLWriter", coverage=true)'
 
 after_success:
   - julia -e 'cd(Pkg.dir("AmplNLWriter")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
