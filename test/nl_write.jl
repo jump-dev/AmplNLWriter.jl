@@ -1,4 +1,4 @@
-facts("[nl_write] Temp file handling") do
+@testset "[nl_write] Temp file handling" begin
     # Turn on debug mode so files persist
     old_debug = AmplNLWriter.debug
     AmplNLWriter.setdebug(true)
@@ -9,22 +9,22 @@ facts("[nl_write] Temp file handling") do
     solfile = "$filepath.sol"
     AmplNLWriter.clean_solverdata()
 
-    context("all temp files deleted successfully") do
-        @fact length(readdir(AmplNLWriter.solverdata_dir)) --> 1
+    @testset "all temp files deleted successfully" begin
+        @test length(readdir(AmplNLWriter.solverdata_dir)) == 1
     end
 
-    solver = BonminNLSolver(filename=filename)
+    solver = AmplNLSolver(Ipopt.amplexe, filename=filename)#BonminNLSolver(filename=filename)
     m = Model(solver=solver)
     @variable(m, x >= 0)
     @objective(m, Min, x)
     solve(m)
 
-    context("temp files present after solve in debug mode") do
-        @fact length(readdir(AmplNLWriter.solverdata_dir)) --> 3
+    @testset "temp files present after solve in debug mode" begin
+        @test length(readdir(AmplNLWriter.solverdata_dir)) == 3
     end
-    context("temp files used custom name") do
-        @fact isfile(probfile) --> true
-        @fact isfile(solfile) --> true
+    @testset "temp files used custom name" begin
+        @test isfile(probfile) == true
+        @test isfile(solfile) == true
     end
 
     # Reset debug mode and clean up
