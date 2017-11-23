@@ -64,7 +64,7 @@ end
     @variable(m, x[1:2] >= 0.5)
     @NLobjective(m, Min, myf(x[1], x[2]))
 
-    @test_throws KeyError solve(m)
+    @test_throws Exception solve(m)
 
     # clean up temp file
     for file in readdir(AmplNLWriter.solverdata_dir)
