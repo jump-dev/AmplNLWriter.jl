@@ -68,6 +68,8 @@ end
 
     # clean up temp file
     for file in readdir(AmplNLWriter.solverdata_dir)
-        startswith(file, "tmp") && rm(joinpath(AmplNLWriter.solverdata_dir, file))
+        if file != ".gitignore"
+            rm(joinpath(AmplNLWriter.solverdata_dir, file))
+        end
     end
 end
