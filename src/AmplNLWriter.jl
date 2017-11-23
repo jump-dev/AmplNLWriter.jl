@@ -17,7 +17,7 @@ export AmplNLSolver, BonminNLSolver, CouenneNLSolver, IpoptNLSolver,
        getsolvername, getsolveresult, getsolveresultnum, getsolvemessage,
        getsolveexitcode
 
-immutable AmplNLSolver <: AbstractMathProgSolver
+struct AmplNLSolver <: AbstractMathProgSolver
     solver_command::String
     options::Vector{String}
     filename::String
@@ -85,7 +85,7 @@ end
 
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)
 
-type AmplNLMathProgModel <: AbstractMathProgModel
+mutable struct AmplNLMathProgModel <: AbstractMathProgModel
     options::Vector{String}
 
     solver_command::String
@@ -179,10 +179,10 @@ type AmplNLMathProgModel <: AbstractMathProgModel
             NaN)
     end
 end
-type AmplNLLinearQuadraticModel <: AbstractLinearQuadraticModel
+mutable struct AmplNLLinearQuadraticModel <: AbstractLinearQuadraticModel
     inner::AmplNLMathProgModel
 end
-type AmplNLNonlinearModel <: AbstractNonlinearModel
+mutable struct AmplNLNonlinearModel <: AbstractNonlinearModel
     inner::AmplNLMathProgModel
 end
 
@@ -212,15 +212,9 @@ function loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer, ncon::Integer,
 
         # Remove relations and bounds from constraint expressions
         if length(c.args) == 3
-            if VERSION < v"0.5-"
-                expected_head = :comparison
-                expr_index = 1
-                rel_index = 2
-            else
-                expected_head = :call
-                expr_index = 2
-                rel_index = 1
-            end
+            expected_head = :call
+            expr_index = 2
+            rel_index = 1
 
             @assert c.head == expected_head
             # Single relation constraint: expr rel bound
