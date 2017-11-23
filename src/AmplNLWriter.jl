@@ -400,9 +400,12 @@ function optimize!(m::AmplNLMathProgModel)
     end
     m.probfile = "$file_basepath.nl"
     m.solfile = "$file_basepath.sol"
-
-    write_nl_file(f_prob, m)
-    close(f_prob)
+    
+    try
+        write_nl_file(f_prob, m)
+    finally
+        close(f_prob)
+    end
 
     # Rename file to have .nl extension (this is required by solvers)
     # remove_destination flag added to fix issue in Windows, where temp file are not absolutely unique and file closing is not fast enough
