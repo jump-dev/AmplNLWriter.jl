@@ -1,4 +1,4 @@
-type LinearityExpr
+mutable struct LinearityExpr
     c
     linearity::Symbol
     coeff::Float64
