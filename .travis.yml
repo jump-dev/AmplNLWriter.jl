@@ -13,21 +13,16 @@ notifications:
 sudo: false
 cache:
   directories:
-    - /home/travis/.julia
+    - $HOME/usr
 addons:
   apt_packages:
     - gfortran
-
-before_install:
-  - julia -e 'Pkg.rm("AmplNLWriter")'
-  - julia -e 'Pkg.update()' #make sure we get the latest version of METADATA
-  - julia -e 'Pkg.add("Ipopt")'
-
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter")'
+  - julia -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.add("Ipopt")'
+  - julia -e 'Pkg.add("Ipopt")'
   - julia --check-bounds=yes -e 'Pkg.test("AmplNLWriter", coverage=true)'
-
+before_cache:
+  - cp -R $HOME/.julia/*/Ipopt/deps/usr $HOME
 after_success:
   - julia -e 'cd(Pkg.dir("AmplNLWriter")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
-  #  - julia -e 'cd(Pkg.dir("AmplNLWriter")); include(joinpath("docs", "make.jl"))'
