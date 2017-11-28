@@ -582,7 +582,7 @@ function read_results(resultio, m::AmplNLMathProgModel)
         # Used to indicate solution present but likely incorrect.
         m.status = :Optimal
         m.solve_result = "solved?"
-        warn("The solver has returned the status :Optimal, but indicated that there might be an error in the solution. The status code returned by the solver was $(m.solve_result_num). Check the solver documentation for more info.""")
+        warn("The solver has returned the status :Optimal, but indicated that there might be an error in the solution. The status code returned by the solver was $(m.solve_result_num). Check the solver documentation for more info.")
     elseif 200 <= m.solve_result_num < 300
         m.status = :Infeasible
         m.solve_result = "infeasible"
