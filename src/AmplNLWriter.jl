@@ -653,7 +653,7 @@ function read_sol(f::IO, m::AmplNLMathProgModel)
     # "Options".
     while true
         line = readline(f)
-        if line[1:7] == "Options"
+        if length(line) >= 7 && line[1:7] == "Options"
             break
         else
             m.solve_message *= line

@@ -4,6 +4,7 @@ using Base.Test
 include("nl_convert.jl")
 include("nl_linearity.jl")
 include("nl_write.jl")
+include("sol_file_parser.jl")
 
 # needed for the scoping of `solver` in the examples
 solver = JuMP.UnsetSolver()
