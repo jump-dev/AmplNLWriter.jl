@@ -394,7 +394,7 @@ function optimize!(m::AmplNLMathProgModel)
     end
     m.probfile = "$file_basepath.nl"
     m.solfile = "$file_basepath.sol"
-    
+
     try
         write_nl_file(f_prob, m)
     finally
@@ -649,17 +649,15 @@ function read_sol(f::IO, m::AmplNLMathProgModel)
     stat = :Undefined
     line = ""
 
-    # Keep building solver message by reading until first truly empty line
+    # Extract the solver message by concatenating all of the lines until
+    # "Options".
     while true
         line = readline(f)
-        isempty(chomp(line)) && break
-        m.solve_message *= line
-    end
-
-    # Skip over empty lines
-    while true
-        line = readline(f)
-        !isempty(chomp(line)) && break
+        if length(line) >= 7 && line[1:7] == "Options"
+            break
+        else
+            m.solve_message *= line
+        end
     end
 
     # Read through all the options. Direct copy of reference implementation.

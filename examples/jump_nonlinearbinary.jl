@@ -23,7 +23,7 @@ using JuMP, Base.Test, AmplNLWriter
 
     @test solve(m) == :Optimal
 
-    if getsolvername(solver) == "ipopt"
+    if contains(getsolvername(solver), "ipopt")
         # Ipopt solves the relaxation
         @test isapprox(getvalue(x), [0.501245, 1.0], atol=1e-6)
         @test isapprox(getobjectivevalue(m), 0.249377, atol=1e-6)
