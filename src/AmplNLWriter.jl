@@ -4,7 +4,7 @@ module AmplNLWriter
 using Compat
 using MathProgBase
 using MathProgBase.SolverInterface
-using SparseArrays
+using Compat.SparseArrays
 
 debug = false
 setdebug(b::Bool) = global debug = b

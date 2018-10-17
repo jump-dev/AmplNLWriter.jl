@@ -29,5 +29,10 @@ for s in solvers
     end
 end
 
-include(joinpath(dirname(pathof(JuMP)), "..", "test", "solvers.jl"))
-include(joinpath(dirname(pathof(JuMP)), "..", "test", "nonlinear.jl"))
+@static if VERSION < v"0.7-"
+    include(Pkg.dir("JuMP","test","solvers.jl"))
+    include(Pkg.dir("JuMP","test","nonlinear.jl"))
+else
+    include(joinpath(dirname(pathof(JuMP)), "..", "test", "solvers.jl"))
+    include(joinpath(dirname(pathof(JuMP)), "..", "test", "nonlinear.jl"))
+end
