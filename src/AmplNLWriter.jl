@@ -410,8 +410,8 @@ function SolverInterface.optimize!(m::AmplNLMathProgModel)
 
     # Run solver and save exitcode
     t = time()
-    proc = Compat.run(pipeline(
-        `$(m.solver_command) $(m.probfile) -AMPL $(m.options)`, stdout=stdout), wait=false)
+    cmd = pipeline(`$(m.solver_command) $(m.probfile) -AMPL $(m.options)`, stdout=stdout)
+    proc = VERSION < v"0.7-" ? spawn(cmd) : run(cmd, wait=false)
     wait(proc)
     kill(proc)
     m.solve_exitcode = proc.exitcode
