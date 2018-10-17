@@ -1,4 +1,4 @@
-using JuMP, Base.Test, AmplNLWriter
+using JuMP, Compat.Test, AmplNLWriter
 
 # solver = AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
 

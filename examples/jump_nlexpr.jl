@@ -1,4 +1,4 @@
-using JuMP, Base.Test, AmplNLWriter
+using JuMP, Compat.Test, AmplNLWriter
 
 # Example testing basic use of NLExpr with AmplNLWriter.jl
 

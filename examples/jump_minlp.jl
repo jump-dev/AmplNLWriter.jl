@@ -1,4 +1,4 @@
-using JuMP, Base.Test, AmplNLWriter
+using JuMP, Compat.Test, AmplNLWriter
 
 ## Solve test problem 1 (Synthesis of processing system) in
  #  M. Duran & I.E. Grossmann, "An outer approximation algorithm for
@@ -43,7 +43,7 @@ using JuMP, Base.Test, AmplNLWriter
 
     @test solve(m) == :Optimal
 
-    if contains(getsolvername(solver), "ipopt")
+    if occursin("ipopt", getsolvername(solver))
         # Ipopt solves the relaxation
         @test isapprox(getvalue(x)[:], [1.14652, 0.546596, 1.0], atol=1e-5)
         @test isapprox(getvalue(y)[:], [0.27330, 0.299959, 0.0], atol=1e-5)
