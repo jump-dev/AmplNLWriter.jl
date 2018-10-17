@@ -4,10 +4,15 @@ os:
   - osx
 julia:
   - 0.6
+  - 1.0
   - nightly
 matrix:
   allow_failures:
     - julia: nightly
+branches:
+  only:
+    - master
+    - /^v[0-9]+\.[0-9]+\.[0-9]+$/ # version tags
 notifications:
   email: false
 sudo: false
@@ -17,12 +22,7 @@ cache:
 addons:
   apt_packages:
     - gfortran
-script:
-  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'Pkg.clone(pwd()); Pkg.build("AmplNLWriter"); Pkg.add("Ipopt")'
-  - julia -e 'Pkg.add("Ipopt")'
-  - julia --check-bounds=yes -e 'Pkg.test("AmplNLWriter", coverage=true)'
 before_cache:
   - cp -R $HOME/.julia/*/Ipopt/deps/usr $HOME
 after_success:
-  - julia -e 'cd(Pkg.dir("AmplNLWriter")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+  - julia -e 'if VERSION >= v"0.7-"; using Pkg; else; cd(Pkg.dir("AmplNLWriter")); end; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
