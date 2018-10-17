@@ -187,7 +187,7 @@ function write_nl_j_blocks(f, m::AmplNLMathProgModel)
 
             # Assemble tuples of (.nl index, constraint value)
             output = collect(zip(
-                Set((m.v_index_map[j] for j in keys(m.lin_constrs[i]))), # TODO: is Set necessary here?
+                (m.v_index_map[j] for j in keys(m.lin_constrs[i])),
                 values(m.lin_constrs[i]))
             )
 
