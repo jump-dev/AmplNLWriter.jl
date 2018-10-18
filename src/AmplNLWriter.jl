@@ -624,7 +624,8 @@ function read_results(resultio, m::AmplNLMathProgModel)
             try
                 m.objval = eval_f(m.d, m.solution)
                 return
-            finally
+            catch
+                # do nothing
             end
         end
 

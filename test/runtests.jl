@@ -22,7 +22,7 @@ for s in solvers
                 "jump_minlp.jl",
                 "jump_nonlinearbinary.jl", "jump_no_obj.jl",
                 "jump_const_obj.jl",
-                # "jump_maxmin.jl" TODO: broken (Unsupported operation min)
+                "jump_maxmin.jl"
             ]
             include(joinpath(examples_path, example))
         end
