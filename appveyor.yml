@@ -1,16 +1,17 @@
 environment:
   matrix:
   - julia_version: 0.6
+  - julia_version: 0.7
   - julia_version: 1
-  - julia_version: nightly
 
 platform:
   - x86 # 32-bit
   - x64 # 64-bit
 
 matrix:
-  allow_failures:
-  - julia_version: nightly
+  allow_failures: # due to https://github.com/JuliaOpt/Ipopt.jl/issues/119#issuecomment-397824151
+  - julia_version: 0.7
+  - julia_version: 1
 
 branches:
   only:
