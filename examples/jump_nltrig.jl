@@ -1,4 +1,4 @@
-using JuMP, Base.Test, AmplNLWriter
+using JuMP, Compat.Test, AmplNLWriter
 
 ## Solve test problem with sind and cosd functions
  #

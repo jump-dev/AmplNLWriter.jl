@@ -1,4 +1,4 @@
-using JuMP, Base.Test, AmplNLWriter
+using JuMP, Compat.Test, AmplNLWriter
 
 # Example with no objective (#50)
 

@@ -1,4 +1,4 @@
-using JuMP, Base.Test, AmplNLWriter
+using JuMP, Compat.Test, AmplNLWriter
 
 ## Solve test problem with non-linear binary variables
  #
@@ -23,7 +23,7 @@ using JuMP, Base.Test, AmplNLWriter
 
     @test solve(m) == :Optimal
 
-    if contains(getsolvername(solver), "ipopt")
+    if occursin("ipopt", getsolvername(solver))
         # Ipopt solves the relaxation
         @test isapprox(getvalue(x), [0.501245, 1.0], atol=1e-6)
         @test isapprox(getobjectivevalue(m), 0.249377, atol=1e-6)

@@ -1,13 +1,15 @@
 __precompile__()
 module AmplNLWriter
 
+using Compat
 using MathProgBase
-importall MathProgBase.SolverInterface
+using MathProgBase.SolverInterface
+using Compat.SparseArrays
 
 debug = false
 setdebug(b::Bool) = global debug = b
 
-solverdata_dir = joinpath(Pkg.dir("AmplNLWriter"), ".solverdata")
+solverdata_dir = abspath(joinpath(@__DIR__, "..", ".solverdata"))
 
 include("nl_linearity.jl")
 include("nl_params.jl")
@@ -188,14 +190,14 @@ end
 
 include("nl_write.jl")
 
-NonlinearModel(s::AmplNLSolver) = AmplNLNonlinearModel(
+SolverInterface.NonlinearModel(s::AmplNLSolver) = AmplNLNonlinearModel(
     AmplNLMathProgModel(s.solver_command, s.options, s.filename)
 )
-LinearQuadraticModel(s::AmplNLSolver) = AmplNLLinearQuadraticModel(
+SolverInterface.LinearQuadraticModel(s::AmplNLSolver) = AmplNLLinearQuadraticModel(
     AmplNLMathProgModel(s.solver_command, s.options, s.filename)
 )
 
-function loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer, ncon::Integer,
+function SolverInterface.loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer, ncon::Integer,
                       x_l, x_u, g_l, g_u, sense::Symbol,
                       d::AbstractNLPEvaluator)
     m = outer.inner
@@ -268,7 +270,7 @@ function loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer, ncon::Integer,
     m
 end
 
-function loadproblem!(outer::AmplNLLinearQuadraticModel, A::AbstractMatrix,
+function SolverInterface.loadproblem!(outer::AmplNLLinearQuadraticModel, A::AbstractMatrix,
                       x_l, x_u, c, g_l, g_u, sense)
     m = outer.inner
     m.ncon, m.nvar = size(A)
@@ -337,7 +339,7 @@ function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
     m.lin_constrs = [Dict{Int, Float64}() for _ in 1:m.ncon]
     m.j_counts = zeros(Int, m.nvar)
 
-    m.r_codes = Array{Int}(m.ncon)
+    m.r_codes = Array{Int}(undef, m.ncon)
 
     m.varlinearities_con = fill(:Lin, m.nvar)
     m.varlinearities_obj = fill(:Lin, m.nvar)
@@ -348,21 +350,21 @@ function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
     m.x_0 = zeros(m.nvar)
 end
 
-getvartype(m::AmplNLMathProgModel) = copy(m.vartypes)
-function setvartype!(m::AmplNLMathProgModel, cat::Vector{Symbol})
+SolverInterface.getvartype(m::AmplNLMathProgModel) = copy(m.vartypes)
+function SolverInterface.setvartype!(m::AmplNLMathProgModel, cat::Vector{Symbol})
     @assert all(x-> (x in [:Cont,:Bin,:Int]), cat)
     m.vartypes = copy(cat)
 end
 
-getsense(m::AmplNLMathProgModel) = m.sense
-function setsense!(m::AmplNLMathProgModel, sense::Symbol)
+SolverInterface.getsense(m::AmplNLMathProgModel) = m.sense
+function SolverInterface.setsense!(m::AmplNLMathProgModel, sense::Symbol)
     @assert sense == :Min || sense == :Max
     m.sense = sense
 end
 
-setwarmstart!(m::AmplNLMathProgModel, v::Vector{Float64}) = m.x_0 = v
+SolverInterface.setwarmstart!(m::AmplNLMathProgModel, v::Vector{Float64}) = m.x_0 = v
 
-function optimize!(m::AmplNLMathProgModel)
+function SolverInterface.optimize!(m::AmplNLMathProgModel)
     m.status = :NotSolved
     m.solve_exitcode = -1
     m.solve_result_num = -1
@@ -402,14 +404,14 @@ function optimize!(m::AmplNLMathProgModel)
     end
 
     # Rename file to have .nl extension (this is required by solvers)
-    # remove_destination flag added to fix issue in Windows, where temp file are not absolutely unique and file closing is not fast enough
+    # force flag added to fix issue in Windows, where temp file are not absolutely unique and file closing is not fast enough
     # See https://github.com/JuliaOpt/AmplNLWriter.jl/pull/63.
-    mv(file_basepath, m.probfile, remove_destination=true)
+    Compat.mv(file_basepath, m.probfile, force=true)
 
     # Run solver and save exitcode
     t = time()
-    proc = spawn(pipeline(
-        `$(m.solver_command) $(m.probfile) -AMPL $(m.options)`, stdout=STDOUT))
+    cmd = pipeline(`$(m.solver_command) $(m.probfile) -AMPL $(m.options)`, stdout=stdout)
+    proc = VERSION < v"0.7-" ? spawn(cmd) : run(cmd, wait=false)
     wait(proc)
     kill(proc)
     m.solve_exitcode = proc.exitcode
@@ -468,12 +470,12 @@ function process_expression!(nonlin_expr::Real, lin_expr, varlinearities)
     0, nonlin_expr, :Lin
 end
 
-status(m::AmplNLMathProgModel) = m.status
-getsolution(m::AmplNLMathProgModel) = copy(m.solution)
-getobjval(m::AmplNLMathProgModel) = m.objval
-numvar(m::AmplNLMathProgModel) = m.nvar
-numconstr(m::AmplNLMathProgModel) = m.ncon
-getsolvetime(m::AmplNLMathProgModel) = m.solve_time
+SolverInterface.status(m::AmplNLMathProgModel) = m.status
+SolverInterface.getsolution(m::AmplNLMathProgModel) = copy(m.solution)
+SolverInterface.getobjval(m::AmplNLMathProgModel) = m.objval
+SolverInterface.numvar(m::AmplNLMathProgModel) = m.nvar
+SolverInterface.numconstr(m::AmplNLMathProgModel) = m.ncon
+SolverInterface.getsolvetime(m::AmplNLMathProgModel) = m.solve_time
 
 # Access to AMPL solve result items
 get_solve_result(m::AmplNLMathProgModel) = m.solve_result
@@ -602,15 +604,15 @@ function read_results(resultio, m::AmplNLMathProgModel)
     # Some solvers (e.g. SCIP) don't ever print the suffixes so we need this.
     if m.status == :NotSolved
         message = lowercase(m.solve_message)
-        if contains(message, "optimal")
+        if occursin("optimal", message)
             m.status = :Optimal
-        elseif contains(message, "infeasible")
+        elseif occursin("infeasible", message)
             m.status = :Infeasible
-        elseif contains(message, "unbounded")
+        elseif occursin("unbounded", message)
             m.status = :Unbounded
-        elseif contains(message, "limit")
+        elseif occursin("limit", message)
             m.status = :UserLimit
-        elseif contains(message, "error")
+        elseif occursin("error", message)
             m.status = :Error
         end
     end
@@ -622,6 +624,8 @@ function read_results(resultio, m::AmplNLMathProgModel)
             try
                 m.objval = eval_f(m.d, m.solution)
                 return
+            catch
+                # do nothing
             end
         end
 
@@ -710,7 +714,7 @@ function read_sol(f::IO, m::AmplNLMathProgModel)
         line = readline(f)
 
         i = m.v_index_map_rev[index]
-        x[i] = float(chomp(line))
+        x[i] = parse(Float64, chomp(line))
     end
     m.solution = x
 
@@ -766,13 +770,17 @@ function evaluate_linear(linear_coeffs::Dict{Int, Float64}, x::Array{Float64})
 end
 
 # Wrapper functions
-for f in [:getvartype,:getsense,:optimize!,:status,:getsolution,:getobjval,:numvar,:numconstr,:get_solve_result,:get_solve_result_num,:get_solve_message,:get_solve_exitcode,:getsolvetime]
+for f in [:getvartype,:getsense,:optimize!,:status,:getsolution,:getobjval,:numvar,:numconstr,:getsolvetime]
+    @eval SolverInterface.$f(m::AmplNLNonlinearModel) = $f(m.inner)
+    @eval SolverInterface.$f(m::AmplNLLinearQuadraticModel) = $f(m.inner)
+end
+for f in [:get_solve_result,:get_solve_result_num,:get_solve_message,:get_solve_exitcode]
     @eval $f(m::AmplNLNonlinearModel) = $f(m.inner)
     @eval $f(m::AmplNLLinearQuadraticModel) = $f(m.inner)
 end
 for f in [:setvartype!,:setsense!,:setwarmstart!]
-    @eval $f(m::AmplNLNonlinearModel, x) = $f(m.inner, x)
-    @eval $f(m::AmplNLLinearQuadraticModel, x) = $f(m.inner, x)
+    @eval SolverInterface.$f(m::AmplNLNonlinearModel, x) = $f(m.inner, x)
+    @eval SolverInterface.$f(m::AmplNLLinearQuadraticModel, x) = $f(m.inner, x)
 end
 
 # Utility method for deleting any leftover debug files
