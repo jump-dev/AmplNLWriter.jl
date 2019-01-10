@@ -791,4 +791,6 @@ function clean_solverdata()
     end
 end
 
+include("MOI_wrapper.jl")
+
 end

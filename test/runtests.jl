@@ -2,6 +2,8 @@ using AmplNLWriter, JuMP, Ipopt
 using Compat
 using Compat.Test
 
+include("MOI_wrapper.jl")
+
 include("nl_convert.jl")
 include("nl_linearity.jl")
 include("nl_write.jl")
