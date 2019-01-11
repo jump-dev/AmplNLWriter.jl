@@ -11,7 +11,7 @@ MOIU.@model(InnerModel,
     (),
     (),
     (MOI.SingleVariable,),
-    (MOI.ScalarAffineFunction,),
+    (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
     (),
     ()
 )
@@ -164,6 +164,27 @@ function func_to_expr_graph(func::MOI.ScalarAffineFunction, variable_map)
         coef = term.coefficient
         variable_int = variable_map[term.variable_index]
         push!(expr.args, Expr(:ref, :x, variable_int))
+    end
+    return expr
+end
+
+function func_to_expr_graph(func::MOI.ScalarQuadraticFunction, variable_map)
+    expr = Expr(:call, :+, func.constant)
+    for term in func.affine_terms
+        coef = term.coefficient
+        variable_int = variable_map[term.variable_index]
+        push!(expr.args, Expr(:ref, :x, variable_int))
+    end
+    for term in func.quadratic_terms
+        coef = term.coefficient
+        variable_int_1 = variable_map[term.variable_index_1]
+        variable_int_2 = variable_map[term.variable_index_2]
+        push!(expr.args, Expr(
+            :call,
+            :*,
+            Expr(:ref, :x, variable_int_1),
+            Expr(:ref, :x, variable_int_2)
+        ))
     end
     return expr
 end
