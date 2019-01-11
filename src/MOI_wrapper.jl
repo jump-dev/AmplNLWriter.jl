@@ -21,6 +21,10 @@ const MOI_SCALAR_SETS = (
     MOI.Interval{Float64}
 )
 
+const MOI_SCALAR_FUNCTIONS = (
+    MOI.ScalarAffineFunction{Float64}, MOI.ScalarQuadraticFunction{Float64}
+)
+
 # Make `Model` a constant for use in the rest of the file.
 const Model = MOIU.UniversalFallback{InnerModel{Float64}}
 
@@ -127,6 +131,9 @@ function replace_variableindex_by_int(variable_map, expr::MOI.VariableIndex)
 end
 replace_variableindex_by_int(variable_map, expr) = expr
 
+# ==============================================================================
+# In the next section we match up the MPB nonlinear functions to the MOI API.
+# This is basically just a rename.
 function MPB.initialize(d::NLPEvaluator, requested_features::Vector{Symbol})
     MOI.initialize(d.inner, requested_features)
     return
@@ -137,15 +144,25 @@ function MPB.features_available(d::NLPEvaluator)
 end
 
 function MPB.obj_expr(d::NLPEvaluator)
+    # d.objective_expr is a SingleVariable, ScalarAffineFunction, or a
+    # ScalarQuadraticFunction from MOI. If it is unset, it will be `nothing` (we
+    # enforce this when creating the NLPEvaluator in `optimize!`).
     if d.objective_expr !=== nothing
         return d.objective_expr
     else
+        # If d.objective_expr === nothing, then the objective must be nonlinear.
+        # Query it from the inner NLP evaluator.
         expr = MOI.objective_expr(d.inner)
         return replace_variableindex_by_int(d.variable_map, expr)
     end
 end
 
 function MPB.constr_expr(d::NLPEvaluator, i)
+    # There are two types of constraints in the model:
+    # i = 1, 2, ..., d.num_inner_con are the nonlinear constraints. We access
+    # these from the inner NLP evaluator.
+    # i = d.num_inner_con + 1, d.num_inner_con + 2, ..., N are the linear or
+    # quadratic constraints added by MOI.
     if i <= d.num_inner_con
         expr = MOI.constraint_expr(d.inner, i)
         return replace_variableindex_by_int(d.variable_map, expr)
@@ -154,6 +171,10 @@ function MPB.constr_expr(d::NLPEvaluator, i)
     end
 end
 
+# ==============================================================================
+# In the next section, we need to convert MOI functions and sets into expression
+# graphs. First, we convert functions (SingleVariable, ScalarAffine, and
+# ScalarQuadratic) into expression graphs.
 function func_to_expr_graph(func::MOI.SingleVariable, variable_map)
     return Expr(:ref, :x, variable_map[func.variable])
 end
@@ -189,6 +210,8 @@ function func_to_expr_graph(func::MOI.ScalarQuadraticFunction, variable_map)
     return expr
 end
 
+# Next, we need to combine a function `Expr` with a MOI set into a comparison.
+
 function funcset_to_expr_graph(func::Expr, set::MOI.LessThan)
     return Expr(:call, :<=, func, set.upper)
 end
@@ -205,18 +228,27 @@ function funcset_to_expr_graph(func::Expr, set::MOI.Interval)
     return Expr(:comparison, set.lower, :<=, func, :<=, set.upper)
 end
 
+# A helper function that converts a MOI function and MOI set into a comparison
+# expression.
+
 function moi_to_expr_graph(func::MOI.ScalarAffineFunction, set, variable_map)
     func_expr = func_to_expr_graph(func, variable_map)
     return funcset_to_expr_graph(func_expr, set)
 end
 
+# ==============================================================================
+# Now we're ready to optimize model.
 function MOI.optimize!(model::Model)
+    # Extract the MathProgBase solver from the model. Recall it's a MOI
+    # attribute which we're careful not to delete on calls to `empty!`.
     mpb_solver = MOI.get(model, MPBSolver())
 
     # Get the optimzation sense.
     opt_sense = MOI.get(model, MOI.ObjectiveSense())
     sense = opt_sense == MOI.MAX_SENSE ? :Max : :Min
 
+    # Get the NLPBlock from the model.
+    # TODO(odow): what to do if there is no NLP block?
     nlp_block = try
         MOI.get(model, MOI.NLPBlock())
     catch ex
@@ -224,7 +256,8 @@ function MOI.optimize!(model::Model)
     end
 
     # ==========================================================================
-    # Extrac the constraint bounds.
+    # Extract the nonlinear constraint bounds. We're going to append to these
+    # g_l and g_u vectors later.
     num_con = length(nlp_block.constraint_bounds)
     g_l = fill(-Inf, num_con)
     g_u = fill(Inf, num_con)
@@ -264,16 +297,18 @@ function MOI.optimize!(model::Model)
     # We have to convert all ScalarAffineFunction-in-Set constraints to an
     # expression graph.
     scalar_constraint_expr = Expr[]
-    for set_type in MOI_SCALAR_SETS
-        for c_ref in MOI.get(model, MOI.ListOfConstraintIndices{
-                MOI.ScalarAffineFunction{Float64}, set_type}())
-            c_func = MOI.get(model, MOI.ConstraintFunction(), c_ref)
-            c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
-            expr = moi_to_expr_graph(c_func, c_set, variable_map)
-            push!(scalar_constraint_expr, expr)
-            lower, upper = set_to_bounds(c_set)
-            push!(g_l, lower)
-            push!(g_u, upper)
+    for func_type in MOI_SCALAR_FUNCTIONS
+        for set_type in MOI_SCALAR_SETS
+            for c_ref in MOI.get(model, MOI.ListOfConstraintIndices{
+                    func_type, set_type}())
+                c_func = MOI.get(model, MOI.ConstraintFunction(), c_ref)
+                c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
+                expr = moi_to_expr_graph(c_func, c_set, variable_map)
+                push!(scalar_constraint_expr, expr)
+                lower, upper = set_to_bounds(c_set)
+                push!(g_l, lower)
+                push!(g_u, upper)
+            end
         end
     end
 
@@ -344,6 +379,9 @@ function MOI.optimize!(model::Model)
     return
 end
 
+# ==============================================================================
+# MOI accessors for the solution info.
+
 function MOI.get(model::Model, ::MOI.VariablePrimal, var::MOI.VariableIndex)
     mpb_solution = MOI.get(model, MPBSolutionAttribute())
     if mpb_solution === nothing
@@ -367,6 +405,8 @@ function MOI.get(model::Model, ::MOI.TerminationStatus)
     end
     status = mpb_solution.status
     if status == :Optimal
+        # TODO(odow): this is not always the case. What if Ipopt solves a
+        # convex problem?
         return MOI.LOCALLY_SOLVED
     elseif status == :Infeasible
         return MOI.INFEASIBLE
