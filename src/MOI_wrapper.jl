@@ -11,13 +11,23 @@ MOIU.@model(InnerModel,
     (),
     (),
     (MOI.SingleVariable,),
-    (),
+    (MOI.ScalarAffineFunction,),
     (),
     ()
 )
 
+const MOI_SCALAR_SETS = (
+    MOI.EqualTo{Float64}, MOI.GreaterThan{Float64}, MOI.LessThan{Float64},
+    MOI.Interval{Float64}
+)
+
 # Make `Model` a constant for use in the rest of the file.
 const Model = MOIU.UniversalFallback{InnerModel{Float64}}
+
+# Only support the constraint types defined by `InnerModel`.
+function MOI.supports_constraint(model::Model, args...)
+    return MOI.supports_constraint(model.model, args...)
+end
 
 "Attribute for the MathProgBase solver."
 struct MPBSolver <: MOI.AbstractOptimizerAttribute end
@@ -94,6 +104,8 @@ set_to_cat(set::MOI.Integer) = :Int
 struct NLPEvaluator{T <: MOI.AbstractNLPEvaluator} <: MPB.AbstractNLPEvaluator
     inner::T
     variable_map::Dict{MOI.VariableIndex, Int}
+    num_inner_con::Int
+    scalar_constraint_expr::Vector{Expr}
 end
 
 """
@@ -128,46 +140,47 @@ function MPB.obj_expr(d::NLPEvaluator)
 end
 
 function MPB.constr_expr(d::NLPEvaluator, i)
-    expr = MOI.constraint_expr(d.inner, i)
-    return replace_variableindex_by_int(d.variable_map, expr)
+    if i <= d.num_inner_con
+        expr = MOI.constraint_expr(d.inner, i)
+        return replace_variableindex_by_int(d.variable_map, expr)
+    else
+        return d.scalar_constraint_expr[i - d.num_inner_con]
+    end
+end
+
+function func_to_expr_graph(func::MOI.ScalarAffineFunction, variable_map)
+    expr = Expr(:call, :+, func.constant)
+    for term in func.terms
+        coef = term.coefficient
+        variable_int = variable_map[term.variable_index]
+        push!(expr.args, Expr(:ref, :x, variable_int))
+    end
+    return expr
+end
+
+function funcset_to_expr_graph(func::Expr, set::MOI.LessThan)
+    return Expr(:call, :<=, func, set.upper)
+end
+
+function funcset_to_expr_graph(func::Expr, set::MOI.GreaterThan)
+    return Expr(:call, :>=, func, set.lower)
+end
+
+function funcset_to_expr_graph(func::Expr, set::MOI.EqualTo)
+    return Expr(:call, :(==), func, set.value)
+end
+
+function funcset_to_expr_graph(func::Expr, set::MOI.Interval)
+    return Expr(:comparison, set.lower, :<=, func, :<=, set.upper)
+end
+
+function moi_to_expr_graph(func::MOI.ScalarAffineFunction, set, variable_map)
+    func_expr = func_to_expr_graph(func, variable_map)
+    return funcset_to_expr_graph(func_expr, set)
 end
 
 function MOI.optimize!(model::Model)
     mpb_solver = MOI.get(model, MPBSolver())
-
-    # Get the variable data.
-    variables = MOI.get(model, MOI.ListOfVariableIndices())
-    num_var = length(variables)
-    x_l = fill(-Inf, num_var)
-    x_u = fill(Inf, num_var)
-    x_cat = fill(:Cont, num_var)
-
-    variable_map = Dict{MOI.VariableIndex, Int}()
-    for (i, variable) in enumerate(variables)
-        variable_map[variable] = i
-    end
-
-    for set_type in (MOI.LessThan{Float64}, MOI.GreaterThan{Float64})
-        for c_ref in MOI.get(model,
-            MOI.ListOfConstraintIndices{MOI.SingleVariable, set_type}())
-            c_func = MOI.get(model, MOI.ConstraintFunction(), c_ref)
-            c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
-            v_index = variable_map[c_func.variable]
-            lower, upper = set_to_bounds(c_set)
-            x_l[v_index] = lower
-            x_u[v_index] = upper
-        end
-    end
-
-    for set_type in (MOI.ZeroOne, MOI.Integer)
-        for c_ref in MOI.get(model,
-            MOI.ListOfConstraintIndices{MOI.SingleVariable, set_type}())
-            c_func = MOI.get(model, MOI.ConstraintFunction(), c_ref)
-            c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
-            v_index = variable_map[c_func.variable]
-            x_cat[v_index] = set_to_cat(c_set)
-        end
-    end
 
     # Get the optimzation sense.
     opt_sense = MOI.get(model, MOI.ObjectiveSense())
@@ -179,7 +192,8 @@ function MOI.optimize!(model::Model)
         error("Expected a NLPBLock.")
     end
 
-    # Extract constraint bounds.
+    # ==========================================================================
+    # Extrac the constraint bounds.
     num_con = length(nlp_block.constraint_bounds)
     g_l = fill(-Inf, num_con)
     g_u = fill(Inf, num_con)
@@ -188,14 +202,77 @@ function MOI.optimize!(model::Model)
         g_u[i] = bound.upper
     end
 
-    mpb_model = MPB.NonlinearModel(mpb_solver)
-    MPB.loadproblem!(
-        mpb_model, num_var, num_con, x_l, x_u, g_l, g_u, sense,
-        NLPEvaluator(nlp_block.evaluator, variable_map)
-    )
+    # ==========================================================================
+    # Intialize the variables. We need to form a mapping between the MOI
+    # VariableIndex and an Int in order to replace instances of
+    # `x[VariableIndex]` with `x[i]` in the expression graphs.
+    variables = MOI.get(model, MOI.ListOfVariableIndices())
+    num_var = length(variables)
+    variable_map = Dict{MOI.VariableIndex, Int}()
+    for (i, variable) in enumerate(variables)
+        variable_map[variable] = i
+    end
 
+    # ==========================================================================
+    # Extract variable bounds.
+    x_l = fill(-Inf, num_var)
+    x_u = fill(Inf, num_var)
+    for set_type in MOI_SCALAR_SETS
+        for c_ref in MOI.get(model,
+            MOI.ListOfConstraintIndices{MOI.SingleVariable, set_type}())
+            c_func = MOI.get(model, MOI.ConstraintFunction(), c_ref)
+            c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
+            v_index = variable_map[c_func.variable]
+            lower, upper = set_to_bounds(c_set)
+            x_l[v_index] = lower
+            x_u[v_index] = upper
+        end
+    end
+
+    # ==========================================================================
+    # We have to convert all ScalarAffineFunction-in-Set constraints to an
+    # expression graph.
+    scalar_constraint_expr = Expr[]
+    for set_type in MOI_SCALAR_SETS
+        for c_ref in MOI.get(model, MOI.ListOfConstraintIndices{
+                MOI.ScalarAffineFunction{Float64}, set_type}())
+            c_func = MOI.get(model, MOI.ConstraintFunction(), c_ref)
+            c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
+            expr = moi_to_expr_graph(c_func, c_set, variable_map)
+            push!(scalar_constraint_expr, expr)
+            lower, upper = set_to_bounds(c_set)
+            push!(g_l, lower)
+            push!(g_u, upper)
+        end
+    end
+    nlp_evaluator = NLPEvaluator(nlp_block.evaluator, variable_map, num_con,
+        scalar_constraint_expr)
+
+    # ==========================================================================
+    # Create the MathProgBase model. Note that we pass `num_con` and the number
+    # of linear constraints.
+    mpb_model = MPB.NonlinearModel(mpb_solver)
+    MPB.loadproblem!( mpb_model, num_var,
+        num_con + length(scalar_constraint_expr), x_l, x_u, g_l, g_u, sense,
+        nlp_evaluator)
+
+    # ==========================================================================
+    # Set any variables to :Bin if they are in ZeroOne and :Int if they are
+    # Integer. The default is just :Cont.
+    x_cat = fill(:Cont, num_var)
+    for set_type in (MOI.ZeroOne, MOI.Integer)
+        for c_ref in MOI.get(model,
+            MOI.ListOfConstraintIndices{MOI.SingleVariable, set_type}())
+            c_func = MOI.get(model, MOI.ConstraintFunction(), c_ref)
+            c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
+            v_index = variable_map[c_func.variable]
+            x_cat[v_index] = set_to_cat(c_set)
+        end
+    end
     MPB.setvartype!(mpb_model, x_cat)
 
+    # ==========================================================================
+    # Set the VariablePrimalStart attributes for variables.
     variable_primal_start = fill(NaN, num_var)
     for (i, variable) in enumerate(variables)
         variable_primal_start[i] =
@@ -203,14 +280,16 @@ function MOI.optimize!(model::Model)
     end
     MPB.setwarmstart!(mpb_model, variable_primal_start)
 
+    # ==========================================================================
+    # Set the VariablePrimalStart attributes for variables.
     MPB.optimize!(mpb_model)
 
-    # MathProbBase solution
+    # ==========================================================================
+    # Extract and save the MathProgBase solution.
     primal_solution = Dict{MOI.VariableIndex, Float64}()
     for (variable, sol) in zip(variables, MPB.getsolution(mpb_model))
         primal_solution[variable] = sol
     end
-
     mpb_solution = MPBSolution(
         MPB.status(mpb_model),
         sense == :Min,
