@@ -16,7 +16,9 @@ const CONFIG = MOIT.TestConfig(
         "solve_objbound_edge_cases",  # ObjectiveBound not implemented
         "solve_integer_edge_cases",  # Ipopt doesn't handle integer
         "solve_affine_deletion_edge_cases",  # VectorAffineFunction
-        "solve_blank_obj"  # Weird corrupt NL file error.
+        # It seems that the AMPL NL reader declares NL files with no objective
+        # and no constraints as corrupt, even if they have variable bounds. Yuk.
+        "solve_blank_obj"
     ])
 end
 

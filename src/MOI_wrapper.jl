@@ -48,7 +48,6 @@ struct MPBSolutionAttribute <: MOI.AbstractModelAttribute end
 "Struct to contain the MPB solution."
 struct MPBSolution
     status::Symbol
-    is_minimization::Bool
     objective_value::Float64
     primal_solution::Dict{MOI.VariableIndex, Float64}
 end
@@ -168,7 +167,7 @@ function MPB.obj_expr(d::NLPEvaluator)
         expr = MOI.objective_expr(d.inner)
         return replace_variableindex_by_int(d.variable_map, expr)
     else
-        return :(0.0 * x[1])
+        return :(0.0)
     end
 end
 
@@ -404,7 +403,6 @@ function MOI.optimize!(model::Model)
     end
     mpb_solution = MPBSolution(
         MPB.status(mpb_model),
-        sense == :Min,
         MPB.getobjval(mpb_model),
         primal_solution
     )

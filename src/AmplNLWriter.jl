@@ -255,16 +255,19 @@ function SolverInterface.loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer
 
     # Process objective
     m.obj = obj_expr(m.d)
-    if length(m.obj.args) < 2
-        m.obj = 0
-    else
-        # Convert non-linear expression to non-linear, linear and constant
-        m.obj, constant, m.objlinearity = process_expression!(
-            m.obj, m.lin_obj, m.varlinearities_obj)
+    if typeof(m.obj) <: Expr
+        if length(m.obj.args) < 2
+            # TODO(odow): what does this case mean?
+            m.obj = 0
+        else
+            # Convert non-linear expression to non-linear, linear and constant
+            m.obj, constant, m.objlinearity = process_expression!(
+                m.obj, m.lin_obj, m.varlinearities_obj)
 
-        # Add constant back into non-linear expression
-        if constant != 0
-            m.obj = add_constant(m.obj, constant)
+            # Add constant back into non-linear expression
+            if constant != 0
+                m.obj = add_constant(m.obj, constant)
+            end
         end
     end
     m
