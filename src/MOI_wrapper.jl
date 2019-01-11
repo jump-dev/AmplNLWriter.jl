@@ -1,7 +1,6 @@
 # TODO(odow):
 # - remove the `try-catch`es once the following PR is merged
 #   https://github.com/JuliaOpt/MathOptInterface.jl/pull/623
-# - What happens if the objective is `min 0.0`?
 
 using MathOptInterface
 const MOI = MathOptInterface
@@ -74,7 +73,7 @@ function Optimizer(
     return model
 end
 
-Base.show(io::IO, ::Model) = println(io, "A MathProgBase model")
+Base.show(io::IO, ::Model) = print(io, "An AmplNLWriter model")
 
 MOI.get(::Model, ::MOI.SolverName) = "AmplNLWriter"
 

@@ -6,6 +6,8 @@ const MOIT = MOI.Test
 
 const OPTIMIZER = AmplNLWriter.Optimizer(Ipopt.amplexe, ["print_level = 0"])
 
+@test sprint(show, OPTIMIZER) == "An AmplNLWriter model"
+
 const CONFIG = MOIT.TestConfig(
     atol = 1e-4, rtol = 1e-4, optimal_status = MOI.LOCALLY_SOLVED,
     infeas_certificates = false, duals = false
