@@ -25,8 +25,9 @@ const MOI_SCALAR_SETS = (
 const Model = MOIU.UniversalFallback{InnerModel{Float64}}
 
 # Only support the constraint types defined by `InnerModel`.
-function MOI.supports_constraint(model::Model, args...)
-    return MOI.supports_constraint(model.model, args...)
+function MOI.supports_constraint(
+        model::Model, F::Type{<:MOI.AbstractFunction}, S::Type{MOI.AbstractSet})
+    return MOI.supports_constraint(model.model, F, S)
 end
 
 "Attribute for the MathProgBase solver."
@@ -105,6 +106,7 @@ struct NLPEvaluator{T <: MOI.AbstractNLPEvaluator} <: MPB.AbstractNLPEvaluator
     inner::T
     variable_map::Dict{MOI.VariableIndex, Int}
     num_inner_con::Int
+    objective_expr::Union{Nothing, Expr}
     scalar_constraint_expr::Vector{Expr}
 end
 
@@ -135,8 +137,12 @@ function MPB.features_available(d::NLPEvaluator)
 end
 
 function MPB.obj_expr(d::NLPEvaluator)
-    expr = MOI.objective_expr(d.inner)
-    return replace_variableindex_by_int(d.variable_map, expr)
+    if d.objective_expr !=== nothing
+        return d.objective_expr
+    else
+        expr = MOI.objective_expr(d.inner)
+        return replace_variableindex_by_int(d.variable_map, expr)
+    end
 end
 
 function MPB.constr_expr(d::NLPEvaluator, i)
@@ -146,6 +152,10 @@ function MPB.constr_expr(d::NLPEvaluator, i)
     else
         return d.scalar_constraint_expr[i - d.num_inner_con]
     end
+end
+
+function func_to_expr_graph(func::MOI.SingleVariable, variable_map)
+    return Expr(:ref, :x, variable_map[func.variable])
 end
 
 function func_to_expr_graph(func::MOI.ScalarAffineFunction, variable_map)
@@ -245,8 +255,21 @@ function MOI.optimize!(model::Model)
             push!(g_u, upper)
         end
     end
+
+    # ==========================================================================
+    # MOI objective
+    obj_type = MOI.get(model, MOI.ObjectiveFunctionType())
+    obj_func = MOI.get(model, MOI.ObjeciveFunction{obj_type}())
+    obj_func_expr = func_to_expr_graph(obj_func, variable_map)
+    if obj_func_expr == :(+ 0.0)
+        obj_func_expr = nothing
+    end
+
+    # ==========================================================================
+    # Build the nlp_evaluator
+    scalar_constraint_expr = Expr[]
     nlp_evaluator = NLPEvaluator(nlp_block.evaluator, variable_map, num_con,
-        scalar_constraint_expr)
+        obj_func_expr, scalar_constraint_expr)
 
     # ==========================================================================
     # Create the MathProgBase model. Note that we pass `num_con` and the number
