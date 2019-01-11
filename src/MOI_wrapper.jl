@@ -1,3 +1,8 @@
+# TODO(odow):
+# - remove the `try-catch`es once the following PR is merged
+#   https://github.com/JuliaOpt/MathOptInterface.jl/pull/623
+# - What happens if the objective is `min 0.0`?
+
 using MathOptInterface
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
@@ -29,8 +34,8 @@ const MOI_SCALAR_FUNCTIONS = (
 const Model = MOIU.UniversalFallback{InnerModel{Float64}}
 
 # Only support the constraint types defined by `InnerModel`.
-function MOI.supports_constraint(
-        model::Model, F::Type{<:MOI.AbstractFunction}, S::Type{MOI.AbstractSet})
+function MOI.supports_constraint(model::Model, F::Type{<:MOI.AbstractFunction},
+        S::Type{<:MOI.AbstractSet})
     return MOI.supports_constraint(model.model, F, S)
 end
 
@@ -72,6 +77,8 @@ end
 
 Base.show(io::IO, ::Model) = println(io, "A MathProgBase model")
 
+MOI.get(::Model, ::MOI.SolverName) = "AmplNLWriter"
+
 # We re-define is_empty and empty! to prevent the universal fallback from
 # deleting the solver that we are caching in it.
 function MOI.is_empty(model::Model)
@@ -106,7 +113,7 @@ set_to_bounds(set::MOI.Interval) = (set.lower, set.upper)
 set_to_cat(set::MOI.ZeroOne) = :Bin
 set_to_cat(set::MOI.Integer) = :Int
 
-struct NLPEvaluator{T <: MOI.AbstractNLPEvaluator} <: MPB.AbstractNLPEvaluator
+struct NLPEvaluator{T} <: MPB.AbstractNLPEvaluator
     inner::T
     variable_map::Dict{MOI.VariableIndex, Int}
     num_inner_con::Int
@@ -135,25 +142,33 @@ replace_variableindex_by_int(variable_map, expr) = expr
 # In the next section we match up the MPB nonlinear functions to the MOI API.
 # This is basically just a rename.
 function MPB.initialize(d::NLPEvaluator, requested_features::Vector{Symbol})
-    MOI.initialize(d.inner, requested_features)
+    if d.inner !== nothing
+        MOI.initialize(d.inner, requested_features)
+    end
     return
 end
 
 function MPB.features_available(d::NLPEvaluator)
-    return MOI.features_available(d.inner)
+    if d.inner !== nothing
+        return MOI.features_available(d.inner)
+    else
+        return [:ExprGraph]
+    end
 end
 
 function MPB.obj_expr(d::NLPEvaluator)
     # d.objective_expr is a SingleVariable, ScalarAffineFunction, or a
     # ScalarQuadraticFunction from MOI. If it is unset, it will be `nothing` (we
     # enforce this when creating the NLPEvaluator in `optimize!`).
-    if d.objective_expr !=== nothing
+    if d.objective_expr !== nothing
         return d.objective_expr
-    else
+    elseif d.inner !== nothing
         # If d.objective_expr === nothing, then the objective must be nonlinear.
         # Query it from the inner NLP evaluator.
         expr = MOI.objective_expr(d.inner)
         return replace_variableindex_by_int(d.variable_map, expr)
+    else
+        return :(0.0 * x[1])
     end
 end
 
@@ -182,9 +197,9 @@ end
 function func_to_expr_graph(func::MOI.ScalarAffineFunction, variable_map)
     expr = Expr(:call, :+, func.constant)
     for term in func.terms
-        coef = term.coefficient
-        variable_int = variable_map[term.variable_index]
-        push!(expr.args, Expr(:ref, :x, variable_int))
+        push!(expr.args, Expr(:call, :*, term.coefficient,
+            Expr(:ref, :x, variable_map[term.variable_index])
+        ))
     end
     return expr
 end
@@ -192,19 +207,21 @@ end
 function func_to_expr_graph(func::MOI.ScalarQuadraticFunction, variable_map)
     expr = Expr(:call, :+, func.constant)
     for term in func.affine_terms
-        coef = term.coefficient
-        variable_int = variable_map[term.variable_index]
-        push!(expr.args, Expr(:ref, :x, variable_int))
+        push!(expr.args, Expr(:call, :*, term.coefficient,
+            Expr(:ref, :x, variable_map[term.variable_index])
+        ))
     end
     for term in func.quadratic_terms
+        index_1 = variable_map[term.variable_index_1]
+        index_2 = variable_map[term.variable_index_2]
         coef = term.coefficient
-        variable_int_1 = variable_map[term.variable_index_1]
-        variable_int_2 = variable_map[term.variable_index_2]
-        push!(expr.args, Expr(
-            :call,
-            :*,
-            Expr(:ref, :x, variable_int_1),
-            Expr(:ref, :x, variable_int_2)
+        # MOI defines quadratic as 1/2 x' Q x :(
+        if index_1 == index_2
+            coef *= 0.5
+        end
+        push!(expr.args, Expr(:call, :*, coef,
+            Expr(:ref, :x, index_1),
+            Expr(:ref, :x, index_2)
         ))
     end
     return expr
@@ -231,7 +248,7 @@ end
 # A helper function that converts a MOI function and MOI set into a comparison
 # expression.
 
-function moi_to_expr_graph(func::MOI.ScalarAffineFunction, set, variable_map)
+function moi_to_expr_graph(func, set, variable_map)
     func_expr = func_to_expr_graph(func, variable_map)
     return funcset_to_expr_graph(func_expr, set)
 end
@@ -248,22 +265,27 @@ function MOI.optimize!(model::Model)
     sense = opt_sense == MOI.MAX_SENSE ? :Max : :Min
 
     # Get the NLPBlock from the model.
-    # TODO(odow): what to do if there is no NLP block?
     nlp_block = try
         MOI.get(model, MOI.NLPBlock())
-    catch ex
-        error("Expected a NLPBLock.")
+    catch
+        nothing
     end
 
     # ==========================================================================
     # Extract the nonlinear constraint bounds. We're going to append to these
     # g_l and g_u vectors later.
-    num_con = length(nlp_block.constraint_bounds)
+    num_con = 0
+    moi_nlp_evaluator = nlp_block !== nothing ? nlp_block.evaluator : nothing
+    if nlp_block !== nothing
+        num_con += length(nlp_block.constraint_bounds)
+    end
     g_l = fill(-Inf, num_con)
     g_u = fill(Inf, num_con)
-    for (i, bound) in enumerate(nlp_block.constraint_bounds)
-        g_l[i] = bound.lower
-        g_u[i] = bound.upper
+    if nlp_block !== nothing
+        for (i, bound) in enumerate(nlp_block.constraint_bounds)
+            g_l[i] = bound.lower
+            g_u[i] = bound.upper
+        end
     end
 
     # ==========================================================================
@@ -288,8 +310,15 @@ function MOI.optimize!(model::Model)
             c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
             v_index = variable_map[c_func.variable]
             lower, upper = set_to_bounds(c_set)
-            x_l[v_index] = lower
-            x_u[v_index] = upper
+            # Note that there might be multiple bounds on the same variable
+            # (e.g., LessThan and GreaterThan), so we should only update bounds
+            # if they differ from the defaults.
+            if lower > -Inf
+                x_l[v_index] = lower
+            end
+            if upper < Inf
+                x_u[v_index] = upper
+            end
         end
     end
 
@@ -315,7 +344,7 @@ function MOI.optimize!(model::Model)
     # ==========================================================================
     # MOI objective
     obj_type = MOI.get(model, MOI.ObjectiveFunctionType())
-    obj_func = MOI.get(model, MOI.ObjeciveFunction{obj_type}())
+    obj_func = MOI.get(model, MOI.ObjectiveFunction{obj_type}())
     obj_func_expr = func_to_expr_graph(obj_func, variable_map)
     if obj_func_expr == :(+ 0.0)
         obj_func_expr = nothing
@@ -323,15 +352,14 @@ function MOI.optimize!(model::Model)
 
     # ==========================================================================
     # Build the nlp_evaluator
-    scalar_constraint_expr = Expr[]
-    nlp_evaluator = NLPEvaluator(nlp_block.evaluator, variable_map, num_con,
+    nlp_evaluator = NLPEvaluator(moi_nlp_evaluator, variable_map, num_con,
         obj_func_expr, scalar_constraint_expr)
 
     # ==========================================================================
     # Create the MathProgBase model. Note that we pass `num_con` and the number
     # of linear constraints.
     mpb_model = MPB.NonlinearModel(mpb_solver)
-    MPB.loadproblem!( mpb_model, num_var,
+    MPB.loadproblem!(mpb_model, num_var,
         num_con + length(scalar_constraint_expr), x_l, x_u, g_l, g_u, sense,
         nlp_evaluator)
 
@@ -352,10 +380,15 @@ function MOI.optimize!(model::Model)
 
     # ==========================================================================
     # Set the VariablePrimalStart attributes for variables.
-    variable_primal_start = fill(NaN, num_var)
+    variable_primal_start = fill(0.0, num_var)
     for (i, variable) in enumerate(variables)
-        variable_primal_start[i] =
-            MOI.get(model, MOI.VariablePrimalStart(), variable)
+        try
+            start_val = MOI.get(model, MOI.VariablePrimalStart(), variable)
+            if start_val !== nothing
+                variable_primal_start[i] = start_val
+            end
+        catch
+        end
     end
     MPB.setwarmstart!(mpb_model, variable_primal_start)
 
@@ -383,15 +416,27 @@ end
 # MOI accessors for the solution info.
 
 function MOI.get(model::Model, ::MOI.VariablePrimal, var::MOI.VariableIndex)
-    mpb_solution = MOI.get(model, MPBSolutionAttribute())
+    mpb_solution = try
+        MOI.get(model, MPBSolutionAttribute())
+    catch
+        nothing
+    end
     if mpb_solution === nothing
         return nothing
     end
     return mpb_solution.primal_solution[var]
 end
 
+function MOI.get(model::Model, ::MOI.ConstraintPrimal, idx::MOI.ConstraintIndex)
+    return MOIU.get_fallback(model, MOI.ConstraintPrimal(), idx)
+end
+
 function MOI.get(model::Model, ::MOI.ObjectiveValue)
-    mpb_solution = MOI.get(model, MPBSolutionAttribute())
+    mpb_solution = try
+        MOI.get(model, MPBSolutionAttribute())
+    catch
+        nothing
+    end
     if mpb_solution === nothing
         return nothing
     end
@@ -399,7 +444,11 @@ function MOI.get(model::Model, ::MOI.ObjectiveValue)
 end
 
 function MOI.get(model::Model, ::MOI.TerminationStatus)
-    mpb_solution = MOI.get(model, MPBSolutionAttribute())
+    mpb_solution = try
+        MOI.get(model, MPBSolutionAttribute())
+    catch
+        nothing
+    end
     if mpb_solution === nothing
         return MOI.OPTIMIZE_NOT_CALLED
     end
@@ -421,7 +470,11 @@ function MOI.get(model::Model, ::MOI.TerminationStatus)
 end
 
 function MOI.get(model::Model, ::MOI.PrimalStatus)
-    mpb_solution = MOI.get(model, MPBSolutionAttribute())
+    mpb_solution = try
+        MOI.get(model, MPBSolutionAttribute())
+    catch
+        nothing
+    end
     if mpb_solution === nothing
         return MOI.NO_SOLUTION
     end
