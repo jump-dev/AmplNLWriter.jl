@@ -160,7 +160,7 @@ function MPB.obj_expr(d::NLPEvaluator)
     # enforce this when creating the NLPEvaluator in `optimize!`).
     if d.objective_expr !== nothing
         return d.objective_expr
-    elseif d.inner !== nothing
+    elseif d.inner !== nothing && d.inner.has_nlobj
         # If d.objective_expr === nothing, then the objective must be nonlinear.
         # Query it from the inner NLP evaluator.
         expr = MOI.objective_expr(d.inner)
