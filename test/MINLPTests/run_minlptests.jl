@@ -26,6 +26,6 @@ const OPTIMIZER = MINLPTests.JuMP.with_optimizer(
     ###
 
     MINLPTests.test_nlp_cvx(OPTIMIZER, exclude = [
-        "109_011"  # Ipopt fails to converge
+        "109_010"  # Ipopt fails to converge
     ])
 end
