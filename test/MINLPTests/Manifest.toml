@@ -79,7 +79,7 @@ version = "0.5.3"
 
 [[JuMP]]
 deps = ["Calculus", "DataStructures", "ForwardDiff", "LinearAlgebra", "MathOptInterface", "NaNMath", "Random", "SparseArrays", "Statistics", "Test"]
-git-tree-sha1 = "4c8748a90e501040f8e1e14e31414a84b017dc02"
+git-tree-sha1 = "fb4c9d5a3cf974859c2090eb3b71d06d948307af"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaOpt/JuMP.jl.git"
 uuid = "4076af6c-e467-56ae-b986-b466b2749572"
@@ -100,7 +100,7 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[MINLPTests]]
 deps = ["JuMP", "Test"]
-git-tree-sha1 = "4fb3972b42046b7d0baf6e02778c51cd5c18f139"
+git-tree-sha1 = "c306fc983902bed95f3e7628c38c1309132777d9"
 repo-rev = "od/moi"
 repo-url = "https://github.com/lanl-ansi/MINLPTests.jl"
 uuid = "c91edd20-2690-11e9-21e6-495b70d5f171"

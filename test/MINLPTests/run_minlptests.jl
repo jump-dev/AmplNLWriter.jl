@@ -1,4 +1,4 @@
-using MINLPTests, Ipopt, AmplNLWriter, Test
+using MINLPTests, JuMP, Ipopt, AmplNLWriter, Test
 
 const OPTIMIZER = MINLPTests.JuMP.with_optimizer(
     AmplNLWriter.Optimizer, Ipopt.amplexe, ["print_level=0"]
