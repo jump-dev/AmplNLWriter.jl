@@ -1,15 +1,11 @@
 language: julia
 os:
   - linux
-  - osx
 julia:
   - 0.6
   - 0.7
   - 1.0
-  - nightly
-matrix:
-  allow_failures:
-    - julia: nightly
+  - 1.1
 branches:
   only:
     - master
@@ -27,3 +23,11 @@ before_cache:
   - cp -R $HOME/.julia/*/Ipopt/deps/usr $HOME
 after_success:
   - julia -e 'if VERSION >= v"0.7-"; using Pkg; else; cd(Pkg.dir("AmplNLWriter")); end; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
+jobs:
+  include:
+    - stage: "MINLPTests"
+      julia: 1.0
+      os: linux
+      script:
+        - julia --project=test/MINLPTests -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(path=pwd()))'
+        - julia --project=test/MINLPTests --color=yes test/MINLPTests/run_minlptests.jl
