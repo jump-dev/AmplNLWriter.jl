@@ -1,15 +1,13 @@
-__precompile__()
 module AmplNLWriter
 
-using Compat
 using MathProgBase
 using MathProgBase.SolverInterface
-using Compat.SparseArrays
+using SparseArrays
 
 debug = false
 setdebug(b::Bool) = global debug = b
 
-solverdata_dir = abspath(joinpath(@__DIR__, "..", ".solverdata"))
+const solverdata_dir = abspath(joinpath(@__DIR__, "..", ".solverdata"))
 
 include("nl_linearity.jl")
 include("nl_params.jl")
@@ -407,9 +405,10 @@ function SolverInterface.optimize!(m::AmplNLMathProgModel)
     end
 
     # Rename file to have .nl extension (this is required by solvers)
-    # force flag added to fix issue in Windows, where temp file are not absolutely unique and file closing is not fast enough
+    # force flag added to fix issue in Windows, where temp file are not
+    # absolutely unique and file closing is not fast enough
     # See https://github.com/JuliaOpt/AmplNLWriter.jl/pull/63.
-    Compat.mv(file_basepath, m.probfile, force=true)
+    mv(file_basepath, m.probfile, force=true)
 
     # Run solver and save exitcode
     t = time()
