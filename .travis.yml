@@ -2,8 +2,6 @@ language: julia
 os:
   - linux
 julia:
-  - 0.6
-  - 0.7
   - 1.0
   - 1.1
 branches:
@@ -22,7 +20,7 @@ addons:
 before_cache:
   - cp -R $HOME/.julia/*/Ipopt/deps/usr $HOME
 after_success:
-  - julia -e 'if VERSION >= v"0.7-"; using Pkg; else; cd(Pkg.dir("AmplNLWriter")); end; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
+  - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
 jobs:
   include:
     - stage: "MINLPTests"

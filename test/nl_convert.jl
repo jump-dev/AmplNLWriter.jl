@@ -1,5 +1,3 @@
-import AmplNLWriter
-
 @testset "[nl_convert] check special conversion cases" begin
     special_cases = [:cbrt, :abs2, :inv, :log2, :log1p, :exp2, :expm1, :sec,
                      :csc, :cot, :sind, :cosd, :tand, :asind, :acosd, :atand,
@@ -53,23 +51,4 @@ end
     @test AmplNLWriter.convert_formula(expr) == :(1 < 2 && 2 < 3)
     expr = :(1 < 2 < 3 < 4)
     @test AmplNLWriter.convert_formula(expr) == :((1 < 2 && 2 < 3) && 3 < 4)
-end
-
-@testset "[nl_convert] check user defined functions error" begin
-    m = Model(solver=AmplNLSolver("any_solver"))
-
-    myf(x,y) = (x-1)^2+(y-2)^2
-    JuMP.register(m, :myf, 2, myf, autodiff=true)
-
-    @variable(m, x[1:2] >= 0.5)
-    @NLobjective(m, Min, myf(x[1], x[2]))
-
-    @test_throws Exception solve(m)
-
-    # clean up temp file
-    for file in readdir(AmplNLWriter.solverdata_dir)
-        if file != ".gitignore"
-            rm(joinpath(AmplNLWriter.solverdata_dir, file))
-        end
-    end
 end

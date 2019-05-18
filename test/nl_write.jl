@@ -13,11 +13,19 @@
         @test length(readdir(AmplNLWriter.solverdata_dir)) == 1
     end
 
-    solver = AmplNLSolver(Ipopt.amplexe, filename=filename)#BonminNLSolver(filename=filename)
-    m = Model(solver=solver)
-    @variable(m, x >= 0)
-    @objective(m, Min, x)
-    solve(m)
+    MOI = AmplNLWriter.MathOptInterface
+    solver = AmplNLWriter.Optimizer(Ipopt.amplexe, filename=filename)
+    x = MOI.add_variable(solver)
+    MOI.add_constraint(
+        solver,
+        MOI.ScalarAffineFunction([MOI.ScalarAffineTerm(1.0, x)], 0.0),
+        MOI.GreaterThan(0.0))
+    MOI.set(
+        solver,
+        MOI.ObjectiveFunction{MOI.SingleVariable}(),
+        MOI.SingleVariable(x))
+    MOI.set(solver, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.optimize!(solver)
 
     @testset "temp files present after solve in debug mode" begin
         @test length(readdir(AmplNLWriter.solverdata_dir)) == 3
