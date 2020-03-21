@@ -5,7 +5,8 @@ const MOIU = MOI.Utilities
 import MathProgBase
 const MPB = MathProgBase.SolverInterface
 
-MOIU.@model(InnerModel,
+MOIU.@model(
+    InnerModel,
     (MOI.ZeroOne, MOI.Integer),
     (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval),
     (),
@@ -13,7 +14,8 @@ MOIU.@model(InnerModel,
     (),
     (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
     (),
-    ()
+    (),
+    true    # is_optimizer
 )
 
 const MOI_SCALAR_SETS = (
