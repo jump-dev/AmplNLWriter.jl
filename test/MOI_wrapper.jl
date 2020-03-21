@@ -39,6 +39,7 @@ end
 
 @testset "ModelLike tests" begin
     @test MOI.get(OPTIMIZER, MOI.SolverName()) == "AmplNLWriter"
+    @test OPTIMIZER isa MOI.AbstractOptimizer
     @testset "default_objective_test" begin
          MOIT.default_objective_test(OPTIMIZER)
      end
