@@ -1,40 +1,63 @@
-using AmplNLWriter, Ipopt
-
+using AmplNLWriter
+import Ipopt
 import MathOptInterface
+
 const MOI = MathOptInterface
 const MOIT = MOI.Test
 
-const OPTIMIZER = AmplNLWriter.Optimizer(Ipopt.amplexe, ["print_level = 0"])
+const OPTIMIZER = MOI.Bridges.full_bridge_optimizer(
+    AmplNLWriter.Optimizer(Ipopt.amplexe, ["print_level = 0"]),
+    Float64
+)
 
-@test sprint(show, OPTIMIZER) == "An AmplNLWriter model"
+@test sprint(
+    show,
+    AmplNLWriter.Optimizer(Ipopt.amplexe, ["print_level = 0"])
+) == "An AmplNLWriter model"
 
 const CONFIG = MOIT.TestConfig(
-    atol = 1e-4, rtol = 1e-4, optimal_status = MOI.LOCALLY_SOLVED,
-    infeas_certificates = false, duals = false
+    atol = 1e-4,
+    rtol = 1e-4,
+    optimal_status = MOI.LOCALLY_SOLVED,
+    infeas_certificates = false,
+    duals = false
 )
 
 @testset "Unit Tests" begin
     MOIT.unittest(OPTIMIZER, CONFIG, [
-        "solve_objbound_edge_cases",  # ObjectiveBound not implemented
-        "solve_integer_edge_cases",  # Ipopt doesn't handle integer
-        "solve_affine_deletion_edge_cases",  # VectorAffineFunction
-        "solve_duplicate_terms_vector_affine",  # VectorAffineFunction
+        # Unsupported attributes:
+        "number_threads",
+        "raw_status_string",
+        "silent",
+        "solve_objbound_edge_cases",
+        "solve_time",
+        "time_limit_sec",
+
+        # Ipopt doesn't handle integer
+        "solve_integer_edge_cases",
+        "solve_zero_one_with_bounds_2",
+        "solve_zero_one_with_bounds_3",
+
         # It seems that the AMPL NL reader declares NL files with no objective
         # and no constraints as corrupt, even if they have variable bounds. Yuk.
-        "solve_blank_obj"
+        "solve_blank_obj",
+
+        # No support for VectorOfVariables-in-SecondOrderCone
+        "delete_soc_variables",
+
+        # TODO(odow): fix handling of result indices.
+        "solve_result_index",
     ])
 end
 
 @testset "Linear tests" begin
-    MOIT.contlineartest(OPTIMIZER, CONFIG, [
-        "linear7", "linear15"  # VectorAffineFunction
+    MOIT.contlineartest(OPTIMIZER, CONFIG, String[
+        "linear15"
     ])
 end
 
 @testset "Quadratic tests" begin
-    MOIT.contquadratictest(OPTIMIZER, CONFIG, [
-        "qcp1"  # VectorAffineFunction
-    ])
+    MOIT.contquadratictest(OPTIMIZER, CONFIG)
 end
 
 @testset "ModelLike tests" begin
@@ -53,15 +76,19 @@ end
         MOIT.validtest(OPTIMIZER)
     end
     @testset "emptytest" begin
-        # Requires VectorOfVariables
-        # MOIT.emptytest(OPTIMIZER)
+        MOIT.emptytest(OPTIMIZER)
     end
     @testset "orderedindicestest" begin
         MOIT.orderedindicestest(OPTIMIZER)
     end
     @testset "copytest" begin
-        # Requires VectorOfVariables
-        # MOIT.copytest(OPTIMIZER, AmplNLWriter.Optimizer(Ipopt.amplexe))
+        MOIT.copytest(
+            OPTIMIZER,
+            MOI.Bridges.full_bridge_optimizer(
+                AmplNLWriter.Optimizer(Ipopt.amplexe),
+                Float64
+            )
+        )
     end
 end
 
