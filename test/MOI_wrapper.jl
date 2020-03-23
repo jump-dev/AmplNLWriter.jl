@@ -52,7 +52,7 @@ end
 
 @testset "Linear tests" begin
     MOIT.contlineartest(OPTIMIZER, CONFIG, String[
-        "linear15"
+        "linear15",
     ])
 end
 

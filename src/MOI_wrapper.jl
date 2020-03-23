@@ -437,7 +437,7 @@ function MOI.get(model::Model, ::MOI.TerminationStatus)
         # convex problem?
         return MOI.LOCALLY_SOLVED
     elseif status == :Infeasible
-        return MOI.LOCALLY_INFEASIBLE
+        return MOI.INFEASIBLE
     elseif status == :Unbounded
         return MOI.DUAL_INFEASIBLE
     elseif status == :UserLimit

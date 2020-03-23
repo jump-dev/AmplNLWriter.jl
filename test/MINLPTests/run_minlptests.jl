@@ -29,7 +29,7 @@ const OPTIMIZER = () -> AmplNLWriter.Optimizer(Ipopt.amplexe, ["print_level=0"])
             1e-5,
             NaN,
             NaN,
-            MINLPTests.TERMINATION_TARGET_LOCAL,
+            Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.INFEASIBLE),
             Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION),
         )
     end
