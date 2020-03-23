@@ -6,7 +6,7 @@ import MathProgBase
 const MPB = MathProgBase.SolverInterface
 
 MOIU.@model(
-    InnerModel,
+    Model,
     (MOI.ZeroOne, MOI.Integer),
     (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval),
     (),
@@ -26,21 +26,6 @@ const MOI_SCALAR_SETS = (
 const MOI_SCALAR_FUNCTIONS = (
     MOI.ScalarAffineFunction{Float64}, MOI.ScalarQuadraticFunction{Float64}
 )
-
-# Make `Model` a constant for use in the rest of the file.
-const Model = MOIU.UniversalFallback{InnerModel{Float64}}
-
-# Only support the constraint types defined by `InnerModel`.
-function MOI.supports_constraint(model::Model, F::Type{<:MOI.AbstractFunction},
-        S::Type{<:MOI.AbstractSet})
-    return MOI.supports_constraint(model.model, F, S)
-end
-
-"Attribute for the MathProgBase solver."
-struct MPBSolver <: MOI.AbstractOptimizerAttribute end
-
-"Attribute for the MathProgBase status."
-struct MPBSolutionAttribute <: MOI.AbstractModelAttribute end
 
 "Struct to contain the MPB solution."
 struct MPBSolution
@@ -63,44 +48,43 @@ end
 function Optimizer(
         solver_command::String,
         options::Vector{String} = String[];
-        filename::String = "")
-    model = MOIU.UniversalFallback(InnerModel{Float64}())
-    MOI.set(model, MPBSolver(),
-        AmplNLSolver(solver_command, options, filename = filename)
-    )
+        filename::String = ""
+)
+    model = Model{Float64}()
+    model.ext[:MPBSolver] = AmplNLSolver(solver_command, options, filename = filename)
+    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex, Union{Nothing, Float64}}()
     return model
+end
+
+function MOI.empty!(model::Model{Float64})
+    model.name = ""
+    model.senseset = false
+    model.sense = MOI.FEASIBILITY_SENSE
+    model.objectiveset = false
+    model.objective = MOI.ScalarAffineFunction{Float64}(MOI.ScalarAffineTerm{Float64}[], 0.0)
+    model.num_variables_created = 0
+    model.variable_indices = nothing
+    empty!(model.single_variable_mask)
+    empty!(model.lower_bound)
+    empty!(model.upper_bound)
+    empty!(model.var_to_name)
+    model.name_to_var = nothing
+    model.nextconstraintid = 0
+    empty!(model.con_to_name)
+    model.name_to_con = nothing
+    empty!(model.constrmap)
+    MOI.empty!(model.moi_scalaraffinefunction)
+    MOI.empty!(model.moi_scalarquadraticfunction)
+    solver = model.ext[:MPBSolver]
+    empty!(model.ext)
+    model.ext[:MPBSolver] = solver
+    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex, Union{Nothing, Float64}}()
+    return
 end
 
 Base.show(io::IO, ::Model) = print(io, "An AmplNLWriter model")
 
 MOI.get(::Model, ::MOI.SolverName) = "AmplNLWriter"
-
-# We re-define is_empty and empty! to prevent the universal fallback from
-# deleting the solver that we are caching in it.
-function MOI.is_empty(model::Model)
-    return MOI.is_empty(model.model) &&
-        isempty(model.constraints) &&
-        isempty(model.modattr) &&
-        isempty(model.varattr) &&
-        isempty(model.conattr) &&
-        length(model.optattr) == 1 &&
-        haskey(model.optattr, MPBSolver())
-end
-
-function MOI.empty!(model::Model)
-    MOI.empty!(model.model)
-    empty!(model.constraints)
-    model.nextconstraintid = 0
-    empty!(model.con_to_name)
-    model.name_to_con = nothing
-    empty!(model.modattr)
-    empty!(model.varattr)
-    empty!(model.conattr)
-    mpb_solver = model.optattr[MPBSolver()]
-    empty!(model.optattr)
-    model.optattr[MPBSolver()] = mpb_solver
-    return
-end
 
 set_to_bounds(set::MOI.LessThan) = (-Inf, set.upper)
 set_to_bounds(set::MOI.GreaterThan) = (set.lower, Inf)
@@ -221,6 +205,37 @@ function func_to_expr_graph(func::MOI.ScalarQuadraticFunction, variable_map)
     return expr
 end
 
+MOI.supports(::Model, ::MOI.NLPBlock) = true
+
+function MOI.set(model::Model, ::MOI.NLPBlock, block)
+    model.ext[:NLPBlock] = block
+    return
+end
+
+MOI.get(model::Model, ::MOI.NLPBlock) = get(model.ext, :NLPBlock, nothing)
+
+function MOI.supports(
+    ::Model, ::MOI.VariablePrimalStart, ::Type{MOI.VariableIndex}
+)
+    return true
+end
+
+function MOI.set(
+    model::Model,
+    ::MOI.VariablePrimalStart,
+    variable::MOI.VariableIndex,
+    value::Union{Nothing, Float64},
+)
+    model.ext[:VariablePrimalStart][variable] = value
+    return
+end
+
+function MOI.get(
+    model::Model, ::MOI.VariablePrimalStart, variable::MOI.VariableIndex
+)
+    return get(model.ext[:VariablePrimalStart], variable, nothing)
+end
+
 # Next, we need to combine a function `Expr` with a MOI set into a comparison.
 
 function funcset_to_expr_graph(func::Expr, set::MOI.LessThan)
@@ -251,18 +266,14 @@ end
 function MOI.optimize!(model::Model)
     # Extract the MathProgBase solver from the model. Recall it's a MOI
     # attribute which we're careful not to delete on calls to `empty!`.
-    mpb_solver = MOI.get(model, MPBSolver())
+    mpb_solver = model.ext[:MPBSolver]
 
     # Get the optimzation sense.
     opt_sense = MOI.get(model, MOI.ObjectiveSense())
     sense = opt_sense == MOI.MAX_SENSE ? :Max : :Min
 
     # Get the NLPBlock from the model.
-    nlp_block = try
-        MOI.get(model, MOI.NLPBlock())
-    catch
-        nothing
-    end
+    nlp_block = MOI.get(model, MOI.NLPBlock())
 
     # Extract the nonlinear constraint bounds. We're going to append to these
     # g_l and g_u vectors later.
@@ -381,21 +392,18 @@ function MOI.optimize!(model::Model)
     for (variable, sol) in zip(variables, MPB.getsolution(mpb_model))
         primal_solution[variable] = sol
     end
-    mpb_solution = MPBSolution(
+    model.ext[:MPBSolutionAttribute] = MPBSolution(
         MPB.status(mpb_model),
         MPB.getobjval(mpb_model),
         primal_solution
     )
-    MOI.set(model, MPBSolutionAttribute(), mpb_solution)
     return
 end
 
 # MOI accessors for the solution info.
 
-function mpb_solution_attribute(model::Model)
-    # We'd like to call MOI.get(model, MPBSolutionAttribute()), but it throws an
-    # error if not set rather than return `nothing`.
-    return get(model.modattr, MPBSolutionAttribute(), nothing)
+function mpb_solution_attribute(model::Model)::Union{Nothing, MPBSolution}
+    return get(model.ext, :MPBSolutionAttribute, nothing)
 end
 
 function MOI.get(model::Model, ::MOI.VariablePrimal, var::MOI.VariableIndex)
@@ -429,7 +437,7 @@ function MOI.get(model::Model, ::MOI.TerminationStatus)
         # convex problem?
         return MOI.LOCALLY_SOLVED
     elseif status == :Infeasible
-        return MOI.INFEASIBLE
+        return MOI.LOCALLY_INFEASIBLE
     elseif status == :Unbounded
         return MOI.DUAL_INFEASIBLE
     elseif status == :UserLimit
