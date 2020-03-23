@@ -1,6 +1,6 @@
 name = "AmplNLWriter"
 uuid = "7c4d4715-977e-5154-bfe0-e096adeac482"
-version = "0.5.1"
+version = "0.6.0"
 
 [deps]
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
