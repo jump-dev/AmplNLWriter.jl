@@ -52,7 +52,7 @@ function Optimizer(
 )
     model = Model{Float64}()
     model.ext[:MPBSolver] = AmplNLSolver(solver_command, options, filename = filename)
-    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex, Union{Nothing, Float64}}()
+    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex, Float64}()
     return model
 end
 
@@ -78,7 +78,7 @@ function MOI.empty!(model::Model{Float64})
     solver = model.ext[:MPBSolver]
     empty!(model.ext)
     model.ext[:MPBSolver] = solver
-    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex, Union{Nothing, Float64}}()
+    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex, Float64}()
     return
 end
 
@@ -97,6 +97,7 @@ struct NLPEvaluator{T} <: MPB.AbstractNLPEvaluator
     inner::T
     variable_map::Dict{MOI.VariableIndex, Int}
     num_inner_con::Int
+    has_nlobjective::Bool
     objective_expr::Union{Nothing, Expr}
     scalar_constraint_expr::Vector{Expr}
 end
@@ -136,16 +137,16 @@ function MPB.features_available(d::NLPEvaluator)
 end
 
 function MPB.obj_expr(d::NLPEvaluator)
-    # d.objective_expr is a SingleVariable, ScalarAffineFunction, or a
-    # ScalarQuadraticFunction from MOI. If it is unset, it will be `nothing` (we
-    # enforce this when creating the NLPEvaluator in `optimize!`).
-    if d.objective_expr !== nothing
-        return d.objective_expr
-    elseif d.inner !== nothing && d.inner.has_nlobj
+    if d.has_nlobjective
         # If d.objective_expr === nothing, then the objective must be nonlinear.
         # Query it from the inner NLP evaluator.
         expr = MOI.objective_expr(d.inner)
         return replace_variableindex_by_int(d.variable_map, expr)
+    elseif d.objective_expr !== nothing
+        # d.objective_expr is a SingleVariable, ScalarAffineFunction, or a
+        # ScalarQuadraticFunction from MOI. If it is unset, it will be `nothing`
+        # (we enforce this when creating the NLPEvaluator in `optimize!`).
+        return d.objective_expr
     else
         return :(0.0)
     end
@@ -224,9 +225,13 @@ function MOI.set(
     model::Model,
     ::MOI.VariablePrimalStart,
     variable::MOI.VariableIndex,
-    value::Union{Nothing, Float64},
+    value::Union{Nothing, Real},
 )
-    model.ext[:VariablePrimalStart][variable] = value
+    if value === nothing
+        delete!(model.ext[:VariablePrimalStart], variable)
+    else
+        model.ext[:VariablePrimalStart][variable] = Float64(value)
+    end
     return
 end
 
@@ -350,8 +355,14 @@ function MOI.optimize!(model::Model)
     end
 
     # Build the nlp_evaluator
-    nlp_evaluator = NLPEvaluator(moi_nlp_evaluator, variable_map, num_con,
-        obj_func_expr, scalar_constraint_expr)
+    nlp_evaluator = NLPEvaluator(
+        moi_nlp_evaluator,
+        variable_map,
+        num_con,
+        nlp_block === nothing ? false : nlp_block.has_objective,
+        obj_func_expr,
+        scalar_constraint_expr
+    )
 
     # Create the MathProgBase model. Note that we pass `num_con` and the number
     # of linear constraints.

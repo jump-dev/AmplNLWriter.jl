@@ -93,6 +93,5 @@ end
 end
 
 @testset "MOI NLP tests" begin
-    # Requires ExprGraph in MOI tests
-    # MOIT.nlptest(OPTIMIZER, CONFIG)
+    MOIT.nlptest(OPTIMIZER, CONFIG)
 end
