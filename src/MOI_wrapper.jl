@@ -30,6 +30,7 @@ const MOI_SCALAR_FUNCTIONS = (
 "Struct to contain the MPB solution."
 struct MPBSolution
     status::Symbol
+    raw_status_string::String
     objective_value::Float64
     primal_solution::Dict{MOI.VariableIndex, Float64}
 end
@@ -394,6 +395,7 @@ function MOI.optimize!(model::Model)
     end
     model.ext[:MPBSolutionAttribute] = MPBSolution(
         MPB.status(mpb_model),
+        mpb_model.inner.solve_result,
         MPB.getobjval(mpb_model),
         primal_solution
     )
@@ -470,4 +472,9 @@ function MOI.get(model::Model, ::MOI.ResultCount)
     else
         return 0
     end
+end
+
+function MOI.get(model::Model, ::MOI.RawStatusString)
+    mpb_solution = mpb_solution_attribute(model)
+    return mpb_solution.raw_status_string
 end

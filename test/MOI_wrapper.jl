@@ -96,3 +96,11 @@ end
     # Requires ExprGraph in MOI tests
     # MOIT.nlptest(OPTIMIZER, CONFIG)
 end
+
+@testset "RawStatusString" begin
+    model = AmplNLWriter.Optimizer("bad_solver")
+    x = MOI.add_variable(model)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OTHER_ERROR
+    @test occursin("IOError", MOI.get(model, MOI.RawStatusString()))
+end
