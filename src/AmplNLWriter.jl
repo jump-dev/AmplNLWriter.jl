@@ -412,19 +412,24 @@ function SolverInterface.optimize!(m::AmplNLMathProgModel)
 
     # Run solver and save exitcode
     t = time()
-    cmd = pipeline(`$(m.solver_command) $(m.probfile) -AMPL $(m.options)`, stdout=stdout)
-    proc = VERSION < v"0.7-" ? spawn(cmd) : run(cmd, wait=false)
-    wait(proc)
-    kill(proc)
-    m.solve_exitcode = proc.exitcode
+    try
+        cmd = pipeline(`$(m.solver_command) $(m.probfile) -AMPL $(m.options)`, stdout=stdout)
+        proc = VERSION < v"0.7-" ? spawn(cmd) : run(cmd, wait=false)
+        wait(proc)
+        kill(proc)
+        m.solve_exitcode = proc.exitcode
+    catch e
+        m.solve_exitcode = 1
+        @warn("Unable to call solver. Failed with the error: $(e)")
+        m.solve_result = "$(e)"
+    end
     m.solve_time = time() - t
 
     if m.solve_exitcode == 0
         read_results(m)
     else
         m.status = :Error
-        m.solution = fill(NaN,m.nvar)
-        m.solve_result = "failure"
+        m.solution = fill(NaN, m.nvar)
         m.solve_result_num = 999
     end
 
