@@ -511,33 +511,76 @@ add_constant(c, constant::Real) = c + constant
 add_constant(c::Expr, constant::Real) = Expr(:call, :+, c, constant)
 
 function make_var_index!(m::AmplNLMathProgModel)
-    nonlin_cont = Int[]
-    nonlin_int = Int[]
-    lin_cont = Int[]
-    lin_int = Int[]
-    lin_bin = Int[]
-
-    for i in 1:m.nvar
-        if m.varlinearities_obj[i] == :Nonlin ||
-           m.varlinearities_con[i] == :Nonlin
-            if m.vartypes[i] == :Cont
-                push!(nonlin_cont, i)
-            else
-                push!(nonlin_int, i)
-            end
+    # AMPL, in all its wisdom, orders variables in a _very_ specific way.
+    # The only hint in "Writing NL files" is the line "Variables are ordered as
+    # described in Tables 3 and 4 of [5]," which leads us to the following order
+    #
+    # 1) Continuous variables that appear in a nonlinear objective AND a nonlinear constraint
+    # 2) Discrete variables that appear in a nonlinear objective AND a nonlinear constraint
+    # 3) Continuous variables that appear in a nonlinear constraint, but NOT a nonlinear objective
+    # 4) Discrete variables that appear in a nonlinear constraint, but NOT a nonlinear objective
+    # 5) Continuous variables that appear in a nonlinear objective, but NOT a nonlinear constraint
+    # 6) Discrete variables that appear in a nonlinear objective, but NOT a nonlinear constraint
+    # 7) Continuous variables that DO NOT appear in a nonlinear objective or a nonlinear constraint
+    # 8) Binary variables that DO NOT appear in a nonlinear objective or a nonlinear constraint
+    # 9) Integer variables that DO NOT appear in a nonlinear objective or a nonlinear constraint
+    #
+    # Yes, nonlinear variables are broken into continuous/discrete, but linear
+    # variables are partitioned into continuous, binary, and integer.
+    #
+    # https://cfwebprod.sandia.gov/cfdocs/CompResearch/docs/nlwrite20051130.pdf
+    # https://ampl.com/REFS/hooking2.pdf
+    #
+    # However! Don't let Tables 3 and 4 fool you, because the ordering actually
+    # depends on whether the number of nonlinear variables in the objective only
+    # is _strictly_ greater than the number of nonlinear variables in the
+    # constraints only. Quoting:
+    #
+    #   For all versions, the first nlvc variables appear nonlinearly in at
+    #   least one constraint. If nlvo > nlvc, the first nlvc variables may or
+    #   may not appear nonlinearly in an objective, but the next nlvo – nlvc
+    #   variables do appear nonlinearly in at least one objective. Otherwise
+    #   all of the first nlvo variables appear nonlinearly in an objective.
+    #
+    # However, even this is slightly incorrect, because I think it should read
+    # "the first nlvb variables appear nonlinearly." Then, the switch on
+    # nlvo > nlvc determines whether the next block of variables are the ones
+    # that appear in the objective only, or the constraints only.
+    #
+    # Here, for example, is the relevant code from Couenne:
+    # https://github.com/coin-or/Couenne/blob/683c5b305d78a009d59268a4bca01e0ad75ebf02/src/readnl/readnl.cpp#L76-L87
+    #
+    # Essentially, what that means is if !(nlvo > nlvc), then swap 3-4 for 5-6 in
+    # the variable order.
+    variable_orders = [Int[] for _ in 1:9]
+    nlvo, nlvc = 0, 0
+    for i = 1:m.nvar
+        if m.varlinearities_obj[i] == :Nonlin && m.varlinearities_con[i] == :Nonlin
+            push!(variable_orders[m.vartypes[i] == :Cont ? 1 : 2], i)
+        elseif m.varlinearities_obj[i] != :Nonlin && m.varlinearities_con[i] == :Nonlin
+            push!(variable_orders[m.vartypes[i] == :Cont ? 3 : 4], i)
+            nlvc += 1
+        elseif m.varlinearities_obj[i] == :Nonlin && m.varlinearities_con[i] != :Nonlin
+            push!(variable_orders[m.vartypes[i] == :Cont ? 5 : 6], i)
+            nlvo += 1
         else
-            if m.vartypes[i] == :Cont
-                push!(lin_cont, i)
+            if m.vartypes[i] == :Bin
+                push!(variable_orders[8], i)
             elseif m.vartypes[i] == :Int
-                push!(lin_int, i)
+                push!(variable_orders[9], i)
             else
-                push!(lin_bin, i)
+                push!(variable_orders[7], i)
             end
         end
     end
+    if !(nlvo > nlvc)
+        # Swap 3 <-> 5 and 4 <-> 6
+        variable_orders[3], variable_orders[5] = variable_orders[5], variable_orders[3]
+        variable_orders[4], variable_orders[6] = variable_orders[6], variable_orders[4]
+    end
 
     # Index variables in required order
-    for var_list in (nonlin_cont, nonlin_int, lin_cont, lin_bin, lin_int)
+    for var_list in variable_orders
         add_to_index_maps!(m.v_index_map, m.v_index_map_rev, var_list)
     end
 end
