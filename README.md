@@ -8,7 +8,7 @@
 [build-url]: https://travis-ci.org/JuliaOpt/AmplNLWriter.jl
 
 [app-build-img]: https://ci.appveyor.com/api/projects/status/github/JuliaOpt/AmplNLWriter.jl?branch=master&svg=true
-[app-build-url]: https://ci.appveyor.com/project/jackdunnnz/amplnlwriter-jl/branch/master
+[app-build-url]: https://ci.appveyor.com/project/JuliaOpt/AmplNLWriter.jl/branch/master
 
 [codecov-img]: https://codecov.io/github/JuliaOpt/AmplNLWriter.jl/coverage.svg?branch=master
 [codecov-url]: https://codecov.io/github/JuliaOpt/AmplNLWriter.jl?branch=master
@@ -32,7 +32,7 @@ Pkg.add("AmplNLWriter")
 AmplNLWriter.jl provides ``AmplNLWriter.Optimizer`` as a usable solver in JuMP. The following Julia code uses the Bonmin solver in JuMP via AmplNLWriter.jl:
 
     julia> using JuMP, AmplNLWriter
-    julia> m = Model(with_optimizer(AmplNLWriter.Optimizer, "bonmin"))
+    julia> m = Model(() -> AmplNLWriter.Optimizer("bonmin"))
 
 You can then model and solve your optimization problem as usual. See [JuMP.jl](https://github.com/JuliaOpt/JuMP.jl/blob/master/README.md) for more details.
 
