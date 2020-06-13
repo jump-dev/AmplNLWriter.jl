@@ -8,7 +8,7 @@ platform:
   - x64 # 64-bit
 
 matrix:
-  allow_failures: # due to https://github.com/JuliaOpt/Ipopt.jl/issues/119#issuecomment-397824151
+  allow_failures: # due to https://github.com/jump-dev/Ipopt.jl/issues/119#issuecomment-397824151
   - julia_version: 1
   - julia_version: 1.1
 

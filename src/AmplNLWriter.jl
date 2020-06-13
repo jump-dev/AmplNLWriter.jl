@@ -407,7 +407,7 @@ function SolverInterface.optimize!(m::AmplNLMathProgModel)
     # Rename file to have .nl extension (this is required by solvers)
     # force flag added to fix issue in Windows, where temp file are not
     # absolutely unique and file closing is not fast enough
-    # See https://github.com/JuliaOpt/AmplNLWriter.jl/pull/63.
+    # See https://github.com/jump-dev/AmplNLWriter.jl/pull/63.
     mv(file_basepath, m.probfile, force=true)
 
     # Run solver and save exitcode
