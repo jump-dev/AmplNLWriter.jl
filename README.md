@@ -4,16 +4,16 @@
 |:-----------------:|:--------------------:|:----------------:|
 | [![][build-img]][build-url] | [![Build Status][app-build-img]][app-build-url] | [![Codecov branch][codecov-img]][codecov-url]
 
-[build-img]: https://travis-ci.org/JuliaOpt/AmplNLWriter.jl.svg?branch=master
-[build-url]: https://travis-ci.org/JuliaOpt/AmplNLWriter.jl
+[build-img]: https://travis-ci.org/jump-dev/AmplNLWriter.jl.svg?branch=master
+[build-url]: https://travis-ci.org/jump-dev/AmplNLWriter.jl
 
-[app-build-img]: https://ci.appveyor.com/api/projects/status/github/JuliaOpt/AmplNLWriter.jl?branch=master&svg=true
-[app-build-url]: https://ci.appveyor.com/project/JuliaOpt/AmplNLWriter.jl/branch/master
+[app-build-img]: https://ci.appveyor.com/api/projects/status/wuf0bmk28wm2dym1?svg=true
+[app-build-url]: https://ci.appveyor.com/project/JuliaOpt/amplnlwriter-jl/branch/master
 
-[codecov-img]: https://codecov.io/github/JuliaOpt/AmplNLWriter.jl/coverage.svg?branch=master
-[codecov-url]: https://codecov.io/github/JuliaOpt/AmplNLWriter.jl?branch=master
+[codecov-img]: https://codecov.io/github/jump-dev/AmplNLWriter.jl/coverage.svg?branch=master
+[codecov-url]: https://codecov.io/github/jump-dev/AmplNLWriter.jl?branch=master
 
-This [Julia](https://github.com/JuliaLang/julia) package is an interface between [MathOptInterface.jl](https://github.com/JuliaOpt/MathOptInterface.jl) and [AMPL-enabled](http://www.ampl.com) [solvers](http://ampl.com/products/solvers/all-solvers-for-ampl/). It is similar in nature to [CoinOptServices.jl](https://github.com/tkelman/CoinOptServices.jl), but instead uses AMPL's low-level [.nl](https://en.wikipedia.org/wiki/Nl_%28format%29) file format.
+This [Julia](https://github.com/JuliaLang/julia) package is an interface between [MathOptInterface.jl](https://github.com/jump-dev/MathOptInterface.jl) and [AMPL-enabled](http://www.ampl.com) [solvers](http://ampl.com/products/solvers/all-solvers-for-ampl/). It is similar in nature to [CoinOptServices.jl](https://github.com/tkelman/CoinOptServices.jl), but instead uses AMPL's low-level [.nl](https://en.wikipedia.org/wiki/Nl_%28format%29) file format.
 
 A list of AMPL-enabled solvers is available [here](http://ampl.com/products/solvers/all-solvers-for-ampl/).
 
@@ -34,7 +34,7 @@ AmplNLWriter.jl provides ``AmplNLWriter.Optimizer`` as a usable solver in JuMP. 
     julia> using JuMP, AmplNLWriter
     julia> m = Model(() -> AmplNLWriter.Optimizer("bonmin"))
 
-You can then model and solve your optimization problem as usual. See [JuMP.jl](https://github.com/JuliaOpt/JuMP.jl/blob/master/README.md) for more details.
+You can then model and solve your optimization problem as usual. See [JuMP.jl](https://github.com/jump-dev/JuMP.jl/blob/master/README.md) for more details.
 
 The ``AmplNLWriter.Optimizer()`` constructor requires as the first argument the name of the solver command needed to run the desired solver. For example, if the ``bonmin`` executable is on the system path, you can use this solver using ``AmplNLWriter.Optimizer("bonmin")``. If the solver is not on the path, the full path to the solver will need to be passed in. This solver executable must be an AMPL-compatible solver.
 
@@ -62,7 +62,7 @@ A list of available options for the respective ``.opt`` files can be found here:
 **NOTE: AmplNLWriter v0.4.0 introduced a breaking change by removing `BonminNLSolver`, `CouenneNLSolver`, and `IpoptNLSolver`. Users are now expected
 to pass the path of the solver executable to `AmplNLWriter.Optimizer`.**
 
-If you have [Ipopt.jl](https://github.com/JuliaOpt/Ipopt.jl) installed, you can use Ipopt by using the solver `AmplNLWriter.Optimizer(Ipopt.amplexe, options)`.
+If you have [Ipopt.jl](https://github.com/jump-dev/Ipopt.jl) installed, you can use Ipopt by using the solver `AmplNLWriter.Optimizer(Ipopt.amplexe, options)`.
 
 ### SCIP
 
