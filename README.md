@@ -62,7 +62,7 @@ A list of available options for the respective ``.opt`` files can be found here:
 **NOTE: AmplNLWriter v0.4.0 introduced a breaking change by removing `BonminNLSolver`, `CouenneNLSolver`, and `IpoptNLSolver`. Users are now expected
 to pass the path of the solver executable to `AmplNLWriter.Optimizer`.**
 
-If you have [Ipopt.jl](https://github.com/jump-dev/Ipopt.jl) installed, you can use Ipopt by using the solver `AmplNLWriter.Optimizer(Ipopt.amplexe, options)`.
+The easiest way to obtain a solver executable for Bonmin, Couenne, or Ipopt is to download one from [AMPL](https://ampl.com/products/solvers/open-source/).
 
 ### SCIP
 
