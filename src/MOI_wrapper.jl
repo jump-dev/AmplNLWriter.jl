@@ -404,6 +404,7 @@ function MOI.optimize!(model::Model)
     for (variable, sol) in zip(variables, MPB.getsolution(mpb_model))
         primal_solution[variable] = sol
     end
+    model.ext[:MPBModel] = mpb_model
     model.ext[:MPBSolutionAttribute] = MPBSolution(
         MPB.status(mpb_model),
         mpb_model.inner.solve_result,
