@@ -1,12 +1,17 @@
 import AmplNLWriter
-import Ipopt
 import MINLPTests
-
 using Test
 
-const OPTIMIZER = () -> AmplNLWriter.Optimizer(Ipopt.amplexe, ["print_level=0"])
+if VERSION < v"1.3"
+    import Ipopt
+    run_with_ampl(f) = f(Ipopt.amplexe)
+else
+    import Ipopt_jll
+    run_with_ampl(f) = Ipopt_jll.amplexe(f)
+end
 
-@testset "MINLPTests" begin
+run_with_ampl() do path
+    OPTIMIZER = () -> AmplNLWriter.Optimizer(path, ["print_level=0"])
     ###
     ### src/nlp tests.
     ###

@@ -1,4 +1,12 @@
-using AmplNLWriter, Test
+using Test
+
+if VERSION < v"1.3"
+    import Ipopt
+    run_with_ampl(f) = f(Ipopt.amplexe)
+else
+    import Ipopt_jll
+    run_with_ampl(f) = Ipopt_jll.amplexe(f)
+end
 
 @testset "MOI" begin
     include("MOI_wrapper.jl")

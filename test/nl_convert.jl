@@ -1,3 +1,6 @@
+using AmplNLWriter
+using Test
+
 @testset "[nl_convert] check special conversion cases" begin
     special_cases = [:cbrt, :abs2, :inv, :log2, :log1p, :exp2, :expm1, :sec,
                      :csc, :cot, :sind, :cosd, :tand, :asind, :acosd, :atand,

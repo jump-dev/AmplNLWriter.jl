@@ -1,3 +1,6 @@
+using AmplNLWriter
+using Test
+
 const FILE_80 = """
 
  Couenne (/home/bgulcan/.julia/v0.6/AmplNLWriter/.solverdata/tmpMSxFvq.nl Mar  6 2018): Infeasible

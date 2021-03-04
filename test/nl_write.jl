@@ -1,4 +1,7 @@
-@testset "[nl_write] Temp file handling" begin
+using AmplNLWriter
+using Test
+
+function test_temp_file_handling(path)
     # Turn on debug mode so files persist
     old_debug = AmplNLWriter.debug
     AmplNLWriter.setdebug(true)
@@ -14,7 +17,7 @@
     end
 
     MOI = AmplNLWriter.MathOptInterface
-    solver = AmplNLWriter.Optimizer(Ipopt.amplexe, filename=filename)
+    solver = AmplNLWriter.Optimizer(path, filename=filename)
     x = MOI.add_variable(solver)
     MOI.add_constraint(
         solver,
@@ -38,4 +41,8 @@
     # Reset debug mode and clean up
     AmplNLWriter.setdebug(old_debug)
     AmplNLWriter.clean_solverdata()
+end
+
+run_with_ampl() do path
+    test_temp_file_handling(path)
 end

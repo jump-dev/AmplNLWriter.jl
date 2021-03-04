@@ -1,30 +1,35 @@
+module TestMOIWrapper
+
 using AmplNLWriter
-import Ipopt
+using Test
 import MathOptInterface
 
 const MOI = MathOptInterface
-const MOIT = MOI.Test
 
-const OPTIMIZER = MOI.Bridges.full_bridge_optimizer(
-    AmplNLWriter.Optimizer(Ipopt.amplexe, ["print_level = 0"]),
-    Float64
-)
-
-@test sprint(
-    show,
-    AmplNLWriter.Optimizer(Ipopt.amplexe, ["print_level = 0"])
-) == "An AmplNLWriter model"
-
-const CONFIG = MOIT.TestConfig(
+const CONFIG = MOI.Test.TestConfig(
     atol = 1e-4,
     rtol = 1e-4,
     optimal_status = MOI.LOCALLY_SOLVED,
     infeas_certificates = false,
-    duals = false
+    duals = false,
 )
 
-@testset "Unit Tests" begin
-    MOIT.unittest(OPTIMIZER, CONFIG, [
+function optimizer(path)
+    return MOI.Bridges.full_bridge_optimizer(
+        AmplNLWriter.Optimizer(path, ["print_level = 0"]),
+        Float64,
+    )
+end
+
+function test_name(path)
+    @test sprint(
+        show,
+        AmplNLWriter.Optimizer(path, ["print_level = 0"])
+    ) == "An AmplNLWriter model"
+end
+
+function test_unittest(path)
+    MOI.Test.unittest(optimizer(path), CONFIG, [
         # Unsupported attributes:
         "number_threads",
         "raw_status_string",
@@ -50,56 +55,83 @@ const CONFIG = MOIT.TestConfig(
     ])
 end
 
-@testset "Linear tests" begin
-    MOIT.contlineartest(OPTIMIZER, CONFIG, String[
+function test_contlinear(path)
+    MOI.Test.contlineartest(optimizer(path), CONFIG, String[
         "linear15",
     ])
 end
 
-@testset "Quadratic tests" begin
-    MOIT.contquadratictest(OPTIMIZER, CONFIG)
+function test_contlquadratic(path)
+    MOI.Test.contquadratictest(optimizer(path), CONFIG)
 end
 
-@testset "ModelLike tests" begin
-    @test MOI.get(OPTIMIZER, MOI.SolverName()) == "AmplNLWriter"
-    @test OPTIMIZER isa MOI.AbstractOptimizer
-    @testset "default_objective_test" begin
-         MOIT.default_objective_test(OPTIMIZER)
-     end
-     @testset "default_status_test" begin
-         MOIT.default_status_test(OPTIMIZER)
-     end
-    @testset "nametest" begin
-        MOIT.nametest(OPTIMIZER)
-    end
-    @testset "validtest" begin
-        MOIT.validtest(OPTIMIZER)
-    end
-    @testset "emptytest" begin
-        MOIT.emptytest(OPTIMIZER)
-    end
-    @testset "orderedindicestest" begin
-        MOIT.orderedindicestest(OPTIMIZER)
-    end
-    @testset "copytest" begin
-        MOIT.copytest(
-            OPTIMIZER,
-            MOI.Bridges.full_bridge_optimizer(
-                AmplNLWriter.Optimizer(Ipopt.amplexe),
-                Float64
-            )
+function test_solver_name(path)
+    @test MOI.get(optimizer(path), MOI.SolverName()) == "AmplNLWriter"
+end
+
+function test_abstractoptimizer(path)
+    @test optimizer(path) isa MOI.AbstractOptimizer
+end
+
+function test_defaultobjective(path)
+    MOI.Test.default_objective_test(optimizer(path))
+end
+
+function test_default_status_test(path)
+    MOI.Test.default_status_test(optimizer(path))
+end
+
+function test_nametest(path)
+    MOI.Test.nametest(optimizer(path))
+end
+
+function test_validtest(path)
+    MOI.Test.validtest(optimizer(path))
+end
+
+function test_emptytest(path)
+    MOI.Test.emptytest(optimizer(path))
+end
+
+function test_orderedindices(path)
+    MOI.Test.orderedindicestest(optimizer(path))
+end
+
+function test_copytest(path)
+    MOI.Test.copytest(
+        optimizer(path),
+        MOI.Bridges.full_bridge_optimizer(
+            AmplNLWriter.Optimizer(path),
+            Float64,
         )
-    end
+    )
 end
 
-@testset "MOI NLP tests" begin
-    MOIT.nlptest(OPTIMIZER, CONFIG)
+function test_nlptest(path)
+    MOI.Test.nlptest(optimizer(path), CONFIG)
 end
 
-@testset "RawStatusString" begin
+function test_bad_string(::Any)
     model = AmplNLWriter.Optimizer("bad_solver")
     x = MOI.add_variable(model)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OTHER_ERROR
     @test occursin("IOError", MOI.get(model, MOI.RawStatusString()))
+end
+
+function runtests(path)
+    for name in names(@__MODULE__; all = true)
+        if !startswith("$(name)", "test_")
+            continue
+        end
+        @testset "$(name)" begin
+            getfield(@__MODULE__, name)(path)
+        end
+    end
+end
+
+end
+
+run_with_ampl() do path
+    TestMOIWrapper.runtests(path)
 end

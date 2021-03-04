@@ -1,3 +1,6 @@
+using AmplNLWriter
+using Test
+
 @testset "[nl_linearity] check simplification of formulae" begin
     @testset "ifelse" begin
         # First term is true, we should choose `then`
