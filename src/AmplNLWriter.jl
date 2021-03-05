@@ -204,6 +204,12 @@ function SolverInterface.loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer
     loadcommon!(m, x_l, x_u, g_l, g_u, sense)
 
     m.d = d
+    if !(:ExprGraph in features_available(m.d))
+        error(
+            "Unable to solve problem using AmplNLWriter because the " *
+            "nonlinear evaluator does not supply expression graphs."
+        )
+    end
     initialize(m.d, [:ExprGraph])
 
     # Process constraints
