@@ -14,25 +14,42 @@ else
     FUNCTIONS["Bonmin"] = f -> Bonmin_jll.amplexe(f)
 end
 
-@testset "$(name)" for (name, f) in FUNCTIONS
-    f() do path
-        OPTIMIZER = () -> AmplNLWriter.Optimizer(path, ["print_level=0"])
-        ###
-        ### src/nlp tests.
-        ###
+const EXCLUDES = Dict(
+    "Bonmin" => Dict(
+        "nlp" => String[
+            "005_011",  # Uses the function `\`
+            "006_010",  # User-defined function
+            "007_010",  # Infeasible model
+        ],
+        "nlp_cvx" => String[
+            "109_010"  # Ipopt fails to converge
+        ],
+        "nlp_mi" => String[
 
+        ],
+    ),
+    "Ipopt" => Dict(
+        "nlp" => String[
+            "005_011",  # Uses the function `\`
+            "006_010",  # User-defined function
+            "007_010",  # Infeasible model
+        ],
+        "nlp_cvx" => String[
+            "109_010"  # Ipopt fails to converge
+        ],
+    ),
+)
+
+@testset "$(name)" for (name, amplexe) in FUNCTIONS
+    amplexe() do path
+        OPTIMIZER = () -> AmplNLWriter.Optimizer(path, ["print_level=0"])
         MINLPTests.test_nlp(
             OPTIMIZER,
-            exclude = [
-                "005_011",  # Uses the function `\`
-                "006_010",  # User-defined function
-                "007_010",  # Infeasible model
-            ],
+            exclude = EXCLUDES[name]["nlp"],
             objective_tol = 1e-5,
             primal_tol = 1e-5,
             dual_tol = NaN,
         )
-
         @testset "nlp_007_010" begin
             MINLPTests.nlp_007_010(
                 OPTIMIZER,
@@ -43,16 +60,9 @@ end
                 Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION),
             )
         end
-
-        ###
-        ### src/nlp-cvx tests.
-        ###
-
-        MINLPTests.test_nlp_cvx(
-            OPTIMIZER,
-            exclude = [
-                "109_010"  # Ipopt fails to converge
-            ]
-        )
+        MINLPTests.test_nlp_cvx(OPTIMIZER, EXCLUDES[name]["nlp_cvx"])
+        if name == "Bonmin"
+            MINLPTests.test_nlp_mi(OPTIMIZER, EXCLUDES[name]["nlp_mi"])
+        end
     end
 end
