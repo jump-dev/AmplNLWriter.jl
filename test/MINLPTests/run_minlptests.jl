@@ -19,25 +19,34 @@ const EXCLUDES = Dict(
         "nlp" => String[
             "005_011",  # Uses the function `\`
             "006_010",  # User-defined function
-            "007_010",  # Infeasible model
         ],
         "nlp_cvx" => String[
             "109_010"  # Ipopt fails to converge
         ],
         "nlp_mi" => String[
-
+            "005_011",  # Uses the function `\`
+            "006_010",  # User-defined function
         ],
     ),
     "Ipopt" => Dict(
         "nlp" => String[
             "005_011",  # Uses the function `\`
             "006_010",  # User-defined function
-            "007_010",  # Infeasible model
         ],
         "nlp_cvx" => String[
             "109_010"  # Ipopt fails to converge
         ],
     ),
+)
+
+const TERMINATION_TARGET = Dict(
+    MINLPTests.FEASIBLE_PROBLEM => AmplNLWriter.MOI.LOCALLY_SOLVED,
+    MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.INFEASIBLE,
+)
+
+const PRIMAL_TARGET = Dict(
+    MINLPTests.FEASIBLE_PROBLEM => AmplNLWriter.MOI.FEASIBLE_POINT,
+    MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION,
 )
 
 @testset "$(name)" for (name, amplexe) in FUNCTIONS
@@ -46,23 +55,20 @@ const EXCLUDES = Dict(
         MINLPTests.test_nlp(
             OPTIMIZER,
             exclude = EXCLUDES[name]["nlp"],
+            termination_target = TERMINATION_TARGET,
+            primal_target = PRIMAL_TARGET,
             objective_tol = 1e-5,
             primal_tol = 1e-5,
             dual_tol = NaN,
         )
-        @testset "nlp_007_010" begin
-            MINLPTests.nlp_007_010(
-                OPTIMIZER,
-                1e-5,
-                NaN,
-                NaN,
-                Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.INFEASIBLE),
-                Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION),
-            )
-        end
         MINLPTests.test_nlp_cvx(OPTIMIZER, exclude = EXCLUDES[name]["nlp_cvx"])
         if name == "Bonmin"
-            MINLPTests.test_nlp_mi(OPTIMIZER, exclude = EXCLUDES[name]["nlp_mi"])
+            MINLPTests.test_nlp_mi(
+                OPTIMIZER, 
+                exclude = EXCLUDES[name]["nlp_mi"],
+                termination_target = TERMINATION_TARGET,
+                primal_target = PRIMAL_TARGET,
+            )
         end
     end
 end
