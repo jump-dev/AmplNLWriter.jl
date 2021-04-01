@@ -60,9 +60,9 @@ const EXCLUDES = Dict(
                 Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION),
             )
         end
-        MINLPTests.test_nlp_cvx(OPTIMIZER, EXCLUDES[name]["nlp_cvx"])
+        MINLPTests.test_nlp_cvx(OPTIMIZER, exclude = EXCLUDES[name]["nlp_cvx"])
         if name == "Bonmin"
-            MINLPTests.test_nlp_mi(OPTIMIZER, EXCLUDES[name]["nlp_mi"])
+            MINLPTests.test_nlp_mi(OPTIMIZER, exclude = EXCLUDES[name]["nlp_mi"])
         end
     end
 end
