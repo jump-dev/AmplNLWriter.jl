@@ -1,11 +1,11 @@
 using Test
 
-if VERSION < v"1.3"
+const SOLVER_CMD = if VERSION < v"1.3"
     import Ipopt
-    run_with_ampl(f) = f(Ipopt.amplexe)
+    Ipopt.amplexe
 else
     import Ipopt_jll
-    run_with_ampl(f) = Ipopt_jll.amplexe(f)
+    Ipopt_jll.amplexe
 end
 
 @testset "MOI" begin

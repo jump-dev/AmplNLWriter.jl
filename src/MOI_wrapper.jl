@@ -38,17 +38,36 @@ end
 
 """
     Optimizer(
-        solver_command::String,
+        solver_command::Union{String,Function},
         options::Vector{String} = String[];
-        filename::String = ""
+        filename::String = "",
     )
 
-# Example
+Create a new optimizer.
+
+`solver_command` should either be one of two things:
+
+ * A `String` of the full path of an AMPL-compatible executable
+ * A function that takes takes a function as input, initializes any environment
+   as needed, calls the input function with a path to the initialized
+   executable, and then destructs the environment.
+
+## Examples
+
+    Optimizer("/path/to/ipopt.exe", ["print_level=0"])
 
     Optimizer(Ipopt.amplexe, ["print_level=0"])
+
+    function solver_command(f::Function)
+        # Create environment ...
+        ret = f("/path/to/ipopt")
+        # Destruct environment ...
+        return ret
+    end
+    Optimizer(solver_command)
 """
 function Optimizer(
-    solver_command::String,
+    solver_command::Union{String,Function},
     options::Vector{String} = String[];
     filename::String = "",
 )

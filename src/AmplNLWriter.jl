@@ -23,18 +23,31 @@ export AmplNLSolver,
     getsolvemessage,
     getsolveexitcode
 
+# Functionify the solver command so it can be called as
+# `solver_command() do path`.
+_solver_command(x::String) = f -> f(x)
+_solver_command(x::Function) = x
+
 struct AmplNLSolver <: AbstractMathProgSolver
-    solver_command::String
+    solver_command::Function
     options::Vector{String}
     filename::String
+
+    function AmplNLSolver(
+        solver::Union{String,Function},
+        options::Vector{String},
+        filename::String,
+    )
+        return new(_solver_command(solver), options, filename)
+    end
 end
 
 function AmplNLSolver(
-    solver_command::String,
+    solver_command::Union{String,Function},
     options::Vector{String} = String[];
     filename::String = "",
 )
-    return AmplNLSolver(solver_command, options, filename)
+    return AmplNLSolver(_solver_command(solver_command), options, filename)
 end
 
 function BonminNLSolver(options = String[]; filename::String = "")
@@ -97,12 +110,12 @@ function IpoptNLSolver(options = String[]; filename::String = "")
     )
 end
 
-getsolvername(s::AmplNLSolver) = basename(s.solver_command)
+getsolvername(s::AmplNLSolver) = s.solver_command(basename)
 
 mutable struct AmplNLMathProgModel <: AbstractMathProgModel
     options::Vector{String}
 
-    solver_command::String
+    solver_command::Function
 
     x_l::Vector{Float64}
     x_u::Vector{Float64}
@@ -153,13 +166,13 @@ mutable struct AmplNLMathProgModel <: AbstractMathProgModel
     d::AbstractNLPEvaluator
 
     function AmplNLMathProgModel(
-        solver_command::String,
+        solver_command::Union{String,Function},
         options::Vector{String},
         filename::String,
     )
         return new(
             options,
-            solver_command,
+            _solver_command(solver_command),
             zeros(0),
             zeros(0),
             zeros(0),
@@ -465,15 +478,16 @@ function SolverInterface.optimize!(m::AmplNLMathProgModel)
     # Run solver and save exitcode
     t = time()
     try
-        cmd = pipeline(
-            `$(m.solver_command) $(m.probfile) -AMPL $(m.options)`,
-            stdout = stdout,
-            stdin = stdin,
-        )
-        proc = VERSION < v"0.7-" ? spawn(cmd) : run(cmd, wait = false)
-        wait(proc)
-        kill(proc)
-        m.solve_exitcode = proc.exitcode
+        m.solver_command() do solver_path
+            proc = run(
+                pipeline(
+                    `$(solver_path) $(m.probfile) -AMPL $(m.options)`,
+                    stdout = stdout,
+                    stdin = stdin,
+                ),
+            )
+            return m.solve_exitcode = proc.exitcode
+        end
     catch e
         m.solve_exitcode = 1
         @warn("Unable to call solver. Failed with the error: $(e)")

@@ -45,6 +45,4 @@ function test_temp_file_handling(path)
     return AmplNLWriter.clean_solverdata()
 end
 
-run_with_ampl() do path
-    return test_temp_file_handling(path)
-end
+test_temp_file_handling(SOLVER_CMD)

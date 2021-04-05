@@ -14,21 +14,23 @@ const CONFIG = MOI.Test.TestConfig(
     duals = false,
 )
 
-function optimizer(path)
+function optimizer(solver_cmd)
     return MOI.Bridges.full_bridge_optimizer(
-        AmplNLWriter.Optimizer(path, ["print_level = 0"]),
+        AmplNLWriter.Optimizer(solver_cmd, ["print_level = 0"]),
         Float64,
     )
 end
 
-function test_name(path)
-    @test sprint(show, AmplNLWriter.Optimizer(path, ["print_level = 0"])) ==
-          "An AmplNLWriter model"
+function test_name(solver_cmd)
+    @test sprint(
+        show,
+        AmplNLWriter.Optimizer(solver_cmd, ["print_level = 0"]),
+    ) == "An AmplNLWriter model"
 end
 
-function test_unittest(path)
+function test_unittest(solver_cmd)
     return MOI.Test.unittest(
-        optimizer(path),
+        optimizer(solver_cmd),
         CONFIG,
         [
             # Unsupported attributes:
@@ -57,58 +59,62 @@ function test_unittest(path)
     )
 end
 
-function test_contlinear(path)
-    return MOI.Test.contlineartest(optimizer(path), CONFIG, String["linear15",])
+function test_contlinear(solver_cmd)
+    return MOI.Test.contlineartest(
+        optimizer(solver_cmd),
+        CONFIG,
+        String["linear15",],
+    )
 end
 
-function test_contlquadratic(path)
-    return MOI.Test.contquadratictest(optimizer(path), CONFIG)
+function test_contlquadratic(solver_cmd)
+    return MOI.Test.contquadratictest(optimizer(solver_cmd), CONFIG)
 end
 
-function test_solver_name(path)
-    @test MOI.get(optimizer(path), MOI.SolverName()) == "AmplNLWriter"
+function test_solver_name(solver_cmd)
+    @test MOI.get(optimizer(solver_cmd), MOI.SolverName()) == "AmplNLWriter"
 end
 
-function test_abstractoptimizer(path)
-    @test optimizer(path) isa MOI.AbstractOptimizer
+function test_abstractoptimizer(solver_cmd)
+    @test optimizer(solver_cmd) isa MOI.AbstractOptimizer
 end
 
-function test_defaultobjective(path)
-    return MOI.Test.default_objective_test(optimizer(path))
+function test_defaultobjective(solver_cmd)
+    return MOI.Test.default_objective_test(optimizer(solver_cmd))
 end
 
-function test_default_status_test(path)
-    return MOI.Test.default_status_test(optimizer(path))
+function test_default_status_test(solver_cmd)
+    return MOI.Test.default_status_test(optimizer(solver_cmd))
 end
 
-function test_nametest(path)
-    return MOI.Test.nametest(optimizer(path))
+function test_nametest(solver_cmd)
+    return MOI.Test.nametest(optimizer(solver_cmd))
 end
 
-function test_validtest(path)
-    return MOI.Test.validtest(optimizer(path))
+function test_validtest(solver_cmd)
+    return MOI.Test.validtest(optimizer(solver_cmd))
 end
 
-function test_emptytest(path)
-    return MOI.Test.emptytest(optimizer(path))
+function test_emptytest(solver_cmd)
+    return MOI.Test.emptytest(optimizer(solver_cmd))
 end
 
-function test_orderedindices(path)
-    return MOI.Test.orderedindicestest(optimizer(path))
+function test_orderedindices(solver_cmd)
+    return MOI.Test.orderedindicestest(optimizer(solver_cmd))
 end
 
-function test_copytest(path)
+function test_copytest(solver_cmd)
     return MOI.Test.copytest(
-        optimizer(path),
+        optimizer(solver_cmd),
         MOI.Bridges.full_bridge_optimizer(
-            AmplNLWriter.Optimizer(path),
+            AmplNLWriter.Optimizer(solver_cmd),
             Float64,
         ),
     )
 end
 
-function test_nlptest(path)
-    return MOI.Test.nlptest(optimizer(path), CONFIG)
+function test_nlptest(solver_cmd)
+    return MOI.Test.nlptest(optimizer(solver_cmd), CONFIG)
 end
 
 function test_bad_string(::Any)
@@ -119,19 +125,17 @@ function test_bad_string(::Any)
     @test occursin("IOError", MOI.get(model, MOI.RawStatusString()))
 end
 
-function runtests(path)
+function runtests(solver_cmd)
     for name in names(@__MODULE__; all = true)
         if !startswith("$(name)", "test_")
             continue
         end
         @testset "$(name)" begin
-            getfield(@__MODULE__, name)(path)
+            getfield(@__MODULE__, name)(solver_cmd)
         end
     end
 end
 
 end
 
-run_with_ampl() do path
-    return TestMOIWrapper.runtests(path)
-end
+TestMOIWrapper.runtests(SOLVER_CMD)
