@@ -13,9 +13,15 @@ include("nl_linearity.jl")
 include("nl_params.jl")
 include("nl_convert.jl")
 
-export AmplNLSolver, BonminNLSolver, CouenneNLSolver, IpoptNLSolver,
-       getsolvername, getsolveresult, getsolveresultnum, getsolvemessage,
-       getsolveexitcode
+export AmplNLSolver,
+    BonminNLSolver,
+    CouenneNLSolver,
+    IpoptNLSolver,
+    getsolvername,
+    getsolveresult,
+    getsolveresultnum,
+    getsolvemessage,
+    getsolveexitcode
 
 struct AmplNLSolver <: AbstractMathProgSolver
     solver_command::String
@@ -23,64 +29,72 @@ struct AmplNLSolver <: AbstractMathProgSolver
     filename::String
 end
 
-function AmplNLSolver(solver_command::String,
-                      options::Vector{String}=String[];
-                      filename::String="")
-    AmplNLSolver(solver_command, options, filename)
+function AmplNLSolver(
+    solver_command::String,
+    options::Vector{String} = String[];
+    filename::String = "",
+)
+    return AmplNLSolver(solver_command, options, filename)
 end
 
-function BonminNLSolver(options=String[]; filename::String="")
-    error("""BonminNLSolver is no longer available by default through AmplNLWriter.
+function BonminNLSolver(options = String[]; filename::String = "")
+    return error(
+        """BonminNLSolver is no longer available by default through AmplNLWriter.
 
-    You should install CoinOptServices via
+  You should install CoinOptServices via
 
-        Pkg.add("CoinOptServices")
+      Pkg.add("CoinOptServices")
 
-    and then replace BonminNLSolver(options=String[]; filename::String="")
-    with
+  and then replace BonminNLSolver(options=String[]; filename::String="")
+  with
 
-        AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
+      AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
 
-    alternatively, you can call
+  alternatively, you can call
 
-        AmplNLSolver("path/to/bonmin", options; filename=filename)
-    """)
+      AmplNLSolver("path/to/bonmin", options; filename=filename)
+  """,
+    )
 end
 
-function CouenneNLSolver(options=String[]; filename::String="")
-    error("""CouenneNLSolver is no longer available by default through AmplNLWriter.
+function CouenneNLSolver(options = String[]; filename::String = "")
+    return error(
+        """CouenneNLSolver is no longer available by default through AmplNLWriter.
 
-    You should install CoinOptServices via
+  You should install CoinOptServices via
 
-        Pkg.add("CoinOptServices")
+      Pkg.add("CoinOptServices")
 
-    and then replace CouenneNLSolver(options=String[]; filename::String="")
-    with
+  and then replace CouenneNLSolver(options=String[]; filename::String="")
+  with
 
-        AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
+      AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
 
-    alternatively, you can call
+  alternatively, you can call
 
-        AmplNLSolver("path/to/couenne", options; filename=filename)
-    """)
+      AmplNLSolver("path/to/couenne", options; filename=filename)
+  """,
+    )
 end
 
-function IpoptNLSolver(options=String[]; filename::String="")
-    error("""IpoptNLSolver is no longer available by default through AmplNLWriter.
+function IpoptNLSolver(options = String[]; filename::String = "")
+    return error(
+        """IpoptNLSolver is no longer available by default through AmplNLWriter.
 
-    You should install Ipopt via
+  You should install Ipopt via
 
-        Pkg.add("Ipopt")
+      Pkg.add("Ipopt")
 
-    and then replace IpoptNLSolver(options=String[]; filename::String="")
-    with
+  and then replace IpoptNLSolver(options=String[]; filename::String="")
+  with
 
-        AmplNLSolver(Ipopt.amplexe, options; filename=filename)
+      AmplNLSolver(Ipopt.amplexe, options; filename=filename)
 
-    alternatively, you can call
+  alternatively, you can call
 
-        AmplNLSolver("path/to/ipopt", options; filename=filename)
-    """)
+      AmplNLSolver("path/to/ipopt", options; filename=filename)
+  """,
+    )
 end
 
 getsolvername(s::AmplNLSolver) = basename(s.solver_command)
@@ -98,11 +112,11 @@ mutable struct AmplNLMathProgModel <: AbstractMathProgModel
     nvar::Int
     ncon::Int
 
-    obj
+    obj::Any
     constrs::Vector{Any}
 
-    lin_constrs::Vector{Dict{Int, Float64}}
-    lin_obj::Dict{Int, Float64}
+    lin_constrs::Vector{Dict{Int,Float64}}
+    lin_obj::Dict{Int,Float64}
 
     r_codes::Vector{Int}
     j_counts::Vector{Int}
@@ -113,10 +127,10 @@ mutable struct AmplNLMathProgModel <: AbstractMathProgModel
     conlinearities::Vector{Symbol}
     objlinearity::Symbol
 
-    v_index_map::Dict{Int, Int}
-    v_index_map_rev::Dict{Int, Int}
-    c_index_map::Dict{Int, Int}
-    c_index_map_rev::Dict{Int, Int}
+    v_index_map::Dict{Int,Int}
+    v_index_map_rev::Dict{Int,Int}
+    c_index_map::Dict{Int,Int}
+    c_index_map_rev::Dict{Int,Int}
 
     sense::Symbol
 
@@ -138,10 +152,13 @@ mutable struct AmplNLMathProgModel <: AbstractMathProgModel
 
     d::AbstractNLPEvaluator
 
-    function AmplNLMathProgModel(solver_command::String,
-                                 options::Vector{String},
-                                 filename::String)
-        new(options,
+    function AmplNLMathProgModel(
+        solver_command::String,
+        options::Vector{String},
+        filename::String,
+    )
+        return new(
+            options,
             solver_command,
             zeros(0),
             zeros(0),
@@ -151,8 +168,8 @@ mutable struct AmplNLMathProgModel <: AbstractMathProgModel
             0,
             :(0),
             [],
-            Dict{Int, Float64}[],
-            Dict{Int, Float64}(),
+            Dict{Int,Float64}[],
+            Dict{Int,Float64}(),
             Int[],
             Int[],
             Symbol[],
@@ -160,10 +177,10 @@ mutable struct AmplNLMathProgModel <: AbstractMathProgModel
             Symbol[],
             Symbol[],
             :Lin,
-            Dict{Int, Int}(),
-            Dict{Int, Int}(),
-            Dict{Int, Int}(),
-            Dict{Int, Int}(),
+            Dict{Int,Int}(),
+            Dict{Int,Int}(),
+            Dict{Int,Int}(),
+            Dict{Int,Int}(),
             :Min,
             zeros(0),
             filename,
@@ -176,7 +193,8 @@ mutable struct AmplNLMathProgModel <: AbstractMathProgModel
             -1,
             "?",
             "",
-            NaN)
+            NaN,
+        )
     end
 end
 mutable struct AmplNLLinearQuadraticModel <: AbstractLinearQuadraticModel
@@ -188,16 +206,28 @@ end
 
 include("nl_write.jl")
 
-SolverInterface.NonlinearModel(s::AmplNLSolver) = AmplNLNonlinearModel(
-    AmplNLMathProgModel(s.solver_command, s.options, s.filename)
-)
-SolverInterface.LinearQuadraticModel(s::AmplNLSolver) = AmplNLLinearQuadraticModel(
-    AmplNLMathProgModel(s.solver_command, s.options, s.filename)
-)
+function SolverInterface.NonlinearModel(s::AmplNLSolver)
+    return AmplNLNonlinearModel(
+        AmplNLMathProgModel(s.solver_command, s.options, s.filename),
+    )
+end
+function SolverInterface.LinearQuadraticModel(s::AmplNLSolver)
+    return AmplNLLinearQuadraticModel(
+        AmplNLMathProgModel(s.solver_command, s.options, s.filename),
+    )
+end
 
-function SolverInterface.loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer, ncon::Integer,
-                      x_l, x_u, g_l, g_u, sense::Symbol,
-                      d::AbstractNLPEvaluator)
+function SolverInterface.loadproblem!(
+    outer::AmplNLNonlinearModel,
+    nvar::Integer,
+    ncon::Integer,
+    x_l,
+    x_u,
+    g_l,
+    g_u,
+    sense::Symbol,
+    d::AbstractNLPEvaluator,
+)
     m = outer.inner
 
     m.nvar, m.ncon = nvar, ncon
@@ -207,7 +237,7 @@ function SolverInterface.loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer
     if !(:ExprGraph in features_available(m.d))
         error(
             "Unable to solve problem using AmplNLWriter because the " *
-            "nonlinear evaluator does not supply expression graphs."
+            "nonlinear evaluator does not supply expression graphs.",
         )
     end
     initialize(m.d, [:ExprGraph])
@@ -243,8 +273,8 @@ function SolverInterface.loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer
         end
 
         # Convert non-linear expression to non-linear, linear and constant
-        c, constant, m.conlinearities[i] = process_expression!(
-            c, m.lin_constrs[i], m.varlinearities_con)
+        c, constant, m.conlinearities[i] =
+            process_expression!(c, m.lin_constrs[i], m.varlinearities_con)
 
         # Update bounds on constraint
         m.g_l[i] -= constant
@@ -254,7 +284,7 @@ function SolverInterface.loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer
         for j in keys(m.lin_constrs[i])
             m.j_counts[j] += 1
         end
-        c
+        return c
     end
 
     # Process objective
@@ -265,8 +295,8 @@ function SolverInterface.loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer
             m.obj = 0
         else
             # Convert non-linear expression to non-linear, linear and constant
-            m.obj, constant, m.objlinearity = process_expression!(
-                m.obj, m.lin_obj, m.varlinearities_obj)
+            m.obj, constant, m.objlinearity =
+                process_expression!(m.obj, m.lin_obj, m.varlinearities_obj)
 
             # Add constant back into non-linear expression
             if constant != 0
@@ -274,11 +304,19 @@ function SolverInterface.loadproblem!(outer::AmplNLNonlinearModel, nvar::Integer
             end
         end
     end
-    m
+    return m
 end
 
-function SolverInterface.loadproblem!(outer::AmplNLLinearQuadraticModel, A::AbstractMatrix,
-                      x_l, x_u, c, g_l, g_u, sense)
+function SolverInterface.loadproblem!(
+    outer::AmplNLLinearQuadraticModel,
+    A::AbstractMatrix,
+    x_l,
+    x_u,
+    c,
+    g_l,
+    g_u,
+    sense,
+)
     m = outer.inner
     m.ncon, m.nvar = size(A)
 
@@ -296,7 +334,7 @@ function SolverInterface.loadproblem!(outer::AmplNLLinearQuadraticModel, A::Abst
     m.obj = 0  # Dummy objective expression tree
 
     # Process variables bounds
-    for j = 1:m.ncon
+    for j in 1:m.ncon
         lower = m.g_l[j]
         upper = m.g_u[j]
         if lower == -Inf
@@ -315,18 +353,18 @@ function SolverInterface.loadproblem!(outer::AmplNLLinearQuadraticModel, A::Abst
             end
         end
     end
-    m
+    return m
 end
 
 function load_A!(m::AmplNLMathProgModel, A::SparseMatrixCSC{Float64})
-    for var = 1:A.n, k = A.colptr[var] : (A.colptr[var + 1] - 1)
+    for var in 1:A.n, k in A.colptr[var]:(A.colptr[var+1]-1)
         m.lin_constrs[A.rowval[k]][var] = A.nzval[k]
         m.j_counts[var] += 1
     end
 end
 
 function load_A!(m::AmplNLMathProgModel, A::Matrix{Float64})
-    for con = 1:m.ncon, var = 1:m.nvar
+    for con in 1:m.ncon, var in 1:m.nvar
         val = A[con, var]
         if val != 0
             m.lin_constrs[con][var] = val
@@ -343,7 +381,7 @@ function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
     m.g_l, m.g_u = g_l, g_u
     setsense!(m, sense)
 
-    m.lin_constrs = [Dict{Int, Float64}() for _ in 1:m.ncon]
+    m.lin_constrs = [Dict{Int,Float64}() for _ in 1:m.ncon]
     m.j_counts = zeros(Int, m.nvar)
 
     m.r_codes = Array{Int}(undef, m.ncon)
@@ -354,22 +392,30 @@ function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
     m.objlinearity = :Lin
 
     m.vartypes = fill(:Cont, m.nvar)
-    m.x_0 = zeros(m.nvar)
+    return m.x_0 = zeros(m.nvar)
 end
 
 SolverInterface.getvartype(m::AmplNLMathProgModel) = copy(m.vartypes)
-function SolverInterface.setvartype!(m::AmplNLMathProgModel, cat::Vector{Symbol})
-    @assert all(x-> (x in [:Cont,:Bin,:Int]), cat)
-    m.vartypes = copy(cat)
+function SolverInterface.setvartype!(
+    m::AmplNLMathProgModel,
+    cat::Vector{Symbol},
+)
+    @assert all(x -> (x in [:Cont, :Bin, :Int]), cat)
+    return m.vartypes = copy(cat)
 end
 
 SolverInterface.getsense(m::AmplNLMathProgModel) = m.sense
 function SolverInterface.setsense!(m::AmplNLMathProgModel, sense::Symbol)
     @assert sense == :Min || sense == :Max
-    m.sense = sense
+    return m.sense = sense
 end
 
-SolverInterface.setwarmstart!(m::AmplNLMathProgModel, v::Vector{Float64}) = m.x_0 = v
+function SolverInterface.setwarmstart!(
+    m::AmplNLMathProgModel,
+    v::Vector{Float64},
+)
+    return m.x_0 = v
+end
 
 function SolverInterface.optimize!(m::AmplNLMathProgModel)
     m.status = :NotSolved
@@ -414,13 +460,17 @@ function SolverInterface.optimize!(m::AmplNLMathProgModel)
     # force flag added to fix issue in Windows, where temp file are not
     # absolutely unique and file closing is not fast enough
     # See https://github.com/jump-dev/AmplNLWriter.jl/pull/63.
-    mv(file_basepath, m.probfile, force=true)
+    mv(file_basepath, m.probfile, force = true)
 
     # Run solver and save exitcode
     t = time()
     try
-        cmd = pipeline(`$(m.solver_command) $(m.probfile) -AMPL $(m.options)`, stdout=stdout, stdin=stdin)
-        proc = VERSION < v"0.7-" ? spawn(cmd) : run(cmd, wait=false)
+        cmd = pipeline(
+            `$(m.solver_command) $(m.probfile) -AMPL $(m.options)`,
+            stdout = stdout,
+            stdin = stdin,
+        )
+        proc = VERSION < v"0.7-" ? spawn(cmd) : run(cmd, wait = false)
         wait(proc)
         kill(proc)
         m.solve_exitcode = proc.exitcode
@@ -447,8 +497,11 @@ function SolverInterface.optimize!(m::AmplNLMathProgModel)
     end
 end
 
-function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int, Float64},
-                             varlinearities::Vector{Symbol})
+function process_expression!(
+    nonlin_expr::Expr,
+    lin_expr::Dict{Int,Float64},
+    varlinearities::Vector{Symbol},
+)
     # Get list of all variables in the expression
     extract_variables!(lin_expr, nonlin_expr)
     # Extract linear and constant terms from non-linear expression
@@ -459,7 +512,7 @@ function process_expression!(nonlin_expr::Expr, lin_expr::Dict{Int, Float64},
     nonlin_expr = convert_formula(tree)
 
     # Track which variables appear nonlinearly
-    nonlin_vars = Dict{Int, Float64}()
+    nonlin_vars = Dict{Int,Float64}()
     extract_variables!(nonlin_vars, nonlin_expr)
     for j in keys(nonlin_vars)
         varlinearities[j] = :Nonlin
@@ -480,7 +533,7 @@ end
 function process_expression!(nonlin_expr::Real, lin_expr, varlinearities)
     # Special case where body of constraint is constant
     # Return empty nonlinear and linear parts, and use the body as the constant
-    0, nonlin_expr, :Lin
+    return 0, nonlin_expr, :Lin
 end
 
 SolverInterface.status(m::AmplNLMathProgModel) = m.status
@@ -497,10 +550,11 @@ get_solve_message(m::AmplNLMathProgModel) = m.solve_message
 get_solve_exitcode(m::AmplNLMathProgModel) = m.solve_exitcode
 
 # We need to track linear coeffs of all variables present in the expression tree
-extract_variables!(lin_constr::Dict{Int, Float64}, c) = c
-extract_variables!(lin_constr::Dict{Int, Float64}, c::LinearityExpr) =
-    extract_variables!(lin_constr, c.c)
-function extract_variables!(lin_constr::Dict{Int, Float64}, c::Expr)
+extract_variables!(lin_constr::Dict{Int,Float64}, c) = c
+function extract_variables!(lin_constr::Dict{Int,Float64}, c::LinearityExpr)
+    return extract_variables!(lin_constr, c.c)
+end
+function extract_variables!(lin_constr::Dict{Int,Float64}, c::Expr)
     if c.head == :ref
         if c.args[1] == :x
             @assert isa(c.args[2], Int)
@@ -560,13 +614,16 @@ function make_var_index!(m::AmplNLMathProgModel)
     # the variable order.
     variable_orders = [Int[] for _ in 1:9]
     nlvo, nlvc = 0, 0
-    for i = 1:m.nvar
-        if m.varlinearities_obj[i] == :Nonlin && m.varlinearities_con[i] == :Nonlin
+    for i in 1:m.nvar
+        if m.varlinearities_obj[i] == :Nonlin &&
+           m.varlinearities_con[i] == :Nonlin
             push!(variable_orders[m.vartypes[i] == :Cont ? 1 : 2], i)
-        elseif m.varlinearities_obj[i] != :Nonlin && m.varlinearities_con[i] == :Nonlin
+        elseif m.varlinearities_obj[i] != :Nonlin &&
+               m.varlinearities_con[i] == :Nonlin
             push!(variable_orders[m.vartypes[i] == :Cont ? 3 : 4], i)
             nlvc += 1
-        elseif m.varlinearities_obj[i] == :Nonlin && m.varlinearities_con[i] != :Nonlin
+        elseif m.varlinearities_obj[i] == :Nonlin &&
+               m.varlinearities_con[i] != :Nonlin
             push!(variable_orders[m.vartypes[i] == :Cont ? 5 : 6], i)
             nlvo += 1
         else
@@ -581,8 +638,10 @@ function make_var_index!(m::AmplNLMathProgModel)
     end
     if !(nlvo > nlvc)
         # Swap 3 <-> 5 and 4 <-> 6
-        variable_orders[3], variable_orders[5] = variable_orders[5], variable_orders[3]
-        variable_orders[4], variable_orders[6] = variable_orders[6], variable_orders[4]
+        variable_orders[3], variable_orders[5] =
+            variable_orders[5], variable_orders[3]
+        variable_orders[4], variable_orders[6] =
+            variable_orders[6], variable_orders[4]
     end
 
     # Index variables in required order
@@ -607,9 +666,11 @@ function make_con_index!(m::AmplNLMathProgModel)
     end
 end
 
-function add_to_index_maps!(forward_map::Dict{Int, Int},
-                            backward_map::Dict{Int, Int},
-                            inds::Array{Int})
+function add_to_index_maps!(
+    forward_map::Dict{Int,Int},
+    backward_map::Dict{Int,Int},
+    inds::Array{Int},
+)
     for i in inds
         # Indices are 0-prefixed so the next index is the current dict length
         index = length(forward_map)
@@ -620,12 +681,14 @@ end
 
 function read_results(m::AmplNLMathProgModel)
     if !isfile(m.solfile)
-        error("""Unable to open the solution file. The most likely cause of this
-        is the solver executable failing unexpectedly. Unfortunately we don't
-        have any other information about the solution or what went wrong.""")
+        error(
+            """Unable to open the solution file. The most likely cause of this
+      is the solver executable failing unexpectedly. Unfortunately we don't
+      have any other information about the solution or what went wrong.""",
+        )
     end
-    open(m.solfile, "r")do io
-        read_results(io, m)
+    open(m.solfile, "r") do io
+        return read_results(io, m)
     end
 end
 
@@ -640,7 +703,9 @@ function read_results(resultio, m::AmplNLMathProgModel)
         # Used to indicate solution present but likely incorrect.
         m.status = :Optimal
         m.solve_result = "solved?"
-        warn("The solver has returned the status :Optimal, but indicated that there might be an error in the solution. The status code returned by the solver was $(m.solve_result_num). Check the solver documentation for more info.")
+        warn(
+            "The solver has returned the status :Optimal, but indicated that there might be an error in the solution. The status code returned by the solver was $(m.solve_result_num). Check the solver documentation for more info.",
+        )
     elseif 200 <= m.solve_result_num < 300
         m.status = :Infeasible
         m.solve_result = "infeasible"
@@ -694,12 +759,14 @@ end
 
 function read_sol(m::AmplNLMathProgModel)
     if !isfile(m.solfile)
-        error("""Unable to open the solution file. The most likely cause of this
-        is the solver executable failing unexpectedly. Unfortunately we don't
-        have any other information about the solution or what went wrong.""")
+        error(
+            """Unable to open the solution file. The most likely cause of this
+      is the solver executable failing unexpectedly. Unfortunately we don't
+      have any other information about the solution or what went wrong.""",
+        )
     end
     open(m.solfile, "r") do io
-        readsol(io, m)
+        return readsol(io, m)
     end
 end
 
@@ -724,14 +791,14 @@ function read_sol(f::IO, m::AmplNLMathProgModel)
     @assert line[1:7] == "Options"
     options = [parse(Int, chomp(readline(f))) for _ in 1:3]
     num_options = options[1]
-    3 <= num_options <= 9 || error("expected num_options between 3 and 9; " *
-                                   "got $num_options")
+    3 <= num_options <= 9 ||
+        error("expected num_options between 3 and 9; " * "got $num_options")
     need_vbtol = false
     if options[3] == 3
         num_options -= 2
         need_vbtol = true
     end
-    for j = 3:num_options
+    for j in 3:num_options
         eof(f) && error()
         push!(options, parse(Int, chomp(readline(f))))
     end
@@ -757,7 +824,7 @@ function read_sol(f::IO, m::AmplNLMathProgModel)
 
     # Skip over duals
     # TODO do something with these?
-    for index in 0:(num_duals_to_read - 1)
+    for index in 0:(num_duals_to_read-1)
         eof(f) && error("End of file while reading duals.")
         line = readline(f)
     end
@@ -765,7 +832,7 @@ function read_sol(f::IO, m::AmplNLMathProgModel)
     # Next, read for the variable values
     x = fill(NaN, m.nvar)
     m.objval = NaN
-    for index in 0:(num_vars_to_read - 1)
+    for index in 0:(num_vars_to_read-1)
         eof(f) && error("End of file while reading variables.")
         line = readline(f)
 
@@ -807,34 +874,49 @@ function substitute_vars!(c::Expr, x::Array{Float64})
             # Convert .nl unary minus (:neg) back to :-
             if c.args[1] == :neg
                 c.args[1] = :-
-            # Convert .nl :sum back to :+
+                # Convert .nl :sum back to :+
             elseif c.args[1] == :sum
                 c.args[1] = :+
             end
         end
         map!(arg -> substitute_vars!(arg, x), c.args, c.args)
     end
-    c
+    return c
 end
 
-function evaluate_linear(linear_coeffs::Dict{Int, Float64}, x::Array{Float64})
+function evaluate_linear(linear_coeffs::Dict{Int,Float64}, x::Array{Float64})
     total = 0.0
     for (i, coeff) in linear_coeffs
         total += coeff * x[i]
     end
-    total
+    return total
 end
 
 # Wrapper functions
-for f in [:getvartype,:getsense,:optimize!,:status,:getsolution,:getobjval,:numvar,:numconstr,:getsolvetime]
+for f in [
+    :getvartype,
+    :getsense,
+    :optimize!,
+    :status,
+    :getsolution,
+    :getobjval,
+    :numvar,
+    :numconstr,
+    :getsolvetime,
+]
     @eval SolverInterface.$f(m::AmplNLNonlinearModel) = $f(m.inner)
     @eval SolverInterface.$f(m::AmplNLLinearQuadraticModel) = $f(m.inner)
 end
-for f in [:get_solve_result,:get_solve_result_num,:get_solve_message,:get_solve_exitcode]
+for f in [
+    :get_solve_result,
+    :get_solve_result_num,
+    :get_solve_message,
+    :get_solve_exitcode,
+]
     @eval $f(m::AmplNLNonlinearModel) = $f(m.inner)
     @eval $f(m::AmplNLLinearQuadraticModel) = $f(m.inner)
 end
-for f in [:setvartype!,:setsense!,:setwarmstart!]
+for f in [:setvartype!, :setsense!, :setwarmstart!]
     @eval SolverInterface.$f(m::AmplNLNonlinearModel, x) = $f(m.inner, x)
     @eval SolverInterface.$f(m::AmplNLLinearQuadraticModel, x) = $f(m.inner, x)
 end

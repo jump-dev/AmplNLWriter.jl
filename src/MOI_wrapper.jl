@@ -19,20 +19,21 @@ MOIU.@model(
 )
 
 const MOI_SCALAR_SETS = (
-    MOI.EqualTo{Float64}, MOI.GreaterThan{Float64}, MOI.LessThan{Float64},
-    MOI.Interval{Float64}
+    MOI.EqualTo{Float64},
+    MOI.GreaterThan{Float64},
+    MOI.LessThan{Float64},
+    MOI.Interval{Float64},
 )
 
-const MOI_SCALAR_FUNCTIONS = (
-    MOI.ScalarAffineFunction{Float64}, MOI.ScalarQuadraticFunction{Float64}
-)
+const MOI_SCALAR_FUNCTIONS =
+    (MOI.ScalarAffineFunction{Float64}, MOI.ScalarQuadraticFunction{Float64})
 
 "Struct to contain the MPB solution."
 struct MPBSolution
     status::Symbol
     raw_status_string::String
     objective_value::Float64
-    primal_solution::Dict{MOI.VariableIndex, Float64}
+    primal_solution::Dict{MOI.VariableIndex,Float64}
 end
 
 """
@@ -47,13 +48,14 @@ end
     Optimizer(Ipopt.amplexe, ["print_level=0"])
 """
 function Optimizer(
-        solver_command::String,
-        options::Vector{String} = String[];
-        filename::String = ""
+    solver_command::String,
+    options::Vector{String} = String[];
+    filename::String = "",
 )
     model = Model{Float64}()
-    model.ext[:MPBSolver] = AmplNLSolver(solver_command, options, filename = filename)
-    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex, Float64}()
+    model.ext[:MPBSolver] =
+        AmplNLSolver(solver_command, options, filename = filename)
+    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex,Float64}()
     return model
 end
 
@@ -62,7 +64,8 @@ function MOI.empty!(model::Model{Float64})
     model.senseset = false
     model.sense = MOI.FEASIBILITY_SENSE
     model.objectiveset = false
-    model.objective = MOI.ScalarAffineFunction{Float64}(MOI.ScalarAffineTerm{Float64}[], 0.0)
+    model.objective =
+        MOI.ScalarAffineFunction{Float64}(MOI.ScalarAffineTerm{Float64}[], 0.0)
     model.num_variables_created = 0
     model.variable_indices = nothing
     empty!(model.single_variable_mask)
@@ -79,7 +82,7 @@ function MOI.empty!(model::Model{Float64})
     solver = model.ext[:MPBSolver]
     empty!(model.ext)
     model.ext[:MPBSolver] = solver
-    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex, Float64}()
+    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex,Float64}()
     return
 end
 
@@ -96,10 +99,10 @@ set_to_cat(set::MOI.Integer) = :Int
 
 struct NLPEvaluator{T} <: MPB.AbstractNLPEvaluator
     inner::T
-    variable_map::Dict{MOI.VariableIndex, Int}
+    variable_map::Dict{MOI.VariableIndex,Int}
     num_inner_con::Int
     has_nlobjective::Bool
-    objective_expr::Union{Nothing, Expr}
+    objective_expr::Union{Nothing,Expr}
     scalar_constraint_expr::Vector{Expr}
 end
 
@@ -163,7 +166,7 @@ function MPB.constr_expr(d::NLPEvaluator, i)
         expr = MOI.constraint_expr(d.inner, i)
         return replace_variableindex_by_int(d.variable_map, expr)
     else
-        return d.scalar_constraint_expr[i - d.num_inner_con]
+        return d.scalar_constraint_expr[i-d.num_inner_con]
     end
 end
 
@@ -177,9 +180,15 @@ end
 function func_to_expr_graph(func::MOI.ScalarAffineFunction, variable_map)
     expr = Expr(:call, :+, func.constant)
     for term in func.terms
-        push!(expr.args, Expr(:call, :*, term.coefficient,
-            Expr(:ref, :x, variable_map[term.variable_index])
-        ))
+        push!(
+            expr.args,
+            Expr(
+                :call,
+                :*,
+                term.coefficient,
+                Expr(:ref, :x, variable_map[term.variable_index]),
+            ),
+        )
     end
     return expr
 end
@@ -187,9 +196,15 @@ end
 function func_to_expr_graph(func::MOI.ScalarQuadraticFunction, variable_map)
     expr = Expr(:call, :+, func.constant)
     for term in func.affine_terms
-        push!(expr.args, Expr(:call, :*, term.coefficient,
-            Expr(:ref, :x, variable_map[term.variable_index])
-        ))
+        push!(
+            expr.args,
+            Expr(
+                :call,
+                :*,
+                term.coefficient,
+                Expr(:ref, :x, variable_map[term.variable_index]),
+            ),
+        )
     end
     for term in func.quadratic_terms
         index_1 = variable_map[term.variable_index_1]
@@ -199,10 +214,16 @@ function func_to_expr_graph(func::MOI.ScalarQuadraticFunction, variable_map)
         if index_1 == index_2
             coef *= 0.5
         end
-        push!(expr.args, Expr(:call, :*, coef,
-            Expr(:ref, :x, index_1),
-            Expr(:ref, :x, index_2)
-        ))
+        push!(
+            expr.args,
+            Expr(
+                :call,
+                :*,
+                coef,
+                Expr(:ref, :x, index_1),
+                Expr(:ref, :x, index_2),
+            ),
+        )
     end
     return expr
 end
@@ -217,7 +238,9 @@ end
 MOI.get(model::Model, ::MOI.NLPBlock) = get(model.ext, :NLPBlock, nothing)
 
 function MOI.supports(
-    ::Model, ::MOI.VariablePrimalStart, ::Type{MOI.VariableIndex}
+    ::Model,
+    ::MOI.VariablePrimalStart,
+    ::Type{MOI.VariableIndex},
 )
     return true
 end
@@ -226,7 +249,7 @@ function MOI.set(
     model::Model,
     ::MOI.VariablePrimalStart,
     variable::MOI.VariableIndex,
-    value::Union{Nothing, Real},
+    value::Union{Nothing,Real},
 )
     if value === nothing
         delete!(model.ext[:VariablePrimalStart], variable)
@@ -237,7 +260,9 @@ function MOI.set(
 end
 
 function MOI.get(
-    model::Model, ::MOI.VariablePrimalStart, variable::MOI.VariableIndex
+    model::Model,
+    ::MOI.VariablePrimalStart,
+    variable::MOI.VariableIndex,
 )
     return get(model.ext[:VariablePrimalStart], variable, nothing)
 end
@@ -302,7 +327,7 @@ function MOI.optimize!(model::Model)
     # `x[VariableIndex]` with `x[i]` in the expression graphs.
     variables = MOI.get(model, MOI.ListOfVariableIndices())
     num_var = length(variables)
-    variable_map = Dict{MOI.VariableIndex, Int}()
+    variable_map = Dict{MOI.VariableIndex,Int}()
     for (i, variable) in enumerate(variables)
         variable_map[variable] = i
     end
@@ -311,8 +336,10 @@ function MOI.optimize!(model::Model)
     x_l = fill(-Inf, num_var)
     x_u = fill(Inf, num_var)
     for set_type in MOI_SCALAR_SETS
-        for c_ref in MOI.get(model,
-            MOI.ListOfConstraintIndices{MOI.SingleVariable, set_type}())
+        for c_ref in MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{MOI.SingleVariable,set_type}(),
+        )
             c_func = MOI.get(model, MOI.ConstraintFunction(), c_ref)
             c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
             v_index = variable_map[c_func.variable]
@@ -334,8 +361,10 @@ function MOI.optimize!(model::Model)
     scalar_constraint_expr = Expr[]
     for func_type in MOI_SCALAR_FUNCTIONS
         for set_type in MOI_SCALAR_SETS
-            for c_ref in MOI.get(model, MOI.ListOfConstraintIndices{
-                    func_type, set_type}())
+            for c_ref in MOI.get(
+                model,
+                MOI.ListOfConstraintIndices{func_type,set_type}(),
+            )
                 c_func = MOI.get(model, MOI.ConstraintFunction(), c_ref)
                 c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
                 expr = moi_to_expr_graph(c_func, c_set, variable_map)
@@ -351,7 +380,7 @@ function MOI.optimize!(model::Model)
     obj_type = MOI.get(model, MOI.ObjectiveFunctionType())
     obj_func = MOI.get(model, MOI.ObjectiveFunction{obj_type}())
     obj_func_expr = func_to_expr_graph(obj_func, variable_map)
-    if obj_func_expr == :(+ 0.0)
+    if obj_func_expr == :(+0.0)
         obj_func_expr = nothing
     end
 
@@ -362,22 +391,32 @@ function MOI.optimize!(model::Model)
         num_con,
         nlp_block === nothing ? false : nlp_block.has_objective,
         obj_func_expr,
-        scalar_constraint_expr
+        scalar_constraint_expr,
     )
 
     # Create the MathProgBase model. Note that we pass `num_con` and the number
     # of linear constraints.
     mpb_model = MPB.NonlinearModel(mpb_solver)
-    MPB.loadproblem!(mpb_model, num_var,
-        num_con + length(scalar_constraint_expr), x_l, x_u, g_l, g_u, sense,
-        nlp_evaluator)
+    MPB.loadproblem!(
+        mpb_model,
+        num_var,
+        num_con + length(scalar_constraint_expr),
+        x_l,
+        x_u,
+        g_l,
+        g_u,
+        sense,
+        nlp_evaluator,
+    )
 
     # Set any variables to :Bin if they are in ZeroOne and :Int if they are
     # Integer. The default is just :Cont.
     x_cat = fill(:Cont, num_var)
     for set_type in (MOI.ZeroOne, MOI.Integer)
-        for c_ref in MOI.get(model,
-            MOI.ListOfConstraintIndices{MOI.SingleVariable, set_type}())
+        for c_ref in MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{MOI.SingleVariable,set_type}(),
+        )
             c_func = MOI.get(model, MOI.ConstraintFunction(), c_ref)
             c_set = MOI.get(model, MOI.ConstraintSet(), c_ref)
             v_index = variable_map[c_func.variable]
@@ -400,7 +439,7 @@ function MOI.optimize!(model::Model)
     MPB.optimize!(mpb_model)
 
     # Extract and save the MathProgBase solution.
-    primal_solution = Dict{MOI.VariableIndex, Float64}()
+    primal_solution = Dict{MOI.VariableIndex,Float64}()
     for (variable, sol) in zip(variables, MPB.getsolution(mpb_model))
         primal_solution[variable] = sol
     end
@@ -409,14 +448,14 @@ function MOI.optimize!(model::Model)
         MPB.status(mpb_model),
         mpb_model.inner.solve_result,
         MPB.getobjval(mpb_model),
-        primal_solution
+        primal_solution,
     )
     return
 end
 
 # MOI accessors for the solution info.
 
-function mpb_solution_attribute(model::Model)::Union{Nothing, MPBSolution}
+function mpb_solution_attribute(model::Model)::Union{Nothing,MPBSolution}
     return get(model.ext, :MPBSolutionAttribute, nothing)
 end
 

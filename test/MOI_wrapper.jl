@@ -22,47 +22,47 @@ function optimizer(path)
 end
 
 function test_name(path)
-    @test sprint(
-        show,
-        AmplNLWriter.Optimizer(path, ["print_level = 0"])
-    ) == "An AmplNLWriter model"
+    @test sprint(show, AmplNLWriter.Optimizer(path, ["print_level = 0"])) ==
+          "An AmplNLWriter model"
 end
 
 function test_unittest(path)
-    MOI.Test.unittest(optimizer(path), CONFIG, [
-        # Unsupported attributes:
-        "number_threads",
-        "raw_status_string",
-        "silent",
-        "solve_objbound_edge_cases",
-        "solve_time",
-        "time_limit_sec",
+    return MOI.Test.unittest(
+        optimizer(path),
+        CONFIG,
+        [
+            # Unsupported attributes:
+            "number_threads",
+            "raw_status_string",
+            "silent",
+            "solve_objbound_edge_cases",
+            "solve_time",
+            "time_limit_sec",
 
-        # Ipopt doesn't handle integer
-        "solve_integer_edge_cases",
-        "solve_zero_one_with_bounds_2",
-        "solve_zero_one_with_bounds_3",
+            # Ipopt doesn't handle integer
+            "solve_integer_edge_cases",
+            "solve_zero_one_with_bounds_2",
+            "solve_zero_one_with_bounds_3",
 
-        # It seems that the AMPL NL reader declares NL files with no objective
-        # and no constraints as corrupt, even if they have variable bounds. Yuk.
-        "solve_blank_obj",
+            # It seems that the AMPL NL reader declares NL files with no objective
+            # and no constraints as corrupt, even if they have variable bounds. Yuk.
+            "solve_blank_obj",
 
-        # No support for VectorOfVariables-in-SecondOrderCone
-        "delete_soc_variables",
+            # No support for VectorOfVariables-in-SecondOrderCone
+            "delete_soc_variables",
 
-        # TODO(odow): fix handling of result indices.
-        "solve_result_index",
-    ])
+            # TODO(odow): fix handling of result indices.
+            "solve_result_index",
+        ],
+    )
 end
 
 function test_contlinear(path)
-    MOI.Test.contlineartest(optimizer(path), CONFIG, String[
-        "linear15",
-    ])
+    return MOI.Test.contlineartest(optimizer(path), CONFIG, String["linear15",])
 end
 
 function test_contlquadratic(path)
-    MOI.Test.contquadratictest(optimizer(path), CONFIG)
+    return MOI.Test.contquadratictest(optimizer(path), CONFIG)
 end
 
 function test_solver_name(path)
@@ -74,41 +74,41 @@ function test_abstractoptimizer(path)
 end
 
 function test_defaultobjective(path)
-    MOI.Test.default_objective_test(optimizer(path))
+    return MOI.Test.default_objective_test(optimizer(path))
 end
 
 function test_default_status_test(path)
-    MOI.Test.default_status_test(optimizer(path))
+    return MOI.Test.default_status_test(optimizer(path))
 end
 
 function test_nametest(path)
-    MOI.Test.nametest(optimizer(path))
+    return MOI.Test.nametest(optimizer(path))
 end
 
 function test_validtest(path)
-    MOI.Test.validtest(optimizer(path))
+    return MOI.Test.validtest(optimizer(path))
 end
 
 function test_emptytest(path)
-    MOI.Test.emptytest(optimizer(path))
+    return MOI.Test.emptytest(optimizer(path))
 end
 
 function test_orderedindices(path)
-    MOI.Test.orderedindicestest(optimizer(path))
+    return MOI.Test.orderedindicestest(optimizer(path))
 end
 
 function test_copytest(path)
-    MOI.Test.copytest(
+    return MOI.Test.copytest(
         optimizer(path),
         MOI.Bridges.full_bridge_optimizer(
             AmplNLWriter.Optimizer(path),
             Float64,
-        )
+        ),
     )
 end
 
 function test_nlptest(path)
-    MOI.Test.nlptest(optimizer(path), CONFIG)
+    return MOI.Test.nlptest(optimizer(path), CONFIG)
 end
 
 function test_bad_string(::Any)
@@ -133,5 +133,5 @@ end
 end
 
 run_with_ampl() do path
-    TestMOIWrapper.runtests(path)
+    return TestMOIWrapper.runtests(path)
 end
