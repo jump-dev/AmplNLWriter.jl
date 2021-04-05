@@ -43,10 +43,7 @@ run_with_ampl() do path
     ### src/nlp-cvx tests.
     ###
 
-    MINLPTests.test_nlp_cvx(
-        OPTIMIZER,
-        exclude = [
-            "109_010"  # Ipopt fails to converge
-        ]
-    )
+    return MINLPTests.test_nlp_cvx(OPTIMIZER, exclude = [
+        "109_010",  # Ipopt fails to converge
+    ])
 end
