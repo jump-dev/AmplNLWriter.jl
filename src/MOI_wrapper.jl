@@ -45,7 +45,7 @@ end
 
 Create a new optimizer.
 
-`solver_command` should either be one of two things:
+`solver_command` should be one of two things:
 
  * A `String` of the full path of an AMPL-compatible executable
  * A function that takes takes a function as input, initializes any environment
@@ -54,17 +54,28 @@ Create a new optimizer.
 
 ## Examples
 
-    Optimizer("/path/to/ipopt.exe", ["print_level=0"])
+A string to an executable:
+```julia
+Optimizer("/path/to/ipopt.exe", ["print_level=0"])
+```
 
-    Optimizer(Ipopt.amplexe, ["print_level=0"])
+A function or string provided by a package:
+```julia
+Optimizer(Ipopt.amplexe, ["print_level=0"])
+# or
+Optimizer(Ipopt_jll.amplexe, ["print_level=0"])
+```
 
-    function solver_command(f::Function)
-        # Create environment ...
-        ret = f("/path/to/ipopt")
-        # Destruct environment ...
-        return ret
-    end
-    Optimizer(solver_command)
+A custom function
+```julia
+function solver_command(f::Function)
+    # Create environment ...
+    ret = f("/path/to/ipopt")
+    # Destruct environment ...
+    return ret
+end
+Optimizer(solver_command)
+```
 """
 function Optimizer(
     solver_command::Union{String,Function},

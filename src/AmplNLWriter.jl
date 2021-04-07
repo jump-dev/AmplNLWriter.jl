@@ -23,8 +23,17 @@ export AmplNLSolver,
     getsolvemessage,
     getsolveexitcode
 
-# Functionify the solver command so it can be called as
-# `solver_command() do path`.
+"""
+    _solver_command(x::Union{Function,String})
+
+Functionify the solver command so it can be called as follows:
+```julia
+foo = _solver_command(x)
+foo() do path
+    run(`$(path) args...`)
+end
+```
+"""
 _solver_command(x::String) = f -> f(x)
 _solver_command(x::Function) = x
 
@@ -42,6 +51,47 @@ struct AmplNLSolver <: AbstractMathProgSolver
     end
 end
 
+"""
+    AmplNLSolver(
+        solver_command::Union{String,Function},
+        options::Vector{String} = String[];
+        filename::String = "",
+    )
+
+Create a new solver object.
+
+`solver_command` should be one of two things:
+
+ * A `String` of the full path of an AMPL-compatible executable
+ * A function that takes takes a function as input, initializes any environment
+   as needed, calls the input function with a path to the initialized
+   executable, and then destructs the environment.
+
+## Examples
+
+A string to an executable:
+```julia
+AmplNLSolver("/path/to/ipopt.exe", ["print_level=0"])
+```
+
+A function or string provided by a package:
+```julia
+AmplNLSolver(Ipopt.amplexe, ["print_level=0"])
+# or
+AmplNLSolver(Ipopt_jll.amplexe, ["print_level=0"])
+```
+
+A custom function
+```julia
+function solver_command(f::Function)
+    # Create environment ...
+    ret = f("/path/to/ipopt")
+    # Destruct environment ...
+    return ret
+end
+AmplNLSolver(solver_command)
+```
+"""
 function AmplNLSolver(
     solver_command::Union{String,Function},
     options::Vector{String} = String[];
