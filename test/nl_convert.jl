@@ -2,20 +2,50 @@ using AmplNLWriter
 using Test
 
 @testset "[nl_convert] check special conversion cases" begin
-    special_cases = [:cbrt, :abs2, :inv, :log2, :log1p, :exp2, :expm1, :sec,
-                     :csc, :cot, :sind, :cosd, :tand, :asind, :acosd, :atand,
-                     :secd, :cscd, :cotd, :sech, :csch, :coth, :asech, :acsch]
+    special_cases = [
+        :cbrt,
+        :abs2,
+        :inv,
+        :log2,
+        :log1p,
+        :exp2,
+        :expm1,
+        :sec,
+        :csc,
+        :cot,
+        :sind,
+        :cosd,
+        :tand,
+        :asind,
+        :acosd,
+        :atand,
+        :secd,
+        :cscd,
+        :cotd,
+        :sech,
+        :csch,
+        :coth,
+        :asech,
+        :acsch,
+    ]
     for func in special_cases
         x = rand()
         expr = Expr(:call, func, x)
-        @test isapprox(eval(AmplNLWriter.convert_formula(expr)), eval(expr), atol=1e-6)
+        @test isapprox(
+            eval(AmplNLWriter.convert_formula(expr)),
+            eval(expr),
+            atol = 1e-6,
+        )
     end
     # These functions need input >1
     for func in [:acoth, :asec, :acsc, :acot, :asecd, :acscd, :acotd]
         x = rand() + 1
         expr = Expr(:call, func, x)
-        @test isapprox(eval(AmplNLWriter.convert_formula(expr)),
-               eval(expr), atol=1e-6)
+        @test isapprox(
+            eval(AmplNLWriter.convert_formula(expr)),
+            eval(expr),
+            atol = 1e-6,
+        )
     end
 end
 
@@ -36,7 +66,7 @@ end
 end
 
 @testset "[nl_convert] check unary, binary and n-ary minus" begin
-    expr = :(- x)
+    expr = :(-x)
     @test AmplNLWriter.convert_formula(expr) == :(neg(x))
     expr = :(x - y)
     @test AmplNLWriter.convert_formula(expr) == :(x - y)
