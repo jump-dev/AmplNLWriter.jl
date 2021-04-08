@@ -16,14 +16,13 @@ const CONFIG = MOI.Test.TestConfig(
 
 function optimizer(path)
     return MOI.Bridges.full_bridge_optimizer(
-        AmplNLWriter.Optimizer(path, ["print_level = 0"]),
+        AmplNLWriter.Optimizer(path),#, ["print_level = 0"]),
         Float64,
     )
 end
 
 function test_name(path)
-    @test sprint(show, AmplNLWriter.Optimizer(path, ["print_level = 0"])) ==
-          "An AMPL (.nl) model"
+    @test sprint(show, AmplNLWriter.Optimizer(path)) == "An AMPL (.nl) model"
 end
 
 function test_unittest(path)

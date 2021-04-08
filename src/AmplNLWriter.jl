@@ -93,10 +93,46 @@ function Optimizer(
     return model
 end
 
-function Base.show(io::IO, ::Optimizer)
-    print(io, "An AMPL (.NL) model")
+function MOI.empty!(model::Optimizer{Float64})
+    model.name = ""
+    model.senseset = false
+    model.sense = MOI.FEASIBILITY_SENSE
+    model.objectiveset = false
+    model.objective =
+        MOI.ScalarAffineFunction{Float64}(MOI.ScalarAffineTerm{Float64}[], 0.0)
+    model.num_variables_created = 0
+    model.variable_indices = nothing
+    empty!(model.single_variable_mask)
+    empty!(model.lower_bound)
+    empty!(model.upper_bound)
+    empty!(model.var_to_name)
+    model.name_to_var = nothing
+    model.nextconstraintid = 0
+    empty!(model.con_to_name)
+    model.name_to_con = nothing
+    empty!(model.constrmap)
+    MOI.empty!(model.moi_scalaraffinefunction)
+    MOI.empty!(model.moi_scalarquadraticfunction)
+    # Reset the extension dictionary.
+    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex,Float64}()
+    model.ext[:NLPBlock] =
+        MOI.NLPBlockData(MOI.NLPBoundsPair[], _LinearNLPEvaluator(), false)
+    model.ext[:Results] = _NLResults(
+        "Optimize not called.",
+        MOI.OPTIMIZE_NOT_CALLED,
+        MOI.NO_SOLUTION,
+        NaN,
+        Dict{MOI.VariableIndex,Float64}(),
+    )
     return
 end
+
+function Base.show(io::IO, ::Optimizer)
+    print(io, "An AMPL (.nl) model")
+    return
+end
+
+MOI.get(model::Optimizer, ::MOI.SolverName) = model.ext[:AmplSolver]()
 
 # ==============================================================================
 
@@ -153,7 +189,6 @@ function MOI.optimize!(model::Optimizer)
     temp_dir = mktempdir()
     nl_file = joinpath(temp_dir, "model.nl")
     open(io -> write(io, nlp), nl_file, "w")
-    println(read(nl_file, String))
     try
         solver() do solver_path
             return run(

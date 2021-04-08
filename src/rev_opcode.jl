@@ -88,6 +88,82 @@ const _REV_OPCODES = Dict{Symbol,Int}(
 )
 
 """
+    _OPCODES_EVAL
+"""
+const _OPCODES_EVAL = Dict{Int,Tuple{Int,Function}}(
+    OPPLUS => (2, +),
+    OPMINUS => (2, -),
+    OPMULT => (2, *),
+    OPDIV => (2, /),
+    OPREM => (2, rem),
+    OPPOW => (2, ^),
+    # OPLESS = 6
+    MINLIST => (-1, min),
+    MAXLIST => (-1, max),
+    # FLOOR = 13
+    # CEIL = 14
+    ABS => (1, abs),
+    OPUMINUS => (1, -),
+    OPOR => (2, |),
+    OPAND => (2, &),
+    LT => (2, <),
+    LE => (2, <=),
+    EQ => (2, ==),
+    GE => (2, >=),
+    GT => (2, >),
+    NE => (2, !=),
+    OPNOT => (1, !),
+    OPIFnl => (3, ifelse),
+    OP_tanh => (1, tanh),
+    OP_tan => (1, tan),
+    OP_sqrt => (1, sqrt),
+    OP_sinh => (1, sinh),
+    OP_sin => (1, sin),
+    OP_log10 => (1, log10),
+    OP_log => (1, log),
+    OP_exp => (1, exp),
+    OP_cosh => (1, cosh),
+    OP_cos => (1, cos),
+    OP_atanh => (1, atanh),
+    # OP_atan2 = 48,
+    OP_atan => (1, atan),
+    OP_asinh => (1, asinh),
+    OP_asin => (1, asin),
+    OP_acosh => (1, acosh),
+    OP_acos => (1, acos),
+    OPSUMLIST => (-1, sum),
+    # OPintDIV = 55
+    # OPprecision = 56
+    # OPround = 57
+    # OPtrunc = 58
+    # OPCOUNT = 59
+    # OPNUMBEROF = 60
+    # OPNUMBEROFs = 61
+    # OPATLEAST = 62
+    # OPATMOST = 63
+    # OPPLTERM = 64
+    # OPIFSYM = 65
+    # OPEXACTLY = 66
+    # OPNOTATLEAST = 67
+    # OPNOTATMOST = 68
+    # OPNOTEXACTLY = 69
+    # ANDLIST = 70
+    # ORLIST = 71
+    # OPIMPELSE = 72
+    # OP_IFF = 73
+    # OPALLDIFF = 74
+    # OPSOMESAME = 75
+    # OP1POW = 76
+    # OP2POW = 77
+    # OPCPOW = 78
+    # OPFUNCALL = 79
+    # OPNUM = 80
+    # OPHOL = 81
+    # OPVARVAL = 82
+    # N_OPS = 83
+)
+
+"""
     _NARY_OPCODES
 
 A manually curated list of n-ary opcodes, taken from Table 8 of "Writing .nl
@@ -97,12 +173,12 @@ const _NARY_OPCODES = Set([
     MINLIST,
     MAXLIST,
     OPSUMLIST,
-    OPCOUNT,
-    OPNUMBEROF,
-    OPNUMBEROFs,
-    ANDLIST,
-    ORLIST,
-    OPALLDIFF,
+    # OPCOUNT,
+    # OPNUMBEROF,
+    # OPNUMBEROFs,
+    # ANDLIST,
+    # ORLIST,
+    # OPALLDIFF,
 ])
 
 """

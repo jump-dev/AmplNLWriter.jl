@@ -333,7 +333,7 @@ function test_nlmodel_hs071_linear_obj()
     @test sprint(write, model) == """
     g3 1 1 0
      4 2 1 0 1 0
-     2 0
+     2 1
      0 0
      4 0 0
      0 0 0 1

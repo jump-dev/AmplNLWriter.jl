@@ -121,9 +121,9 @@ function _interpret_status(solve_result_num::Int, raw_status_string::String)
     elseif 100 <= solve_result_num < 200
         return MOI.LOCALLY_SOLVED, MOI.UNKNOWN_RESULT_STATUS
     elseif 200 <= solve_result_num < 300
-        return MOI.INFEASIBLE, MOI.INFEASIBLE_POINT
+        return MOI.INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
     elseif 300 <= solve_result_num < 400
-        return MOI.DUAL_INFEASIBLE, MOI.FEASIBLE_POINT
+        return MOI.DUAL_INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
     elseif 400 <= solve_result_num < 500
         return MOI.OTHER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
     elseif 500 <= solve_result_num < 600
@@ -136,9 +136,9 @@ function _interpret_status(solve_result_num::Int, raw_status_string::String)
     if occursin("optimal", message)
         return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
     elseif occursin("infeasible", message)
-        return MOI.INFEASIBLE, MOI.INFEASIBLE_POINT
+        return MOI.INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
     elseif occursin("unbounded", message)
-        return MOI.DUAL_INFEASIBLE, MOI.FEASIBLE_POINT
+        return MOI.DUAL_INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
     elseif occursin("limit", message)
         return MOI.OTHER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
     elseif occursin("error", message)

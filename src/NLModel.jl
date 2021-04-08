@@ -16,8 +16,49 @@ function _evaluate(expr::_NLExpr, x::Dict{MOI.VariableIndex,Float64})
     for (c, v) in zip(expr.coefficients, expr.variables)
         y += c * x[v]
     end
-    # TODO(odow): evaluate nonlinear terms
+    if length(expr.nonlinear_terms) > 0
+        ret, n = _evaluate(expr.nonlinear_terms[1], expr.nonlinear_terms, x, 1)
+        @assert n == length(expr.nonlinear_terms) + 1
+        y += ret
+    end
     return y
+end
+
+function _evaluate(
+    head::MOI.VariableIndex,
+    ::Vector{_NLTerm},
+    x::Dict{MOI.VariableIndex,Float64},
+    head_i::Int,
+)::Tuple{Float64,Int}
+    return x[head], head_i + 1
+end
+
+function _evaluate(
+    head::Float64,
+    ::Vector{_NLTerm},
+    ::Dict{MOI.VariableIndex,Float64},
+    head_i::Int,
+)::Tuple{Float64,Int}
+    return head, head_i + 1
+end
+
+function _evaluate(
+    head::Int,
+    terms::Vector{_NLTerm},
+    x::Dict{MOI.VariableIndex,Float64},
+    head_i::Int,
+)::Tuple{Float64,Int}
+    N, f = _OPCODES_EVAL[head]
+    if N == -1  # n-ary function
+        N = terms[head_i+1]::Int
+        head_i += 2
+    end
+    args = Vector{Float64}(undef, N)
+    for n in 1:N
+        args[n], d = _evaluate(terms[head_i], terms, x, head_i)
+        head_i += d
+    end
+    return f(args...), head_i
 end
 
 function Base.:(==)(x::_NLExpr, y::_NLExpr)
@@ -45,6 +86,9 @@ _NLExpr(x::MOI.VariableIndex) = _NLExpr(true, _NLTerm[], [x], [1.0], 0.0)
 _NLExpr(x::MOI.SingleVariable) = _NLExpr(x.variable)
 
 function _NLExpr(x::MOI.ScalarAffineFunction)
+    if !MOI.Utilities.is_canonical(x)
+        x = MOI.Utilities.canonical(x)
+    end
     N = length(x.terms)
     coefficients = Vector{Float64}(undef, N)
     variables = Vector{MOI.VariableIndex}(undef, N)
@@ -56,6 +100,9 @@ function _NLExpr(x::MOI.ScalarAffineFunction)
 end
 
 function _NLExpr(x::MOI.ScalarQuadraticFunction)
+    if !MOI.Utilities.is_canonical(x)
+        x = MOI.Utilities.canonical(x)
+    end
     N = length(x.affine_terms)
     variables = Vector{MOI.VariableIndex}(undef, N)
     coefficients = Vector{Float64}(undef, N)
@@ -522,7 +569,7 @@ function Base.write(io::IO, nlmodel::_NLModel)
 
     # Line 3: nonlinear constraints, objectives
     n_nlcon = length(nlmodel.g)
-    println(io, " ", n_nlcon, " ", nlmodel.f.is_linear ? 0 : 1)
+    println(io, " ", n_nlcon, " ", 1) # nlmodel.f.is_linear ? 0 : 1)
 
     # Line 4: network constraints: nonlinear, linear
     println(io, " 0 0")
