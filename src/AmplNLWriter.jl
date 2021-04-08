@@ -93,36 +93,6 @@ function Optimizer(
     return model
 end
 
-function MOI.empty!(model::Optimizer)
-    @info "emptying"
-    model.name = ""
-    model.senseset = false
-    model.sense = MOI.FEASIBILITY_SENSE
-    model.objectiveset = false
-    model.objective = zero(MOI.ScalarAffineFunction{T})
-    model.num_variables_created = 0
-    model.variable_indices = nothing
-    model.single_variable_mask = UInt8[]
-    model.lower_bound = T[]
-    model.upper_bound = T[]
-    empty!(model.var_to_name)
-    model.name_to_var = nothing
-    empty!(model.con_to_name)
-    model.name_to_con = nothing
-    MOI.empty!(model.constraints)
-    model.ext[:VariablePrimalStart] = Dict{MOI.VariableIndex,Float64}()
-    model.ext[:NLPBlock] =
-        MOI.NLPBlockData(MOI.NLPBoundsPair[], _LinearNLPEvaluator(), false)
-    model.ext[:Results] = _NLResults(
-        "Optimize not called.",
-        MOI.OPTIMIZE_NOT_CALLED,
-        MOI.NO_SOLUTION,
-        NaN,
-        Dict{MOI.VariableIndex,Float64}(),
-    )
-    return
-end
-
 function Base.show(io::IO, ::Optimizer)
     print(io, "An AMPL (.NL) model")
     return
@@ -213,7 +183,7 @@ end
 _results(model::Optimizer)::_NLResults = model.ext[:Results]
 
 function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
-    return NaN
+    return _results(model).objective_value
 end
 
 function MOI.get(model::Optimizer, ::MOI.VariablePrimal, x::MOI.VariableIndex)

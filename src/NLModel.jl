@@ -11,6 +11,15 @@ struct _NLExpr
     constant::Float64
 end
 
+function _evaluate(expr::_NLExpr, x::Dict{MOI.VariableIndex,Float64})
+    y = expr.constant
+    for (c, v) in zip(expr.coefficients, expr.variables)
+        y += c * x[v]
+    end
+    # TODO(odow): evaluate nonlinear terms
+    return y
+end
+
 function Base.:(==)(x::_NLExpr, y::_NLExpr)
     return x.is_linear == y.is_linear &&
            x.nonlinear_terms == y.nonlinear_terms &&
@@ -36,8 +45,9 @@ _NLExpr(x::MOI.VariableIndex) = _NLExpr(true, _NLTerm[], [x], [1.0], 0.0)
 _NLExpr(x::MOI.SingleVariable) = _NLExpr(x.variable)
 
 function _NLExpr(x::MOI.ScalarAffineFunction)
-    coefficients = Vector{Float64}(undef, length(x.terms))
-    variables = Vector{MOI.VariableIndex}(undef, length(x.terms))
+    N = length(x.terms)
+    coefficients = Vector{Float64}(undef, N)
+    variables = Vector{MOI.VariableIndex}(undef, N)
     for (i, term) in enumerate(x.terms)
         coefficients[i] = term.coefficient
         variables[i] = term.variable_index
@@ -46,32 +56,34 @@ function _NLExpr(x::MOI.ScalarAffineFunction)
 end
 
 function _NLExpr(x::MOI.ScalarQuadraticFunction)
-    terms = _NLTerm[OPSUMLIST, length(x.affine_terms)+length(x.quadratic_terms)]
-    if !iszero(x.constant)
-        terms[2] += 1
-        push!(terms, x.constant)
+    N = length(x.affine_terms)
+    variables = Vector{MOI.VariableIndex}(undef, N)
+    coefficients = Vector{Float64}(undef, N)
+    for (i, term) in enumerate(x.affine_terms)
+        variables[i] = term.variable_index
+        coefficients[i] = term.coefficient
     end
-    for term in x.affine_terms
-        if !isone(term.coefficient)
-            push!(terms, OPMULT)
-            push!(terms, term.coefficient)
-        end
-        push!(terms, term.variable_index)
+    terms = _NLTerm[]
+    if length(x.quadratic_terms) == 2
+        push!(terms, OPPLUS)
+    elseif length(x.quadratic_terms) > 2
+        push!(terms, OPSUMLIST)
+        push!(terms, length(x.quadratic_terms))
     end
     for term in x.quadratic_terms
-        index_1 = term.variable_index_1
-        index_2 = term.variable_index_2
-        # MOI defines quadratic as 1/2 x' Q x :(
-        coef = index_1 == index_2 ? 0.5 * term.coefficient : term.coefficient
-        if !isone(coef)
+        coefficient = term.coefficient
+        if term.variable_index_1 == term.variable_index_2
+            coefficient *= 0.5  # MOI defines quadratic as 1/2 x' Q x :(
+        end
+        if !isone(coefficient)
             push!(terms, OPMULT)
-            push!(terms, coef)
+            push!(terms, coefficient)
         end
         push!(terms, OPMULT)
-        push!(terms, index_1)
-        push!(terms, index_2)
+        push!(terms, term.variable_index_1)
+        push!(terms, term.variable_index_2)
     end
-    return _NLExpr(terms)
+    return _NLExpr(false, terms, variables, coefficients, x.constant)
 end
 
 function _NLExpr(expr::Expr)
@@ -282,6 +294,9 @@ function _NLModel(model::Optimizer)
     end
     # ==========================================================================
     # Jacobian counts
+    for g in nlmodel.g, v in g.expr.variables
+        nlmodel.x[v].jacobian_count += 1
+    end
     for h in nlmodel.h, v in h.expr.variables
         nlmodel.x[v].jacobian_count += 1
     end
@@ -328,15 +343,23 @@ function _NLModel(model::Optimizer)
     # Essentially, what that means is if !(nlvo > nlvc), then swap 3-4 for 5-6 in
     # the variable order.
     if !nlmodel.f.is_linear
+        for x in nlmodel.f.variables
+            nlmodel.x[x].in_nonlinear_objective = true
+        end
         for x in nlmodel.f.nonlinear_terms
             if x isa MOI.VariableIndex
                 nlmodel.x[x].in_nonlinear_objective = true
             end
         end
     end
-    for con in nlmodel.g, x in con.expr.nonlinear_terms
-        if x isa MOI.VariableIndex
-            nlmodel.x[x].in_nonlinear_constraint = true
+    for con in nlmodel.g
+        for x in con.expr.variables
+            nlmodel.x[x].in_nonlinear_objective = true
+        end
+        for x in con.expr.nonlinear_terms
+            if x isa MOI.VariableIndex
+                nlmodel.x[x].in_nonlinear_constraint = true
+            end
         end
     end
     types = nlmodel.types
@@ -439,7 +462,22 @@ _is_nary(x::Int) = x in _NARY_OPCODES
 _is_nary(x) = false
 
 function _write_nlexpr(io::IO, expr::_NLExpr, nlmodel::_NLModel)
-    @assert !expr.is_linear
+    # If the expression is linear, just write out the constant term.
+    if expr.is_linear || length(expr.nonlinear_terms) == 0
+        _write_term(io, expr.constant, nlmodel)
+        return
+    end
+    # If the nonlinear terms are a summation, we can stick our constant on the
+    # end, otherwise, prepend a binary addition of (+ constant terms).
+    if !iszero(expr.constant)
+        if expr.nonlinear_terms[1] == OPSUMLIST
+            expr.nonlinear_terms[2] += 1
+            push!(expr.nonlinear_terms, expr.constant)
+        else
+            pushfirst!(expr.nonlinear_terms, expr.constant)
+            pushfirst!(expr.nonlinear_terms, OPPLUS)
+        end
+    end
     last_nary = false
     for term in expr.nonlinear_terms
         if last_nary
@@ -483,15 +521,16 @@ function Base.write(io::IO, nlmodel::_NLModel)
     println(io, " $(length(nlmodel.x)) $(n_con) 1 $(n_ranges) $(n_eqns) 0")
 
     # Line 3: nonlinear constraints, objectives
-    println(io, " ", length(nlmodel.g), " ", nlmodel.f.is_linear ? 0 : 1)
+    n_nlcon = length(nlmodel.g)
+    println(io, " ", n_nlcon, " ", nlmodel.f.is_linear ? 0 : 1)
 
     # Line 4: network constraints: nonlinear, linear
     println(io, " 0 0")
 
     # Line 5: nonlinear vars in constraints, objectives, both
     nlvb = length(nlmodel.types[1]) + length(nlmodel.types[2])
-    nlvo = nlvb + length(nlmodel.types[3]) + length(nlmodel.types[4])
-    nlvc = nlvo + length(nlmodel.types[5]) + length(nlmodel.types[6])
+    nlvc = nlvb + length(nlmodel.types[3]) + length(nlmodel.types[4])
+    nlvo = nlvb + length(nlmodel.types[5]) + length(nlmodel.types[6])
     println(io, " ", nlvc, " ", nlvo, " ", nlvb)
 
     # Line 6: linear network variables; functions; arith, flags
@@ -502,12 +541,15 @@ function Base.write(io::IO, nlmodel::_NLModel)
     nbv = length(nlmodel.types[8])
     niv = length(nlmodel.types[9])
     nl_both = length(nlmodel.types[2])
-    nl_cons = length(nlmodel.types[6])
-    nl_obj = length(nlmodel.types[4])
+    nl_cons = length(nlmodel.types[4])
+    nl_obj = length(nlmodel.types[6])
     println(io, " ", nbv, " ", niv, " ", nl_both, " ", nl_cons, " ", nl_obj)
 
     # # Line 8: nonzeros in Jacobian, gradients
     nnz_jacobian = 0
+    for g in nlmodel.g
+        nnz_jacobian += length(g.expr.coefficients)
+    end
     for h in nlmodel.h
         nnz_jacobian += length(h.expr.coefficients)
     end
@@ -524,14 +566,14 @@ function Base.write(io::IO, nlmodel::_NLModel)
         println(io, "C", i - 1)
         _write_nlexpr(io, g.expr, nlmodel)
     end
+    for (i, h) in enumerate(nlmodel.h)
+        println(io, "C", i - 1 + n_nlcon)
+        _write_nlexpr(io, h.expr, nlmodel)
+    end
     # ==========================================================================
     # Objective
     println(io, "O0 ", nlmodel.sense == MOI.MAX_SENSE ? "1" : "0")
-    if nlmodel.f.is_linear
-        _write_term(io, nlmodel.f.constant, nlmodel)
-    else
-        _write_nlexpr(io, nlmodel.f, nlmodel)
-    end
+    _write_nlexpr(io, nlmodel.f, nlmodel)
     # ==========================================================================
     # VariablePrimalStart
     println(io, "x", length(nlmodel.x))
@@ -592,15 +634,19 @@ function Base.write(io::IO, nlmodel::_NLModel)
     end
     # ==========================================================================
     # Jacobian block
-    if length(nlmodel.h) > 0
+    if any(x -> nlmodel.x[x].jacobian_count > 0, keys(nlmodel.x))
         println(io, "k", length(nlmodel.x) - 1)
         total = 0
         for i in 1:length(nlmodel.order)-1
             total += nlmodel.x[nlmodel.order[i]].jacobian_count
             println(io, total)
         end
+        for (i, g) in enumerate(nlmodel.g)
+            println(io, "J", i - 1, " ", length(g.expr.coefficients))
+            _write_linear_block(io, g.expr, nlmodel)
+        end
         for (i, h) in enumerate(nlmodel.h)
-            println(io, "J", i - 1, " ", length(h.expr.coefficients))
+            println(io, "J", i - 1 + n_nlcon, " ", length(h.expr.coefficients))
             _write_linear_block(io, h.expr, nlmodel)
         end
     end

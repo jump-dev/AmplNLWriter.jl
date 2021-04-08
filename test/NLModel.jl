@@ -8,25 +8,25 @@ const MOI = MathOptInterface
 
 using Test
 
-function _test_nonlinear(expr::NL._NLExpr, nonlinear_terms)
-    @test expr.is_linear == false
+function _test_expr(
+    expr::NL._NLExpr,
+    nonlinear_terms,
+    variables,
+    coefficients,
+    constant,
+)
+    @test expr.is_linear == (length(nonlinear_terms) == 0)
     @test expr.nonlinear_terms == nonlinear_terms
-    @test isempty(expr.variables)
-    @test isempty(expr.coefficients)
-    @test iszero(expr.constant)
-    return
-end
-_test_nonlinear(x, terms) = _test_nonlinear(NL._NLExpr(x), terms)
-
-function _test_linear(expr::NL._NLExpr, variables, coefficients, constant)
-    @test expr.is_linear == true
-    @test isempty(expr.nonlinear_terms)
     @test expr.variables == variables
     @test expr.coefficients == coefficients
     @test expr.constant == constant
     return
 end
-_test_linear(x, args...) = _test_linear(NL._NLExpr(x), args...)
+_test_expr(x, args...) = _test_expr(NL._NLExpr(x), args...)
+_test_linear(x, args...) = _test_expr(x, NL._NLTerm[], args...)
+function _test_nonlinear(x, terms)
+    return _test_expr(x, terms, MOI.VariableIndex[], Float64[], 0.0)
+end
 
 function test_nlexpr_singlevariable()
     x = MOI.VariableIndex(1)
@@ -46,8 +46,8 @@ function test_nlexpr_scalarquadratic()
         [MOI.ScalarQuadraticTerm(2.0, x, x)],
         3.0,
     )
-    terms = [NL.OPSUMLIST, 3, 3.0, NL.OPMULT, 1.1, x, NL.OPMULT, x, x]
-    return _test_nonlinear(f, terms)
+    terms = [NL.OPMULT, x, x]
+    return _test_expr(f, terms, [x], [1.1], 3.0)
 end
 
 function test_nlexpr_unary_addition()
@@ -335,9 +335,9 @@ function test_nlmodel_hs071_linear_obj()
      4 2 1 0 1 0
      2 0
      0 0
-     4 4 0
+     4 0 0
      0 0 0 1
-     0 0 0 0 2
+     0 0 0 2 0
      0 4
      0 0
      0 0 0 0 0
@@ -413,8 +413,8 @@ function test_nlmodel_linear_quadratic()
     n = NL._NLModel(model)
     @test n.sense == MOI.MAX_SENSE
     @test n.f == NL._NLExpr(h)
-    terms = [NL.OPSUMLIST, 3, 3.0, x[1], NL.OPMULT, 2.0, NL.OPMULT, x[1], x[2]]
-    _test_nonlinear(n.g[1].expr, terms)
+    terms = [NL.OPMULT, 2.0, NL.OPMULT, x[1], x[2]]
+    _test_expr(n.g[1].expr, terms, [x[1]], [1.0], 3.0)
     @test n.g[1].opcode == 1
     @test n.g[1].lower == -Inf
     @test n.g[1].upper == 5.0
@@ -432,26 +432,23 @@ function test_nlmodel_linear_quadratic()
      4 2 1 1 0 0
      1 1
      0 0
-     3 2 2
+     2 3 2
      0 0 0 1
-     0 0 1 1 0
-     3 0
+     0 0 1 0 1
+     4 1
      0 0
      0 0 0 0 0
     C0
-    o54
-    3
+    o0
     n3
-    v0
     o2
     n2
     o2
     v0
     v1
+    C1
+    n2
     O0 1
-    o54
-    2
-    v2
     o2
     v0
     v1
@@ -469,10 +466,12 @@ function test_nlmodel_linear_quadratic()
     0 0 2
     0 0 2
     k3
-    0
     1
     2
-    J0 3
+    3
+    J0 1
+    0 1
+    J1 3
     1 1
     2 1
     3 1

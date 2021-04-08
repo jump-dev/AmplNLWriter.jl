@@ -23,7 +23,7 @@ end
 
 function test_name(path)
     @test sprint(show, AmplNLWriter.Optimizer(path, ["print_level = 0"])) ==
-          "An AmplNLWriter model"
+          "An AMPL (.nl) model"
 end
 
 function test_unittest(path)

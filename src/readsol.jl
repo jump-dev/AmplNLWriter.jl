@@ -94,11 +94,15 @@ function _read_sol(io::IO, model::_NLModel)
     end
     termination_status, primal_status =
         _interpret_status(solve_result_num, raw_status_string)
+    objective_value = NaN
+    if length(primal_solution) > 0
+        objective_value = _evaluate(model.f, primal_solution)
+    end
     return _NLResults(
         raw_status_string,
         termination_status,
         length(primal_solution) > 0 ? primal_status : MOI.NO_SOLUTION,
-        NaN,
+        objective_value,
         primal_solution,
     )
 end
@@ -114,15 +118,15 @@ for returning `MOI.NO_SOLUTION` if no primal solution is present.
 function _interpret_status(solve_result_num::Int, raw_status_string::String)
     if 0 <= solve_result_num < 100
         return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
-    elseif 100 <= m.solve_result_num < 200
+    elseif 100 <= solve_result_num < 200
         return MOI.LOCALLY_SOLVED, MOI.UNKNOWN_RESULT_STATUS
-    elseif 200 <= m.solve_result_num < 300
+    elseif 200 <= solve_result_num < 300
         return MOI.INFEASIBLE, MOI.INFEASIBLE_POINT
-    elseif 300 <= m.solve_result_num < 400
+    elseif 300 <= solve_result_num < 400
         return MOI.DUAL_INFEASIBLE, MOI.FEASIBLE_POINT
-    elseif 400 <= m.solve_result_num < 500
-        return MOI.USER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
-    elseif 500 <= m.solve_result_num < 600
+    elseif 400 <= solve_result_num < 500
+        return MOI.OTHER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
+    elseif 500 <= solve_result_num < 600
         return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
     end
     # If we didn't get a valid solve_result_num, try to get the status from the
@@ -136,7 +140,7 @@ function _interpret_status(solve_result_num::Int, raw_status_string::String)
     elseif occursin("unbounded", message)
         return MOI.DUAL_INFEASIBLE, MOI.FEASIBLE_POINT
     elseif occursin("limit", message)
-        return MOI.USER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
+        return MOI.OTHER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
     elseif occursin("error", message)
         return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
     else
