@@ -30,7 +30,7 @@ Functionify the solver command so it can be called as follows:
 ```julia
 foo = _solver_command(x)
 foo() do path
-    run(`$(path) args...`)
+    run(`\$(path) args...`)
 end
 ```
 """
