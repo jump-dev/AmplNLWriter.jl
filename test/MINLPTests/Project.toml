@@ -7,7 +7,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 Ipopt = "0.6"
-Ipopt_jll = "=3.13.2"
+Ipopt_jll = "3.13.2"
 JuMP = "0.21"
 MINLPTests = "0.5"
 julia = "1"
