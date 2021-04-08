@@ -1,6 +1,6 @@
 name = "AmplNLWriter"
 uuid = "7c4d4715-977e-5154-bfe0-e096adeac482"
-version = "0.6.1"
+version = "0.7.0"
 
 [deps]
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
@@ -9,7 +9,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
 Ipopt = "0.6"
-Ipopt_jll = "=3.13.2"
+Ipopt_jll = "3.13.2"
 MathOptInterface = "0.9.13"
 MathProgBase = "~0.5.0, ~0.6, ~0.7"
 julia = "1"

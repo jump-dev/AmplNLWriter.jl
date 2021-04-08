@@ -132,6 +132,10 @@ end
 
 end
 
-run_with_ampl() do path
-    return TestMOIWrapper.runtests(path)
+if VERSION < v"1.3"
+    import Ipopt
+    TestMOIWrapper.runtests(Ipopt.amplexe)
+else
+    import Ipopt_jll
+    TestMOIWrapper.runtests(Ipopt_jll.amplexe)
 end
