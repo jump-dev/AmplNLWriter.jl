@@ -215,11 +215,17 @@ end
 
 _results(model::Optimizer)::_NLResults = model.ext[:Results]
 
-function MOI.get(model::Optimizer, ::MOI.ObjectiveValue)
+function MOI.get(model::Optimizer, attr::MOI.ObjectiveValue)
+    MOI.check_result_index_bounds(model, attr)
     return _results(model).objective_value
 end
 
-function MOI.get(model::Optimizer, ::MOI.VariablePrimal, x::MOI.VariableIndex)
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.VariablePrimal,
+    x::MOI.VariableIndex,
+)
+    MOI.check_result_index_bounds(model, attr)
     return _results(model).primal_solution[x]
 end
 
@@ -227,8 +233,8 @@ function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
     return _results(model).termination_status
 end
 
-function MOI.get(model::Optimizer, ::MOI.PrimalStatus)
-    return _results(model).primal_status
+function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
+    return attr.N == 1 ? _results(model).primal_status : MOI.NO_SOLUTION
 end
 
 MOI.get(::Optimizer, ::MOI.DualStatus) = MOI.NO_SOLUTION
@@ -243,9 +249,10 @@ end
 
 function MOI.get(
     model::Optimizer,
-    ::MOI.ConstraintPrimal,
+    attr::MOI.ConstraintPrimal,
     idx::MOI.ConstraintIndex,
 )
+    MOI.check_result_index_bounds(model, attr)
     return MOI.Utilities.get_fallback(model, MOI.ConstraintPrimal(), idx)
 end
 
