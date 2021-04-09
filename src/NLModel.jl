@@ -697,7 +697,6 @@ function Base.write(io::IO, nlmodel::_NLModel)
         # Linear constraints
         for h in nlmodel.h
             print(io, h.opcode)
-            # c = h.expr.constant
             if h.opcode == 0
                 println(io, " ", _str(h.lower), " ", _str(h.upper))
             elseif h.opcode == 1

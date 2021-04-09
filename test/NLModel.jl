@@ -509,7 +509,7 @@ function test_nlmodel_linear_quadratic()
     3 0
     r
     1 5
-    0 -1 8
+    0 1 10
     b
     0 0 2
     0 0 1
