@@ -429,7 +429,7 @@ function _NLModel(model::Optimizer)
         nlmodel.x[x].order = n
         n += 1
     end
-    copy!(
+    copyto!(
         nlmodel.order,
         sort!(collect(keys(nlmodel.x)); by = x -> nlmodel.x[x].order),
     )
@@ -554,9 +554,13 @@ function Base.write(io::IO, nlmodel::_NLModel)
     # ==========================================================================
     # Header
     # Line 1: Always the same
+    # Notes:
+    #  * I think there are magic bytes used by AMPL internally for stuff.
     println(io, "g3 1 1 0")
 
     # Line 2: vars, constraints, objectives, ranges, eqns, logical constraints
+    # Notes:
+    #  * We assume there is always one objective, even if it is just `min 0`.
     n_con, n_ranges, n_eqns = 0, 0, 0
     for cons in (nlmodel.g, nlmodel.h), c in cons
         n_con += 1
@@ -569,23 +573,39 @@ function Base.write(io::IO, nlmodel::_NLModel)
     println(io, " $(length(nlmodel.x)) $(n_con) 1 $(n_ranges) $(n_eqns) 0")
 
     # Line 3: nonlinear constraints, objectives
+    # Notes:
+    #  * We assume there is always one objective, even if it is just `min 0`.
     n_nlcon = length(nlmodel.g)
     println(io, " ", n_nlcon, " ", 1)
 
     # Line 4: network constraints: nonlinear, linear
+    # Notes:
+    #  * We don't support linear constraints. I don't know how they are
+    #    represented.
     println(io, " 0 0")
 
     # Line 5: nonlinear vars in constraints, objectives, both
+    # Notes:
+    #  * This order is confusingly different to the standard "b, c, o" order.
     nlvb = length(nlmodel.types[1]) + length(nlmodel.types[2])
     nlvc = nlvb + length(nlmodel.types[3]) + length(nlmodel.types[4])
     nlvo = nlvb + length(nlmodel.types[5]) + length(nlmodel.types[6])
     println(io, " ", nlvc, " ", nlvo, " ", nlvb)
 
     # Line 6: linear network variables; functions; arith, flags
-    # `flags` is set to 1 to get suffixes in .sol file.
+    # Notes:
+    #  * I don't know what this line means. It is what it is. Apparently `flags`
+    #    is set to 1 to get suffixes in .sol file.
     println(io, " 0 0 0 1")
 
-    # # Line 7: discrete variables: binary, integer, nonlinear (b,c,o)
+    # Line 7: discrete variables: binary, integer, nonlinear (b,c,o)
+    # Notes:
+    #  * The order is
+    #    - binary variables in linear only
+    #    - integer variables in linear only
+    #    - binary or integer variables in nonlinear objective and constraint
+    #    - binary or integer variables in nonlinear constraint
+    #    - binary or integer variables in nonlinear objective
     nbv = length(nlmodel.types[8])
     niv = length(nlmodel.types[9])
     nl_both = length(nlmodel.types[2])
@@ -593,7 +613,10 @@ function Base.write(io::IO, nlmodel::_NLModel)
     nl_obj = length(nlmodel.types[6])
     println(io, " ", nbv, " ", niv, " ", nl_both, " ", nl_cons, " ", nl_obj)
 
-    # # Line 8: nonzeros in Jacobian, gradients
+    # Line 8: nonzeros in Jacobian, gradients
+    # Notes:
+    #  * Make sure to include a 0 element for every variable that appears in an
+    #    objective or constraint, even if the linear coefficient is 0.
     nnz_jacobian = 0
     for g in nlmodel.g
         nnz_jacobian += length(g.expr.linear_terms)
@@ -601,15 +624,29 @@ function Base.write(io::IO, nlmodel::_NLModel)
     for h in nlmodel.h
         nnz_jacobian += length(h.expr.linear_terms)
     end
-    println(io, " ", nnz_jacobian, " ", length(nlmodel.f.linear_terms))
+    nnz_gradient = length(nlmodel.f.linear_terms)
+    println(io, " ", nnz_jacobian, " ", nnz_gradient)
 
     # Line 9: max name lengths: constraints, variables
+    # Notes:
+    #  * We don't add names, so this is just 0, 0.
     println(io, " 0 0")
 
     # Line 10: common exprs: b,c,o,c1,o1
+    # Notes:
+    #  * We don't add common subexpressions (i.e., V blocks).
+    #  * I assume the notation means
+    #     - b = in nonlinear objective and constraint
+    #     - c = in nonlinear constraint
+    #     - o = in nonlinear objective
+    #     - c1 = in linear constraint
+    #     - o1 = in linear objective
     println(io, " 0 0 0 0 0")
     # ==========================================================================
     # Constraints
+    # Notes:
+    #  * Nonlinear constraints first, then linear.
+    #  * For linear constraints, write out the constant term here.
     for (i, g) in enumerate(nlmodel.g)
         println(io, "C", i - 1)
         _write_nlexpr(io, g.expr, nlmodel)
@@ -620,10 +657,16 @@ function Base.write(io::IO, nlmodel::_NLModel)
     end
     # ==========================================================================
     # Objective
+    # Notes:
+    #  * NL files support multiple objectives, but we're just going to write 1,
+    #    so it's always `O0`.
+    #  * For linear objectives, write out the constant term here.
     println(io, "O0 ", nlmodel.sense == MOI.MAX_SENSE ? "1" : "0")
     _write_nlexpr(io, nlmodel.f, nlmodel)
     # ==========================================================================
     # VariablePrimalStart
+    # Notes:
+    #  * Make sure to write out the variables in order.
     println(io, "x", length(nlmodel.x))
     for (i, x) in enumerate(nlmodel.order)
         start = nlmodel.x[x].start
@@ -631,6 +674,10 @@ function Base.write(io::IO, nlmodel::_NLModel)
     end
     # ==========================================================================
     # Constraint bounds
+    # Notes:
+    #  * Nonlinear constraints go first, then linear.
+    #  * The constant term for linear constraints gets written out in the
+    #    "C" block.
     if n_con > 0
         println(io, "r")
         # Nonlinear constraints
@@ -650,21 +697,24 @@ function Base.write(io::IO, nlmodel::_NLModel)
         # Linear constraints
         for h in nlmodel.h
             print(io, h.opcode)
-            c = h.expr.constant
+            # c = h.expr.constant
             if h.opcode == 0
-                println(io, " ", _str(h.lower - c), " ", _str(h.upper - c))
+                println(io, " ", _str(h.lower), " ", _str(h.upper))
             elseif h.opcode == 1
-                println(io, " ", _str(h.upper - c))
+                println(io, " ", _str(h.upper))
             elseif h.opcode == 2
-                println(io, " ", _str(h.lower - c))
+                println(io, " ", _str(h.lower))
             else
                 @assert h.opcode == 4
-                println(io, " ", _str(h.lower - c))
+                println(io, " ", _str(h.lower))
             end
         end
     end
     # ==========================================================================
     # Variable bounds
+    # Notes:
+    #  * Not much to note, other than to make sure you iterate the variables in
+    #    the correct order.
     println(io, "b")
     for x in nlmodel.order
         v = nlmodel.x[x]
@@ -682,6 +732,14 @@ function Base.write(io::IO, nlmodel::_NLModel)
     end
     # ==========================================================================
     # Jacobian block
+    # Notes:
+    #  * If a variable appears in a constraint, it needs to have a corresponding
+    #    entry in the Jacobian block, even if the linear coefficient is zero.
+    #    AMPL uses this to determine the Jacobian sparsity.
+    #  * As before, nonlinear constraints go first, then linear.
+    #  * You don't need to write out the `k` entry for the last variable,
+    #    because it can be inferred from the total number of elements in the
+    #    Jacobian as given in the header.
     if n_con > 0
         println(io, "k", length(nlmodel.x) - 1)
         total = 0
@@ -700,8 +758,11 @@ function Base.write(io::IO, nlmodel::_NLModel)
     end
     # ==========================================================================
     # Gradient block
-    if length(nlmodel.f.linear_terms) > 0
-        println(io, "G0 ", length(nlmodel.f.linear_terms))
+    # Notes:
+    #  * You only need to write this ot if there are linear terms in the
+    #    objective.
+    if nnz_gradient > 0
+        println(io, "G0 ", nnz_gradient)
         _write_linear_block(io, nlmodel.f, nlmodel)
     end
     return nlmodel
