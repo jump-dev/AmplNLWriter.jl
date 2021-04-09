@@ -8,35 +8,25 @@ const MOI = MathOptInterface
 
 using Test
 
-function _test_expr(
-    expr::NL._NLExpr,
-    nonlinear_terms,
-    variables,
-    coefficients,
-    constant,
-)
+function _test_nlexpr(expr::NL._NLExpr, nonlinear_terms, linear_terms, constant)
     @test expr.is_linear == (length(nonlinear_terms) == 0)
     @test expr.nonlinear_terms == nonlinear_terms
-    @test expr.variables == variables
-    @test expr.coefficients == coefficients
+    @test expr.linear_terms == linear_terms
     @test expr.constant == constant
     return
 end
-_test_expr(x, args...) = _test_expr(NL._NLExpr(x), args...)
-_test_linear(x, args...) = _test_expr(x, NL._NLTerm[], args...)
-function _test_nonlinear(x, terms)
-    return _test_expr(x, terms, MOI.VariableIndex[], Float64[], 0.0)
-end
+_test_nlexpr(x, args...) = _test_nlexpr(NL._NLExpr(x), args...)
 
 function test_nlexpr_singlevariable()
     x = MOI.VariableIndex(1)
-    return _test_linear(MOI.SingleVariable(x), [x], [1.0], 0.0)
+    _test_nlexpr(MOI.SingleVariable(x), NL._NLTerm[], Dict(x => 1.0), 0.0)
+    return
 end
 
 function test_nlexpr_scalaraffine()
     x = MOI.VariableIndex.(1:3)
     f = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(1.0, x), 4.0)
-    return _test_linear(f, x, [1.0, 1.0, 1.0], 4.0)
+    return _test_nlexpr(f, NL._NLTerm[], Dict(x .=> 1), 4.0)
 end
 
 function test_nlexpr_scalarquadratic()
@@ -47,39 +37,59 @@ function test_nlexpr_scalarquadratic()
         3.0,
     )
     terms = [NL.OPMULT, x, x]
-    return _test_expr(f, terms, [x], [1.1], 3.0)
+    return _test_nlexpr(f, terms, Dict(x => 1.1), 3.0)
 end
 
 function test_nlexpr_unary_addition()
     x = MOI.VariableIndex(1)
-    return _test_nonlinear(:(+$x), [x])
+    return _test_nlexpr(:(+$x), [x], Dict(x => 0), 0.0)
 end
 
 function test_nlexpr_binary_addition()
     x = MOI.VariableIndex(1)
     y = MOI.VariableIndex(2)
-    return _test_nonlinear(:($x + $y), [NL.OPPLUS, x, y])
+    return _test_nlexpr(
+        :($x + $y),
+        [NL.OPPLUS, x, y],
+        Dict(x => 0.0, y => 0.0),
+        0.0,
+    )
 end
 
 function test_nlexpr_nary_addition()
     x = MOI.VariableIndex(1)
     y = MOI.VariableIndex(2)
-    return _test_nonlinear(:($x + $y + 1.0), [NL.OPSUMLIST, 3, x, y, 1.0])
+    return _test_nlexpr(
+        :($x + $y + 1.0),
+        [NL.OPSUMLIST, 3, x, y, 1.0],
+        Dict(x => 0.0, y => 0.0),
+        0.0,
+    )
 end
 
 function test_nlexpr_unary_subtraction()
     x = MOI.VariableIndex(1)
-    return _test_nonlinear(:(-$x), [NL.OPUMINUS, x])
+    return _test_nlexpr(:(-$x), [NL.OPUMINUS, x], Dict(x => 0.0), 0.0)
 end
 
 function test_nlexpr_nary_multiplication()
     x = MOI.VariableIndex(1)
-    return _test_nonlinear(:($x * $x * 2.0), [NL.OPMULT, x, NL.OPMULT, x, 2.0])
+    return _test_nlexpr(
+        :($x * $x * 2.0),
+        [NL.OPMULT, x, NL.OPMULT, x, 2.0],
+        Dict(x => 0.0),
+        0.0,
+    )
 end
 
 function test_nlexpr_unary_specialcase()
     x = MOI.VariableIndex(1)
-    return _test_nonlinear(:(cbrt($x)), [NL.OPPOW, x, NL.OPDIV, 1, 3])
+    return _test_nlexpr(
+        :(cbrt($x)),
+        [NL.OPPOW, x, NL.OPDIV, 1, 3],
+        Dict(x => 0.0),
+        0.0,
+    )
 end
 
 function test_nlexpr_unsupportedoperation()
@@ -99,7 +109,7 @@ end
 
 function test_nlexpr_ref()
     x = MOI.VariableIndex(1)
-    return _test_nonlinear(:(x[$x]), [x])
+    return _test_nlexpr(:(x[$x]), [x], Dict(x => 0.0), 0.0)
 end
 
 function test_nlconstraint_interval()
@@ -159,14 +169,16 @@ function test_nlmodel_hs071()
     n = NL._NLModel(model)
     @test n.sense == MOI.MIN_SENSE
     @test n.f == NL._NLExpr(MOI.objective_expr(evaluator))
-    _test_nonlinear(
+    _test_nlexpr(
         n.g[1].expr,
         [NL.OPMULT, v[1], NL.OPMULT, v[2], NL.OPMULT, v[3], v[4]],
+        Dict(v .=> 0.0),
+        0.0,
     )
     @test n.g[1].lower == 25.0
     @test n.g[1].upper == Inf
     @test n.g[1].opcode == 2
-    _test_nonlinear(
+    _test_nlexpr(
         n.g[2].expr,
         [
             NL.OPSUMLIST,
@@ -184,6 +196,8 @@ function test_nlmodel_hs071()
             v[4],
             2,
         ],
+        Dict(v .=> 0.0),
+        0.0,
     )
     @test n.g[2].lower == 40.0
     @test n.g[2].upper == 40.0
@@ -193,7 +207,7 @@ function test_nlmodel_hs071()
         @test n.x[v[i]].lower == l[i]
         @test n.x[v[i]].upper == u[i]
         @test n.x[v[i]].type == NL._CONTINUOUS
-        @test n.x[v[i]].jacobian_count == 0
+        @test n.x[v[i]].jacobian_count == 2
         @test n.x[v[i]].in_nonlinear_constraint
         @test n.x[v[i]].in_nonlinear_objective
         @test 0 <= n.x[v[i]].order <= 3
@@ -207,7 +221,7 @@ function test_nlmodel_hs071()
      4 4 4
      0 0 0 1
      0 0 0 0 0
-     0 0
+     8 4
      0 0
      0 0 0 0 0
     C0
@@ -223,16 +237,16 @@ function test_nlmodel_hs071()
     4
     o5
     v3
-    o2
+    n2
     o5
     v1
-    o2
+    n2
     o5
     v2
-    o2
+    n2
     o5
     v0
-    o2
+    n2
     O0 0
     o0
     o2
@@ -258,6 +272,25 @@ function test_nlmodel_hs071()
     0 1.2 5.2
     0 1.3 5.3
     0 1.1 5.1
+    k3
+    2
+    4
+    6
+    J0 4
+    0 0
+    1 0
+    2 0
+    3 0
+    J1 4
+    0 0
+    1 0
+    2 0
+    3 0
+    G0 4
+    0 0
+    1 0
+    2 0
+    3 0
     """
     return
 end
@@ -283,14 +316,16 @@ function test_nlmodel_hs071_linear_obj()
     n = NL._NLModel(model)
     @test n.sense == MOI.MAX_SENSE
     @test n.f == NL._NLExpr(f)
-    _test_nonlinear(
+    _test_nlexpr(
         n.g[1].expr,
         [NL.OPMULT, v[1], NL.OPMULT, v[2], NL.OPMULT, v[3], v[4]],
+        Dict(v .=> 0.0),
+        0.0,
     )
     @test n.g[1].lower == 25.0
     @test n.g[1].upper == Inf
     @test n.g[1].opcode == 2
-    _test_nonlinear(
+    _test_nlexpr(
         n.g[2].expr,
         [
             NL.OPSUMLIST,
@@ -308,6 +343,8 @@ function test_nlmodel_hs071_linear_obj()
             v[4],
             2,
         ],
+        Dict(v .=> 0.0),
+        0.0,
     )
     @test n.g[2].lower == 40.0
     @test n.g[2].upper == 40.0
@@ -319,7 +356,7 @@ function test_nlmodel_hs071_linear_obj()
         @test n.x[v[i]].lower == l[i]
         @test n.x[v[i]].upper == u[i]
         @test n.x[v[i]].type == types[i]
-        @test n.x[v[i]].jacobian_count == 0
+        @test n.x[v[i]].jacobian_count == 2
         @test n.x[v[i]].in_nonlinear_constraint
         @test !n.x[v[i]].in_nonlinear_objective
         @test 0 <= n.x[v[i]].order <= 3
@@ -338,7 +375,7 @@ function test_nlmodel_hs071_linear_obj()
      4 0 0
      0 0 0 1
      0 0 0 2 0
-     0 4
+     8 4
      0 0
      0 0 0 0 0
     C0
@@ -354,16 +391,16 @@ function test_nlmodel_hs071_linear_obj()
     4
     o5
     v1
-    o2
+    n2
     o5
     v2
-    o2
+    n2
     o5
     v3
-    o2
+    n2
     o5
     v0
-    o2
+    n2
     O0 1
     n2
     x4
@@ -379,6 +416,20 @@ function test_nlmodel_hs071_linear_obj()
     0 1.1 5.1
     0 1.2 1
     0 1.3 5.3
+    k3
+    2
+    4
+    6
+    J0 4
+    0 0
+    1 0
+    2 0
+    3 0
+    J1 4
+    0 0
+    1 0
+    2 0
+    3 0
     G0 4
     0 1.4
     1 1.1
@@ -414,7 +465,7 @@ function test_nlmodel_linear_quadratic()
     @test n.sense == MOI.MAX_SENSE
     @test n.f == NL._NLExpr(h)
     terms = [NL.OPMULT, 2.0, NL.OPMULT, x[1], x[2]]
-    _test_expr(n.g[1].expr, terms, [x[1]], [1.0], 3.0)
+    _test_nlexpr(n.g[1].expr, terms, Dict(x[1] => 1.0, x[2] => 0.0), 3.0)
     @test n.g[1].opcode == 1
     @test n.g[1].lower == -Inf
     @test n.g[1].upper == 5.0
@@ -426,7 +477,6 @@ function test_nlmodel_linear_quadratic()
     @test n.types[2] == [x[2]]  # Discrete in both
     @test n.types[6] == [x[3]]  # Discrete in objective only
     @test n.types[7] == [x[4]]  # Continuous in linear
-
     @test sprint(write, model) == """
     g3 1 1 0
      4 2 1 1 0 0
@@ -435,7 +485,7 @@ function test_nlmodel_linear_quadratic()
      2 3 2
      0 0 0 1
      0 0 1 0 1
-     4 1
+     5 3
      0 0
      0 0 0 0 0
     C0
@@ -467,16 +517,76 @@ function test_nlmodel_linear_quadratic()
     0 0 2
     k3
     1
-    2
     3
-    J0 1
+    4
+    J0 2
     0 1
+    1 0
     J1 3
     1 1
     2 1
     3 1
+    G0 3
+    0 0
+    1 0
+    2 1
     """
     return
+end
+
+function test_eval_singlevariable()
+    x = MOI.VariableIndex(1)
+    f = NL._NLExpr(MOI.SingleVariable(x))
+    @test NL._evaluate(f, Dict(x => 1.2)) == 1.2
+end
+
+function test_eval_scalaraffine()
+    x = MOI.VariableIndex.(1:3)
+    f = NL._NLExpr(MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(1.0, x), 4.0))
+    @test NL._evaluate(f, Dict(x[i] => Float64(i) for i in 1:3)) == 10.0
+end
+
+function test_eval_scalarquadratic()
+    x = MOI.VariableIndex(1)
+    f = MOI.ScalarQuadraticFunction(
+        [MOI.ScalarAffineTerm(1.1, x)],
+        [MOI.ScalarQuadraticTerm(2.0, x, x)],
+        3.0,
+    )
+    @test NL._evaluate(NL._NLExpr(f), Dict(x => 1.1)) == 5.42
+end
+
+function test_eval_unary_addition()
+    x = MOI.VariableIndex(1)
+    @test NL._evaluate(NL._NLExpr(:(+$x)), Dict(x => 1.1)) == 1.1
+end
+
+function test_eval_binary_addition()
+    x = MOI.VariableIndex(1)
+    y = MOI.VariableIndex(2)
+    @test NL._evaluate(NL._NLExpr(:($x + $y)), Dict(x => 1.1, y => 2.2)) ≈ 3.3
+end
+
+function test_eval_nary_addition()
+    x = MOI.VariableIndex(1)
+    y = MOI.VariableIndex(2)
+    @test NL._evaluate(NL._NLExpr(:($x + $y + 1.0)), Dict(x => 1.1, y => 2.2)) ≈
+          4.3
+end
+
+function test_eval_unary_subtraction()
+    x = MOI.VariableIndex(1)
+    @test NL._evaluate(NL._NLExpr(:(-$x)), Dict(x => 1.1)) == -1.1
+end
+
+function test_eval_nary_multiplication()
+    x = MOI.VariableIndex(1)
+    @test NL._evaluate(NL._NLExpr(:($x * $x * 2.0)), Dict(x => 1.1)) ≈ 2.42
+end
+
+function test_eval_unary_specialcase()
+    x = MOI.VariableIndex(1)
+    @test NL._evaluate(NL._NLExpr(:(cbrt($x))), Dict(x => 1.1)) ≈ 1.1^(1 / 3)
 end
 
 function runtests()

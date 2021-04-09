@@ -16,6 +16,47 @@
 # action of contract, negligence or other tortious action, arising out
 # of or in connection with the use or performance of this software.
 
+"""
+    _interpret_status(solve_result_num::Int, raw_status_string::String)
+
+Convert the `solve_result_num` and `raw_status_string` into MOI-type statuses.
+
+For the primal status, assume a solution is present. Other code is responsible
+for returning `MOI.NO_SOLUTION` if no primal solution is present.
+"""
+function _interpret_status(solve_result_num::Int, raw_status_string::String)
+    if 0 <= solve_result_num < 100
+        return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
+    elseif 100 <= solve_result_num < 200
+        return MOI.LOCALLY_SOLVED, MOI.UNKNOWN_RESULT_STATUS
+    elseif 200 <= solve_result_num < 300
+        return MOI.INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
+    elseif 300 <= solve_result_num < 400
+        return MOI.DUAL_INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
+    elseif 400 <= solve_result_num < 500
+        return MOI.OTHER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
+    elseif 500 <= solve_result_num < 600
+        return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
+    end
+    # If we didn't get a valid solve_result_num, try to get the status from the
+    # solve_message string. Some solvers (e.g. SCIP) don't ever print the
+    # suffixes so we need this.
+    message = lowercase(raw_status_string)
+    if occursin("optimal", message)
+        return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
+    elseif occursin("infeasible", message)
+        return MOI.INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
+    elseif occursin("unbounded", message)
+        return MOI.DUAL_INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
+    elseif occursin("limit", message)
+        return MOI.OTHER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
+    elseif occursin("error", message)
+        return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
+    else
+        return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
+    end
+end
+
 struct _NLResults
     raw_status_string::String
     termination_status::MOI.TerminationStatusCode
@@ -31,6 +72,10 @@ function _readline(io::IO)
     return strip(readline(io))
 end
 _readline(io::IO, T) = parse(T, _readline(io))
+
+function _read_sol(filename::String, model::_NLModel)
+    return open(io -> _read_sol(io, model), filename, "r")
+end
 
 function _read_sol(io::IO, model::_NLModel)
     raw_status_string = ""
@@ -105,45 +150,4 @@ function _read_sol(io::IO, model::_NLModel)
         objective_value,
         primal_solution,
     )
-end
-
-"""
-    _interpret_status(solve_result_num::Int, raw_status_string::String)
-
-Convert the `solve_result_num` and `raw_status_string` into MOI-type statuses.
-
-For the primal status, assume a solution is present. Other code is responsible
-for returning `MOI.NO_SOLUTION` if no primal solution is present.
-"""
-function _interpret_status(solve_result_num::Int, raw_status_string::String)
-    if 0 <= solve_result_num < 100
-        return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
-    elseif 100 <= solve_result_num < 200
-        return MOI.LOCALLY_SOLVED, MOI.UNKNOWN_RESULT_STATUS
-    elseif 200 <= solve_result_num < 300
-        return MOI.INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
-    elseif 300 <= solve_result_num < 400
-        return MOI.DUAL_INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
-    elseif 400 <= solve_result_num < 500
-        return MOI.OTHER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
-    elseif 500 <= solve_result_num < 600
-        return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
-    end
-    # If we didn't get a valid solve_result_num, try to get the status from the
-    # solve_message string. Some solvers (e.g. SCIP) don't ever print the
-    # suffixes so we need this.
-    message = lowercase(raw_status_string)
-    if occursin("optimal", message)
-        return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
-    elseif occursin("infeasible", message)
-        return MOI.INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
-    elseif occursin("unbounded", message)
-        return MOI.DUAL_INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
-    elseif occursin("limit", message)
-        return MOI.OTHER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
-    elseif occursin("error", message)
-        return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
-    else
-        return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
-    end
 end

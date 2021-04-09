@@ -127,12 +127,9 @@ function MOI.empty!(model::Optimizer{Float64})
     return
 end
 
-function Base.show(io::IO, ::Optimizer)
-    print(io, "An AMPL (.nl) model")
-    return
-end
+Base.show(io::IO, ::Optimizer) = print(io, "An AMPL (.nl) model")
 
-MOI.get(model::Optimizer, ::MOI.SolverName) = model.ext[:AmplSolver]()
+MOI.get(model::Optimizer, ::MOI.SolverName) = "AmplNLWriter"
 
 # ==============================================================================
 
@@ -191,17 +188,18 @@ function MOI.optimize!(model::Optimizer)
     open(io -> write(io, nlp), nl_file, "w")
     try
         solver() do solver_path
-            return run(
+            ret = run(
                 pipeline(
                     `$(solver_path) $(nl_file) -AMPL $(options)`,
                     stdout = stdout,
                     stdin = stdin,
                 ),
             )
+            if ret.exitcode != 0
+                error("Nonzero exit code: $(ret.exitcode)")
+            end
         end
-        open(joinpath(temp_dir, "model.sol"), "r") do sol_io
-            return model.ext[:Results] = _read_sol(sol_io, nlp)
-        end
+        model.ext[:Results] = _read_sol(joinpath(temp_dir, "model.sol"), nlp)
     catch err
         @warn err
         model.ext[:Results] = _NLResults(

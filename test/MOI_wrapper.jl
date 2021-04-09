@@ -16,7 +16,7 @@ const CONFIG = MOI.Test.TestConfig(
 
 function optimizer(path)
     return MOI.Bridges.full_bridge_optimizer(
-        AmplNLWriter.Optimizer(path),#, ["print_level = 0"]),
+        AmplNLWriter.Optimizer(path, ["print_level = 0"]),
         Float64,
     )
 end
