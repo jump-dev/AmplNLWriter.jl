@@ -250,17 +250,17 @@ function test_nlmodel_hs071()
      0 0 0 0 0
     C0
     o2
-    v3
+    v0
     o2
     v1
     o2
     v2
-    v0
+    v3
     C1
     o54
     4
     o5
-    v3
+    v0
     n2
     o5
     v1
@@ -269,33 +269,33 @@ function test_nlmodel_hs071()
     v2
     n2
     o5
-    v0
+    v3
     n2
     O0 0
     o0
     o2
-    v3
-    o2
     v0
+    o2
+    v3
     o54
     3
-    v3
+    v0
     v1
     v2
     v2
     x4
-    0 2.4
+    0 2.1
     1 2.2
     2 2.3
-    3 2.1
+    3 2.4
     r
     2 25
     4 40
     b
-    0 1.4 5.4
+    0 1.1 5.1
     0 1.2 5.2
     0 1.3 5.3
-    0 1.1 5.1
+    0 1.4 5.4
     k3
     2
     4
@@ -404,17 +404,17 @@ function test_nlmodel_hs071_linear_obj()
      0 0 0 0 0
     C0
     o2
-    v1
+    v0
     o2
     v2
     o2
     v3
-    v0
+    v1
     C1
     o54
     4
     o5
-    v1
+    v0
     n2
     o5
     v2
@@ -423,21 +423,21 @@ function test_nlmodel_hs071_linear_obj()
     v3
     n2
     o5
-    v0
+    v1
     n2
     O0 1
     n2
     x4
-    0 2.4
-    1 2.1
+    0 2.1
+    1 2.4
     2 2.2
     3 2.3
     r
     2 25
     4 40
     b
-    0 1.4 5.4
     0 1.1 5.1
+    0 1.4 5.4
     0 1.2 1
     0 1.3 5.3
     k3
@@ -455,8 +455,8 @@ function test_nlmodel_hs071_linear_obj()
     2 0
     3 0
     G0 4
-    0 1.4
-    1 1.1
+    0 1.1
+    1 1.4
     2 1.2
     3 1.3
     """

@@ -765,18 +765,24 @@ function _NLModel(model::Optimizer)
     #
     # Essentially, what all this means is if !(nlvo > nlvc), then swap 3-4 for
     # 5-6 in the variable order.
-    order_i = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     nlvc = length(types[3]) + length(types[4])
     nlvo = length(types[5]) + length(types[6])
-    if !(nlvo > nlvc)
-        order_i[3], order_i[4], order_i[5], order_i[6] = 5, 6, 3, 4
+    order_i = if nlvo > nlvc
+        [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    else
+        [1, 2, 5, 6, 3, 4, 7, 8, 9]
     end
     # Now we can order the variables.
-    n = 1
-    for i in order_i, x in types[i]
-        nlmodel.x[x].order = n - 1  # 0-indexed.
-        nlmodel.order[n] = x
-        n += 1
+    n = 0
+    for i in order_i
+        # Since variables come from a dictionary, there may be differences in
+        # the order depending on platform and Julia version. Sort by creation
+        # time for consistency.
+        for x in sort!(types[i]; by = y -> y.value)
+            nlmodel.x[x].order = n
+            nlmodel.order[n+1] = x
+            n += 1
+        end
     end
     return nlmodel
 end
