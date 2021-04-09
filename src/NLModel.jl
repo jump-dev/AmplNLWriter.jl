@@ -915,7 +915,7 @@ function Base.write(io::IO, nlmodel::_NLModel)
     # Header
     # Line 1: Always the same
     # Notes:
-    #  * I think there are magic bytes used by AMPL internally for stuff.
+    #  * I think these are magic bytes used by AMPL internally for stuff.
     println(io, "g3 1 1 0")
 
     # Line 2: vars, constraints, objectives, ranges, eqns, logical constraints
@@ -940,7 +940,7 @@ function Base.write(io::IO, nlmodel::_NLModel)
 
     # Line 4: network constraints: nonlinear, linear
     # Notes:
-    #  * We don't support linear constraints. I don't know how they are
+    #  * We don't support network constraints. I don't know how they are
     #    represented.
     println(io, " 0 0")
 
@@ -1096,9 +1096,9 @@ function Base.write(io::IO, nlmodel::_NLModel)
     #    entry in the Jacobian block, even if the linear coefficient is zero.
     #    AMPL uses this to determine the Jacobian sparsity.
     #  * As before, nonlinear constraints go first, then linear.
-    #  * You don't need to write out the `k` entry for the last variable,
-    #    because it can be inferred from the total number of elements in the
-    #    Jacobian as given in the header.
+    #  * Don't write out the `k` entry for the last variable, because it can be
+    #    inferred from the total number of elements in the Jacobian as given in
+    #    the header.
     if n_con > 0
         println(io, "k", length(nlmodel.x) - 1)
         total = 0
@@ -1118,7 +1118,7 @@ function Base.write(io::IO, nlmodel::_NLModel)
     # ==========================================================================
     # Gradient block
     # Notes:
-    #  * You only need to write this ot if there are linear terms in the
+    #  * You only need to write this out if there are linear terms in the
     #    objective.
     if nnz_gradient > 0
         println(io, "G0 ", nnz_gradient)
