@@ -1,21 +1,3 @@
-# This file is a Julia translation of readsol.c, available at
-# https://github.com/ampl/asl/blob/64919f75fa7a438f4b41bce892dcbe2ae38343ee/src/solvers/readsol.c
-# and licensed under the following:
-#
-# Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
-# Permission to use, copy, modify, and distribute this software and its
-# documentation for any purpose and without fee is hereby granted,
-# provided that the above copyright notice appear in all copies and that
-# both that the copyright notice and this permission notice and warranty
-# disclaimer appear in supporting documentation.
-# The author and AMPL Optimization, Inc. disclaim all warranties with
-# regard to this software, including all implied warranties of
-# merchantability and fitness.  In no event shall the author be liable
-# for any special, indirect or consequential damages or any damages
-# whatsoever resulting from loss of use, data or profits, whether in an
-# action of contract, negligence or other tortious action, arising out
-# of or in connection with the use or performance of this software.
-
 """
     _interpret_status(solve_result_num::Int, raw_status_string::String)
 
@@ -77,6 +59,28 @@ function _read_sol(filename::String, model::_NLModel)
     return open(io -> _read_sol(io, model), filename, "r")
 end
 
+"""
+    _read_sol(io::IO, model::_NLModel)
+
+This function is based on a Julia translation of readsol.c, available at
+https://github.com/ampl/asl/blob/64919f75fa7a438f4b41bce892dcbe2ae38343ee/src/solvers/readsol.c
+and under the following license:
+
+Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
+
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+"""
 function _read_sol(io::IO, model::_NLModel)
     raw_status_string = ""
     line = ""
@@ -141,6 +145,8 @@ function _read_sol(io::IO, model::_NLModel)
         _interpret_status(solve_result_num, raw_status_string)
     objective_value = NaN
     if length(primal_solution) > 0
+        # TODO(odow): is there a better way of getting this other than
+        # evaluating it?
         objective_value = _evaluate(model.f, primal_solution)
     end
     return _NLResults(

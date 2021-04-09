@@ -115,7 +115,7 @@ end
 function test_nlconstraint_interval()
     x = MOI.VariableIndex(1)
     expr = :(1 <= $x <= 2)
-    con = NL._NLConstraint(expr)
+    con = NL._NLConstraint(expr, MOI.NLPBoundsPair(1.0, 2.0))
     @test con.lower == 1
     @test con.upper == 2
     @test con.opcode == 0
@@ -125,7 +125,7 @@ end
 function test_nlconstraint_lessthan()
     x = MOI.VariableIndex(1)
     expr = :($x <= 2)
-    con = NL._NLConstraint(expr)
+    con = NL._NLConstraint(expr, MOI.NLPBoundsPair(-Inf, 2.0))
     @test con.lower == -Inf
     @test con.upper == 2
     @test con.opcode == 1
@@ -135,7 +135,7 @@ end
 function test_nlconstraint_greaterthan()
     x = MOI.VariableIndex(1)
     expr = :($x >= 2)
-    con = NL._NLConstraint(expr)
+    con = NL._NLConstraint(expr, MOI.NLPBoundsPair(2.0, Inf))
     @test con.lower == 2
     @test con.upper == Inf
     @test con.opcode == 2
@@ -145,11 +145,35 @@ end
 function test_nlconstraint_equalto()
     x = MOI.VariableIndex(1)
     expr = :($x == 2)
-    con = NL._NLConstraint(expr)
+    con = NL._NLConstraint(expr, MOI.NLPBoundsPair(2.0, 2.0))
     @test con.lower == 2
     @test con.upper == 2
     @test con.opcode == 4
     @test con.expr == NL._NLExpr(expr.args[2])
+end
+
+function test_nlconstraint_interval_warn()
+    x = MOI.VariableIndex(1)
+    expr = :(2 <= $x <= 1)
+    @test_logs (:warn,) NL._NLConstraint(expr, MOI.NLPBoundsPair(1.0, 2.0))
+end
+
+function test_nlconstraint_lessthan_warn()
+    x = MOI.VariableIndex(1)
+    expr = :(1 <= $x <= 2)
+    @test_logs (:warn,) NL._NLConstraint(expr, MOI.NLPBoundsPair(-Inf, 2.0))
+end
+
+function test_nlconstraint_greaterthan_warn()
+    x = MOI.VariableIndex(1)
+    expr = :(1 <= $x <= 2)
+    @test_logs (:warn,) NL._NLConstraint(expr, MOI.NLPBoundsPair(1.0, Inf))
+end
+
+function test_nlconstraint_equalto_warn()
+    x = MOI.VariableIndex(1)
+    expr = :(1 <= $x <= 2)
+    @test_logs (:warn,) NL._NLConstraint(expr, MOI.NLPBoundsPair(1.0, 1.0))
 end
 
 function test_nlmodel_hs071()
@@ -587,6 +611,54 @@ end
 function test_eval_unary_specialcase()
     x = MOI.VariableIndex(1)
     @test NL._evaluate(NL._NLExpr(:(cbrt($x))), Dict(x => 1.1)) ≈ 1.1^(1 / 3)
+end
+
+"""
+    test_issue_79()
+
+Test the problem
+
+    min (z - 0.5)^2 = z^2 - z + 1/4
+    s.t. x * z <= 0
+         z ∈ {0, 1}
+"""
+function test_issue_79()
+    model = NL.Optimizer()
+    x = MOI.add_variable(model)
+    z = MOI.add_variable(model)
+    MOI.add_constraint(model, MOI.SingleVariable(z), MOI.ZeroOne())
+    f = MOI.ScalarQuadraticFunction(
+        [MOI.ScalarAffineTerm(-1.0, z)],
+        [MOI.ScalarQuadraticTerm(1.0, z, z)],
+        0.25,
+    )
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.add_constraint(
+        model,
+        MOI.ScalarQuadraticFunction(
+            MOI.ScalarAffineTerm{Float64}[],
+            [MOI.ScalarQuadraticTerm(1.0, x, z)],
+            0.0,
+        ),
+        MOI.LessThan(0.0),
+    )
+    n = NL._NLModel(model)
+    # x is continuous in a nonlinear constraint             [Priority 3]
+    # z is discrete in a nonlinear constraint and objective [Priority 2]
+    @test n.x[x].order == 1
+    @test n.x[z].order == 0
+end
+
+function test_malformed_constraint_error()
+    model = NL.Optimizer()
+    x = MOI.add_variable(model)
+    MOI.add_constraint(
+        model,
+        MOI.ScalarAffineFunction(MOI.ScalarAffineTerm{Float64}[], 1.0),
+        MOI.LessThan(0.0),
+    )
+    @test_throws ErrorException NL._NLModel(model)
 end
 
 function runtests()

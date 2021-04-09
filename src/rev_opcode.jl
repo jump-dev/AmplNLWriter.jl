@@ -1,5 +1,5 @@
 """
-    _REV_OPCODES
+    _JULIA_TO_AMPL
 
 This dictionary is manualy curated, based on the list of opcodes in `opcode.jl`.
 
@@ -12,9 +12,10 @@ different symbol to disambiguate them in the context of this dictionary, and add
 logic to `_process_call` to rewrite the Julia expression.
 
 Commented out lines are opcodes supported by AMPL that don't have a clear Julia
-equivalent. If you can think of one, feel free to add it.
+equivalent. If you can think of one, feel free to add it. But then go and make
+similar changes to `_AMPL_TO_JULIA` and `_NARY_OPCODES`.
 """
-const _REV_OPCODES = Dict{Symbol,Int}(
+const _JULIA_TO_AMPL = Dict{Symbol,Int}(
     :+ => OPPLUS,  # binary-plus
     :- => OPMINUS,
     :* => OPMULT,
@@ -88,9 +89,17 @@ const _REV_OPCODES = Dict{Symbol,Int}(
 )
 
 """
-    _OPCODES_EVAL
+    _AMPL_TO_JULIA
+
+This dictionary is manualy curated, based on the list of supported opcodes
+`_JULIA_TO_AMPL`.
+
+The goal is to map AMPL opcodes to their Julia equivalents. In addition, we need
+to know the arity of each opcode.
+
+If the opcode is an n-ary function, use `-1`.
 """
-const _OPCODES_EVAL = Dict{Int,Tuple{Int,Function}}(
+const _AMPL_TO_JULIA = Dict{Int,Tuple{Int,Function}}(
     OPPLUS => (2, +),
     OPMINUS => (2, -),
     OPMULT => (2, *),
@@ -168,17 +177,19 @@ const _OPCODES_EVAL = Dict{Int,Tuple{Int,Function}}(
 
 A manually curated list of n-ary opcodes, taken from Table 8 of "Writing .nl
 files."
+
+Not all of these are implemented. See `_REV_OPCODES` for more detail.
 """
 const _NARY_OPCODES = Set([
     MINLIST,
     MAXLIST,
     OPSUMLIST,
-    # OPCOUNT,
-    # OPNUMBEROF,
-    # OPNUMBEROFs,
-    # ANDLIST,
-    # ORLIST,
-    # OPALLDIFF,
+    OPCOUNT,
+    OPNUMBEROF,
+    OPNUMBEROFs,
+    ANDLIST,
+    ORLIST,
+    OPALLDIFF,
 ])
 
 """

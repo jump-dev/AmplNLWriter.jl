@@ -32,7 +32,6 @@ function test_unittest(path)
         [
             # Unsupported attributes:
             "number_threads",
-            "raw_status_string",
             "silent",
             "solve_objbound_edge_cases",
             "solve_time",
@@ -43,21 +42,14 @@ function test_unittest(path)
             "solve_zero_one_with_bounds_2",
             "solve_zero_one_with_bounds_3",
 
-            # It seems that the AMPL NL reader declares NL files with no objective
-            # and no constraints as corrupt, even if they have variable bounds. Yuk.
-            "solve_blank_obj",
-
             # No support for VectorOfVariables-in-SecondOrderCone
             "delete_soc_variables",
-
-            # TODO(odow): fix handling of result indices.
-            "solve_result_index",
         ],
     )
 end
 
 function test_contlinear(path)
-    return MOI.Test.contlineartest(optimizer(path), CONFIG, String["linear15",])
+    return MOI.Test.contlineartest(optimizer(path), CONFIG)
 end
 
 function test_contlquadratic(path)

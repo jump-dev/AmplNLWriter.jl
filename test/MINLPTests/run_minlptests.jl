@@ -35,7 +35,10 @@ run_with_ampl() do path
             NaN,
             NaN,
             Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.INFEASIBLE),
-            Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS),
+            Dict(
+                MINLPTests.INFEASIBLE_PROBLEM =>
+                    AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
+            ),
         )
     end
 
