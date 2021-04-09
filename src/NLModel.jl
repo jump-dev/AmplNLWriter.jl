@@ -501,27 +501,38 @@ _is_nary(x::Int) = x in _NARY_OPCODES
 _is_nary(x) = false
 
 function _write_nlexpr(io::IO, expr::_NLExpr, nlmodel::_NLModel)
-    # If the expression is linear, just write out the constant term.
     if expr.is_linear || length(expr.nonlinear_terms) == 0
+        # If the expression is linear, just write out the constant term.
         _write_term(io, expr.constant, nlmodel)
         return
     end
-    # If the nonlinear terms are a summation, we can stick our constant on the
-    # end, otherwise, prepend a binary addition of (+ constant terms).
+    # If the constant term is non-zero, we need to write it out.
+    skip_terms = 0
     if !iszero(expr.constant)
         if expr.nonlinear_terms[1] == OPSUMLIST
-            expr.nonlinear_terms[2] += 1
-            push!(expr.nonlinear_terms, expr.constant)
+            # The nonlinear expression is a summation. We can write our constant
+            # first, but we also need to increment the number of arguments by
+            # one. In addition, since we're writing out the first two terms now,
+            # we must skip them below.
+            _write_term(io, OPSUMLIST, nlmodel)
+            println(io, expr.nonlinear_terms[2] + 1)
+            _write_term(io, expr.constant, nlmodel)
+            skip_terms = 2
         else
-            pushfirst!(expr.nonlinear_terms, expr.constant)
-            pushfirst!(expr.nonlinear_terms, OPPLUS)
+            # The nonlinear expression is something other than a summation, so
+            # add a new + node to the expression.
+            _write_term(io, OPPLUS, nlmodel)
+            _write_term(io, expr.constant, nlmodel)
         end
     end
     last_nary = false
     for term in expr.nonlinear_terms
+        if skip_terms > 0
+            skip_terms -= 1
+            continue
+        end
         if last_nary
-            @assert term isa Int
-            println(io, term)
+            println(io, term::Int)
             last_nary = false
         else
             _write_term(io, term, nlmodel)
