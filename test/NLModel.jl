@@ -667,7 +667,7 @@ MOI.features_available(::NoExprGraph) = Symbol[]
 function test_noexpr_graph()
     model = NL.Optimizer()
     block_data = MOI.NLPBlockData(MOI.NLPBoundsPair[], NoExprGraph(), false)
-    MOI.set(model, MOI.NLPBlockData(), block_data)
+    MOI.set(model, MOI.NLPBlock(), block_data)
     @test_throws ErrorException NL._NLModel(model)
 end
 
