@@ -110,6 +110,18 @@ function test_bad_string(::Any)
     @test occursin("IOError", MOI.get(model, MOI.RawStatusString()))
 end
 
+function test_function_constant_nonzero(path)
+    model = optimizer(path)
+    x = MOI.add_variable(model)
+    f = MOI.ScalarAffineFunction([MOI.ScalarAffineTerm(1.0, x)], 1.0)
+    MOI.add_constraint(model, f, MOI.GreaterThan(3.0))
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.VariablePrimal(), x) ≈ 2.0 atol=1e-6
+    @test MOI.get(model, MOI.ObjectiveValue()) ≈ 3.0 atol=1e-6
+end
+
 function runtests(path)
     for name in names(@__MODULE__; all = true)
         if !startswith("$(name)", "test_")

@@ -626,7 +626,7 @@ function _NLModel(model::Optimizer)
         _NLExpr(obj)
     end
     # Nonlinear constraints
-    g = [
+    g = _NLConstraint[
         _NLConstraint(MOI.constraint_expr(nlp_block.evaluator, i), bound)
         for (i, bound) in enumerate(nlp_block.constraint_bounds)
     ]
