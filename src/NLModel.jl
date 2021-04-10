@@ -616,6 +616,12 @@ where `g` are nonlinear functions and `h` are linear.
 function _NLModel(model::Optimizer)
     # Initialize the NLP block.
     nlp_block = MOI.get(model, MOI.NLPBlock())
+    if !(:ExprGraph in MOI.features_available(nlp_block.evaluator))
+        error(
+            "Unable to use AmplNLWriter because the nonlinear evaluator " *
+            "does not supply expression graphs.",
+        )
+    end
     MOI.initialize(nlp_block.evaluator, [:ExprGraph])
     # Objective function.
     objective = if nlp_block.has_objective

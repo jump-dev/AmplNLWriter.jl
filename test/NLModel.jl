@@ -661,6 +661,16 @@ function test_malformed_constraint_error()
     @test_throws ErrorException NL._NLModel(model)
 end
 
+struct NoExprGraph <: MOI.AbstractNLPEvaluator end
+MOI.features_available(::NoExprGraph) = Symbol[]
+
+function test_noexpr_graph()
+    model = NL.Optimizer()
+    block_data = MOI.NLPBlockData(MOI.NLPBoundsPair[], NoExprGraph(), false)
+    MOI.set(model, MOI.NLPBlockData(), block_data)
+    @test_throws ErrorException NL._NLModel(model)
+end
+
 function runtests()
     for name in names(@__MODULE__; all = true)
         if startswith("$(name)", "test_")
