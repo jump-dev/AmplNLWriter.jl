@@ -118,8 +118,8 @@ function test_function_constant_nonzero(path)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.optimize!(model)
-    @test MOI.get(model, MOI.VariablePrimal(), x) ≈ 2.0 atol=1e-6
-    @test MOI.get(model, MOI.ObjectiveValue()) ≈ 3.0 atol=1e-6
+    @test isapprox(MOI.get(model, MOI.VariablePrimal(), x), 2.0, atol = 1e-6)
+    @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 3.0, atol = 1e-6)
 end
 
 function runtests(path)
