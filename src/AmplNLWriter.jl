@@ -17,6 +17,7 @@ MOI.Utilities.@model(
 )
 
 struct _LinearNLPEvaluator <: MOI.AbstractNLPEvaluator end
+MOI.features_available(::_LinearNLPEvaluator) = [:ExprGraph]
 MOI.initialize(::_LinearNLPEvaluator, ::Vector{Symbol}) = nothing
 
 """
