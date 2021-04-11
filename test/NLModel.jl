@@ -114,7 +114,7 @@ end
 
 function test_nlconstraint_interval()
     x = MOI.VariableIndex(1)
-    expr = :(1 <= $x <= 2)
+    expr = :(1.0 <= $x <= 2.0)
     con = NL._NLConstraint(expr, MOI.NLPBoundsPair(1.0, 2.0))
     @test con.lower == 1
     @test con.upper == 2
@@ -124,7 +124,7 @@ end
 
 function test_nlconstraint_lessthan()
     x = MOI.VariableIndex(1)
-    expr = :($x <= 2)
+    expr = :($x <= 2.0)
     con = NL._NLConstraint(expr, MOI.NLPBoundsPair(-Inf, 2.0))
     @test con.lower == -Inf
     @test con.upper == 2
@@ -134,7 +134,7 @@ end
 
 function test_nlconstraint_greaterthan()
     x = MOI.VariableIndex(1)
-    expr = :($x >= 2)
+    expr = :($x >= 2.0)
     con = NL._NLConstraint(expr, MOI.NLPBoundsPair(2.0, Inf))
     @test con.lower == 2
     @test con.upper == Inf
@@ -144,7 +144,7 @@ end
 
 function test_nlconstraint_equalto()
     x = MOI.VariableIndex(1)
-    expr = :($x == 2)
+    expr = :($x == 2.0)
     con = NL._NLConstraint(expr, MOI.NLPBoundsPair(2.0, 2.0))
     @test con.lower == 2
     @test con.upper == 2
@@ -154,25 +154,25 @@ end
 
 function test_nlconstraint_interval_warn()
     x = MOI.VariableIndex(1)
-    expr = :(2 <= $x <= 1)
+    expr = :(2.0 <= $x <= 1.0)
     @test_logs (:warn,) NL._NLConstraint(expr, MOI.NLPBoundsPair(1.0, 2.0))
 end
 
 function test_nlconstraint_lessthan_warn()
     x = MOI.VariableIndex(1)
-    expr = :(1 <= $x <= 2)
+    expr = :($x <= 1.0)
     @test_logs (:warn,) NL._NLConstraint(expr, MOI.NLPBoundsPair(-Inf, 2.0))
 end
 
 function test_nlconstraint_greaterthan_warn()
     x = MOI.VariableIndex(1)
-    expr = :(1 <= $x <= 2)
+    expr = :($x >= 0.0)
     @test_logs (:warn,) NL._NLConstraint(expr, MOI.NLPBoundsPair(1.0, Inf))
 end
 
 function test_nlconstraint_equalto_warn()
     x = MOI.VariableIndex(1)
-    expr = :(1 <= $x <= 2)
+    expr = :($x == 2.0)
     @test_logs (:warn,) NL._NLConstraint(expr, MOI.NLPBoundsPair(1.0, 1.0))
 end
 
@@ -561,6 +561,49 @@ function test_nlmodel_linear_quadratic()
     return
 end
 
+function test_nlmodel_quadratic_interval()
+    model = MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}())
+    x = MOI.add_variable(model)
+    g = MOI.ScalarQuadraticFunction(
+        [MOI.ScalarAffineTerm(1.0, x)],
+        [MOI.ScalarQuadraticTerm(2.0, x, x)],
+        3.0,
+    )
+    MOI.add_constraint(model, g, MOI.Interval(1.0, 10.0))
+    n = NL.Optimizer()
+    MOI.copy_to(n, model)
+    @test sprint(write, n) == """
+    g3 1 1 0
+     1 1 1 1 0 0
+     1 1
+     0 0
+     1 0 0
+     0 0 0 1
+     0 0 0 0 0
+     1 0
+     0 0
+     0 0 0 0 0
+    C0
+    o0
+    n3
+    o2
+    v0
+    v0
+    O0 0
+    n0
+    x1
+    0 0
+    r
+    0 1 10
+    b
+    3
+    k0
+    J0 1
+    0 1
+    """
+    return
+end
+
 function test_eval_singlevariable()
     x = MOI.VariableIndex(1)
     f = NL._NLExpr(MOI.SingleVariable(x))
@@ -611,9 +654,14 @@ function test_eval_nary_multiplication()
     @test NL._evaluate(NL._NLExpr(:($x * $x * 2.0)), Dict(x => 1.1)) ≈ 2.42
 end
 
-function test_eval_unary_specialcase()
+function test_eval_unary_specialcases()
     x = MOI.VariableIndex(1)
-    @test NL._evaluate(NL._NLExpr(:(cbrt($x))), Dict(x => 1.1)) ≈ 1.1^(1 / 3)
+    S = [:acoth, :asec, :acsc, :acot, :asecd, :acscd, :acotd]
+    for (k, v) in NL._UNARY_SPECIAL_CASES
+        expr = NL._NLExpr(:($k($x)))
+        xv = k in S ? 1.49 : 0.49
+        @test NL._evaluate(expr, Dict(x => xv)) ≈ getfield(Main, k)(xv)
+    end
 end
 
 """

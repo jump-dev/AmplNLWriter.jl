@@ -29,8 +29,38 @@ function optimizer(path)
     )
 end
 
-function test_name(path)
+function test_show(path)
     @test sprint(show, AmplNLWriter.Optimizer(path)) == "An AMPL (.nl) model"
+end
+
+function test_name(path)
+    model = AmplNLWriter.Optimizer(path)
+    @test MOI.supports(model, MOI.Name())
+    MOI.set(model, MOI.Name(), "Foo")
+    @test MOI.get(model, MOI.Name()) == "Foo"
+end
+
+function test_write_to_file(path)
+    model = AmplNLWriter.Optimizer(path)
+    MOI.write_to_file(model, "foo.nl")
+    @test read("foo.nl", String) == """
+    g3 1 1 0
+     0 0 1 0 0 0
+     0 1
+     0 0
+     0 0 0
+     0 0 0 1
+     0 0 0 0 0
+     0 0
+     0 0
+     0 0 0 0 0
+    O0 0
+    n0
+    x0
+    b
+    """
+    rm("foo.nl")
+    return
 end
 
 function test_unittest(path)
