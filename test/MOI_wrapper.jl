@@ -15,15 +15,20 @@ const CONFIG = MOI.Test.TestConfig(
 )
 
 function optimizer(path)
-    return MOI.Bridges.full_bridge_optimizer(
-        AmplNLWriter.Optimizer(path, ["print_level = 0"]),
-        Float64,
+    return MOI.Utilities.CachingOptimizer(
+        MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
+        MOI.Bridges.full_bridge_optimizer(
+            MOI.Utilities.CachingOptimizer(
+                MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
+                AmplNLWriter.Optimizer(path, ["print_level = 0"]),
+            ),
+            Float64,
+        ),
     )
 end
 
 function test_name(path)
-    @test sprint(show, AmplNLWriter.Optimizer(path, ["print_level = 0"])) ==
-          "An AmplNLWriter model"
+    @test sprint(show, AmplNLWriter.Optimizer(path)) == "An AMPL (.nl) model"
 end
 
 function test_unittest(path)
@@ -33,7 +38,6 @@ function test_unittest(path)
         [
             # Unsupported attributes:
             "number_threads",
-            "raw_status_string",
             "silent",
             "solve_objbound_edge_cases",
             "solve_time",
@@ -44,21 +48,14 @@ function test_unittest(path)
             "solve_zero_one_with_bounds_2",
             "solve_zero_one_with_bounds_3",
 
-            # It seems that the AMPL NL reader declares NL files with no objective
-            # and no constraints as corrupt, even if they have variable bounds. Yuk.
-            "solve_blank_obj",
-
             # No support for VectorOfVariables-in-SecondOrderCone
             "delete_soc_variables",
-
-            # TODO(odow): fix handling of result indices.
-            "solve_result_index",
         ],
     )
 end
 
 function test_contlinear(path)
-    return MOI.Test.contlineartest(optimizer(path), CONFIG, String["linear15",])
+    return MOI.Test.contlineartest(optimizer(path), CONFIG)
 end
 
 function test_contlquadratic(path)
@@ -98,13 +95,7 @@ function test_orderedindices(path)
 end
 
 function test_copytest(path)
-    return MOI.Test.copytest(
-        optimizer(path),
-        MOI.Bridges.full_bridge_optimizer(
-            AmplNLWriter.Optimizer(path),
-            Float64,
-        ),
-    )
+    return MOI.Test.copytest(optimizer(path), optimizer(path))
 end
 
 function test_nlptest(path)
@@ -112,11 +103,23 @@ function test_nlptest(path)
 end
 
 function test_bad_string(::Any)
-    model = AmplNLWriter.Optimizer("bad_solver")
+    model = optimizer("bad_solver")
     x = MOI.add_variable(model)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OTHER_ERROR
     @test occursin("IOError", MOI.get(model, MOI.RawStatusString()))
+end
+
+function test_function_constant_nonzero(path)
+    model = optimizer(path)
+    x = MOI.add_variable(model)
+    f = MOI.ScalarAffineFunction([MOI.ScalarAffineTerm(1.0, x)], 1.0)
+    MOI.add_constraint(model, f, MOI.GreaterThan(3.0))
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.optimize!(model)
+    @test isapprox(MOI.get(model, MOI.VariablePrimal(), x), 2.0, atol = 1e-6)
+    @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 3.0, atol = 1e-6)
 end
 
 function runtests(path)
@@ -132,6 +135,10 @@ end
 
 end
 
-run_with_ampl() do path
-    return TestMOIWrapper.runtests(path)
+if VERSION < v"1.3"
+    import Ipopt
+    TestMOIWrapper.runtests(Ipopt.amplexe)
+else
+    import Ipopt_jll
+    TestMOIWrapper.runtests(Ipopt_jll.amplexe)
 end

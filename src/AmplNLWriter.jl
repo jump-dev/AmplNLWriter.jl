@@ -1,596 +1,473 @@
 module AmplNLWriter
 
-using MathProgBase
-using MathProgBase.SolverInterface
-using SparseArrays
+import MathOptInterface
+const MOI = MathOptInterface
 
-debug = false
-setdebug(b::Bool) = global debug = b
+include("NLExpr.jl")
 
-const solverdata_dir = abspath(joinpath(@__DIR__, "..", ".solverdata"))
+### ============================================================================
+### Nonlinear constraints
+### ============================================================================
 
-include("nl_linearity.jl")
-include("nl_params.jl")
-include("nl_convert.jl")
-
-export AmplNLSolver,
-    BonminNLSolver,
-    CouenneNLSolver,
-    IpoptNLSolver,
-    getsolvername,
-    getsolveresult,
-    getsolveresultnum,
-    getsolvemessage,
-    getsolveexitcode
-
-struct AmplNLSolver <: AbstractMathProgSolver
-    solver_command::String
-    options::Vector{String}
-    filename::String
+struct _NLConstraint
+    lower::Float64
+    upper::Float64
+    opcode::Int
+    expr::_NLExpr
 end
 
-function AmplNLSolver(
-    solver_command::String,
-    options::Vector{String} = String[];
-    filename::String = "",
-)
-    return AmplNLSolver(solver_command, options, filename)
-end
+"""
+    _NLConstraint(expr::Expr, bound::MOI.NLPBoundsPair)
 
-function BonminNLSolver(options = String[]; filename::String = "")
-    return error(
-        """BonminNLSolver is no longer available by default through AmplNLWriter.
+Convert a constraint in the form of a `expr` into a `_NLConstraint` object.
 
-  You should install CoinOptServices via
+See `MOI.constraint_expr` for details on the format.
 
-      Pkg.add("CoinOptServices")
+As a validation step, the right-hand side of each constraint must be a constant
+term that is given by the `bound`. (If the constraint is an interval constraint,
+both the left-hand and right-hand sides must be constants.)
 
-  and then replace BonminNLSolver(options=String[]; filename::String="")
-  with
+The six NL constraint types are:
 
-      AmplNLSolver(CoinOptServices.bonmin, options; filename=filename)
-
-  alternatively, you can call
-
-      AmplNLSolver("path/to/bonmin", options; filename=filename)
-  """,
-    )
-end
-
-function CouenneNLSolver(options = String[]; filename::String = "")
-    return error(
-        """CouenneNLSolver is no longer available by default through AmplNLWriter.
-
-  You should install CoinOptServices via
-
-      Pkg.add("CoinOptServices")
-
-  and then replace CouenneNLSolver(options=String[]; filename::String="")
-  with
-
-      AmplNLSolver(CoinOptServices.couenne, options; filename=filename)
-
-  alternatively, you can call
-
-      AmplNLSolver("path/to/couenne", options; filename=filename)
-  """,
-    )
-end
-
-function IpoptNLSolver(options = String[]; filename::String = "")
-    return error(
-        """IpoptNLSolver is no longer available by default through AmplNLWriter.
-
-  You should install Ipopt via
-
-      Pkg.add("Ipopt")
-
-  and then replace IpoptNLSolver(options=String[]; filename::String="")
-  with
-
-      AmplNLSolver(Ipopt.amplexe, options; filename=filename)
-
-  alternatively, you can call
-
-      AmplNLSolver("path/to/ipopt", options; filename=filename)
-  """,
-    )
-end
-
-getsolvername(s::AmplNLSolver) = basename(s.solver_command)
-
-mutable struct AmplNLMathProgModel <: AbstractMathProgModel
-    options::Vector{String}
-
-    solver_command::String
-
-    x_l::Vector{Float64}
-    x_u::Vector{Float64}
-    g_l::Vector{Float64}
-    g_u::Vector{Float64}
-
-    nvar::Int
-    ncon::Int
-
-    obj::Any
-    constrs::Vector{Any}
-
-    lin_constrs::Vector{Dict{Int,Float64}}
-    lin_obj::Dict{Int,Float64}
-
-    r_codes::Vector{Int}
-    j_counts::Vector{Int}
-
-    vartypes::Vector{Symbol}
-    varlinearities_con::Vector{Symbol}
-    varlinearities_obj::Vector{Symbol}
-    conlinearities::Vector{Symbol}
-    objlinearity::Symbol
-
-    v_index_map::Dict{Int,Int}
-    v_index_map_rev::Dict{Int,Int}
-    c_index_map::Dict{Int,Int}
-    c_index_map_rev::Dict{Int,Int}
-
-    sense::Symbol
-
-    x_0::Vector{Float64}
-
-    file_basename::String
-    probfile::String
-    solfile::String
-
-    objval::Float64
-    solution::Vector{Float64}
-
-    status::Symbol
-    solve_exitcode::Int
-    solve_result_num::Int
-    solve_result::String
-    solve_message::String
-    solve_time::Float64
-
-    d::AbstractNLPEvaluator
-
-    function AmplNLMathProgModel(
-        solver_command::String,
-        options::Vector{String},
-        filename::String,
-    )
-        return new(
-            options,
-            solver_command,
-            zeros(0),
-            zeros(0),
-            zeros(0),
-            zeros(0),
+    l <= g(x) <= u : 0
+         g(x) >= l : 1
+         g(x) <= u : 2
+         g(x)      : 3  # We don't support this
+         g(x) == c : 4
+     x ⟂ g(x)      : 5  # TODO(odow): Complementarity constraints
+"""
+function _NLConstraint(expr::Expr, bound::MOI.NLPBoundsPair)
+    if expr.head == :comparison
+        @assert length(expr.args) == 5
+        if !(expr.args[1] ≈ bound.lower && bound.upper ≈ expr.args[5])
+            _warn_invalid_bound(expr, bound)
+        end
+        return _NLConstraint(
+            expr.args[1],
+            expr.args[5],
             0,
-            0,
-            :(0),
-            [],
-            Dict{Int,Float64}[],
-            Dict{Int,Float64}(),
-            Int[],
-            Int[],
-            Symbol[],
-            Symbol[],
-            Symbol[],
-            Symbol[],
-            :Lin,
-            Dict{Int,Int}(),
-            Dict{Int,Int}(),
-            Dict{Int,Int}(),
-            Dict{Int,Int}(),
-            :Min,
-            zeros(0),
-            filename,
-            "",
-            "",
-            NaN,
-            zeros(0),
-            :NotSolved,
-            -1,
-            -1,
-            "?",
-            "",
-            NaN,
+            _NLExpr(expr.args[3]),
         )
+    else
+        @assert expr.head == :call
+        @assert length(expr.args) == 3
+        if expr.args[1] == :(<=)
+            if !(-Inf ≈ bound.lower && bound.upper ≈ expr.args[3])
+                _warn_invalid_bound(expr, bound)
+            end
+            return _NLConstraint(-Inf, expr.args[3], 1, _NLExpr(expr.args[2]))
+        elseif expr.args[1] == :(>=)
+            if !(expr.args[3] ≈ bound.lower && bound.upper ≈ Inf)
+                _warn_invalid_bound(expr, bound)
+            end
+            return _NLConstraint(expr.args[3], Inf, 2, _NLExpr(expr.args[2]))
+        else
+            @assert expr.args[1] == :(==)
+            if !(expr.args[3] ≈ bound.lower ≈ bound.upper)
+                _warn_invalid_bound(expr, bound)
+            end
+            return _NLConstraint(
+                expr.args[3],
+                expr.args[3],
+                4,
+                _NLExpr(expr.args[2]),
+            )
+        end
     end
 end
-mutable struct AmplNLLinearQuadraticModel <: AbstractLinearQuadraticModel
-    inner::AmplNLMathProgModel
-end
-mutable struct AmplNLNonlinearModel <: AbstractNonlinearModel
-    inner::AmplNLMathProgModel
-end
 
-include("nl_write.jl")
-
-function SolverInterface.NonlinearModel(s::AmplNLSolver)
-    return AmplNLNonlinearModel(
-        AmplNLMathProgModel(s.solver_command, s.options, s.filename),
-    )
-end
-function SolverInterface.LinearQuadraticModel(s::AmplNLSolver)
-    return AmplNLLinearQuadraticModel(
-        AmplNLMathProgModel(s.solver_command, s.options, s.filename),
+function _warn_invalid_bound(expr::Expr, bound::MOI.NLPBoundsPair)
+    return @warn(
+        "Invalid bounds detected in nonlinear constraint. Expected " *
+        "`$(bound.lower) <= g(x) <= $(bound.upper)`, but got the constraint " *
+        "$(expr)",
     )
 end
 
-function SolverInterface.loadproblem!(
-    outer::AmplNLNonlinearModel,
-    nvar::Integer,
-    ncon::Integer,
-    x_l,
-    x_u,
-    g_l,
-    g_u,
-    sense::Symbol,
-    d::AbstractNLPEvaluator,
+### ============================================================================
+### Nonlinear models
+### ============================================================================
+
+@enum(_VariableType, _BINARY, _INTEGER, _CONTINUOUS)
+
+mutable struct _VariableInfo
+    # Variable lower bound.
+    lower::Float64
+    # Variable upper bound.
+    upper::Float64
+    # Whether variable is binary or integer.
+    type::_VariableType
+    # Primal start of the variable.
+    start::Union{Float64,Nothing}
+    # Number of constraints that the variable appears in.
+    jacobian_count::Int
+    # If the variable appears in the objective.
+    in_nonlinear_objective::Bool
+    # If the objetive appears in a nonlinear constraint.
+    in_nonlinear_constraint::Bool
+    # The 0-indexed column of the variable. Computed right at the end.
+    order::Int
+    function _VariableInfo(model::MOI.ModelLike, x::MOI.VariableIndex)
+        start = MOI.get(model, MOI.VariablePrimalStart(), x)
+        return new(-Inf, Inf, _CONTINUOUS, start, 0, false, false, 0)
+    end
+end
+
+struct _NLResults
+    raw_status_string::String
+    termination_status::MOI.TerminationStatusCode
+    primal_status::MOI.ResultStatusCode
+    objective_value::Float64
+    primal_solution::Dict{MOI.VariableIndex,Float64}
+end
+
+"""
+    _solver_command(x::Union{Function,String})
+
+Functionify the solver command so it can be called as follows:
+```julia
+foo = _solver_command(x)
+foo() do path
+    run(`\$(path) args...`)
+end
+```
+"""
+_solver_command(x::String) = f -> f(x)
+_solver_command(x::Function) = x
+
+mutable struct Optimizer <: MOI.AbstractOptimizer
+    optimizer::Function
+    options::Vector{String}
+    results::_NLResults
+    # Store MOI.Name().
+    name::String
+    # The objective expression.
+    f::_NLExpr
+    sense::MOI.OptimizationSense
+    # A vector of nonlinear constraints
+    g::Vector{_NLConstraint}
+    # A vector of linear constraints
+    h::Vector{_NLConstraint}
+    # A dictionary of info for the variables.
+    x::Dict{MOI.VariableIndex,_VariableInfo}
+    # A struct to help sort the mess that is variable ordering in NL files.
+    types::Vector{Vector{MOI.VariableIndex}}
+    # A vector of the final ordering of the variables.
+    order::Vector{MOI.VariableIndex}
+end
+
+"""
+    Optimizer(
+        solver_command::Union{String,Function},
+        options::Vector{String} = String[],
+    )
+
+Create a new Optimizer object.
+
+`solver_command` should be one of two things:
+
+* A `String` of the full path of an AMPL-compatible executable
+* A function that takes takes a function as input, initializes any environment
+  as needed, calls the input function with a path to the initialized executable,
+  and then destructs the environment.
+
+# Examples
+
+A string to an executable:
+```julia
+Optimizer("/path/to/ipopt.exe", ["print_level=0"])
+```
+
+A function or string provided by a package:
+```julia
+Optimizer(Ipopt.amplexe, ["print_level=0"])
+# or
+Optimizer(Ipopt_jll.amplexe, ["print_level=0"])
+```
+
+A custom function
+```julia
+function solver_command(f::Function)
+    # Create environment ...
+    ret = f("/path/to/ipopt")
+    # Destruct environment ...
+    return ret
+end
+Optimizer(solver_command)
+```
+"""
+function Optimizer(
+    solver_command::Union{String,Function} = "",
+    options::Vector{String} = String[],
 )
-    m = outer.inner
+    return Optimizer(
+        _solver_command(solver_command),
+        options,
+        _NLResults(
+            "Optimize not called.",
+            MOI.OPTIMIZE_NOT_CALLED,
+            MOI.NO_SOLUTION,
+            NaN,
+            Dict{MOI.VariableIndex,Float64}(),
+        ),
+        "",
+        _NLExpr(false, _NLTerm[], Dict{MOI.VariableIndex,Float64}(), 0.0),
+        MOI.FEASIBILITY_SENSE,
+        _NLConstraint[],
+        _NLConstraint[],
+        Dict{MOI.VariableIndex,_VariableInfo}(),
+        [MOI.VariableIndex[] for _ in 1:9],
+        MOI.VariableIndex[],
+    )
+end
 
-    m.nvar, m.ncon = nvar, ncon
-    loadcommon!(m, x_l, x_u, g_l, g_u, sense)
+Base.show(io::IO, ::Optimizer) = print(io, "An AMPL (.nl) model")
 
-    m.d = d
-    if !(:ExprGraph in features_available(m.d))
+MOI.get(model::Optimizer, ::MOI.SolverName) = "AmplNLWriter"
+
+MOI.supports(::Optimizer, ::MOI.Name) = true
+MOI.get(model::Optimizer, ::MOI.Name) = model.name
+MOI.set(model::Optimizer, ::MOI.Name, name::String) = (model.name = name)
+
+function MOI.empty!(model::Optimizer)
+    model.results = _NLResults(
+        "Optimize not called.",
+        MOI.OPTIMIZE_NOT_CALLED,
+        MOI.NO_SOLUTION,
+        NaN,
+        Dict{MOI.VariableIndex,Float64}(),
+    )
+    model.f = _NLExpr(false, _NLTerm[], Dict{MOI.VariableIndex,Float64}(), 0.0)
+    empty!(model.g)
+    empty!(model.h)
+    empty!(model.x)
+    for i in 1:9
+        empty!(model.types[i])
+    end
+    empty!(model.order)
+    return
+end
+
+function MOI.is_empty(model::Optimizer)
+    return isempty(model.g) && isempty(model.h) && isempty(model.x)
+end
+
+const _SCALAR_FUNCTIONS = Union{
+    MOI.SingleVariable,
+    MOI.ScalarAffineFunction{Float64},
+    MOI.ScalarQuadraticFunction{Float64},
+}
+
+const _SCALAR_SETS = Union{
+    MOI.LessThan{Float64},
+    MOI.GreaterThan{Float64},
+    MOI.EqualTo{Float64},
+    MOI.Interval{Float64},
+}
+
+function MOI.supports_constraint(
+    ::Optimizer,
+    ::Type{<:_SCALAR_FUNCTIONS},
+    ::Type{<:_SCALAR_SETS},
+)
+    return true
+end
+
+function MOI.supports_constraint(
+    ::Optimizer,
+    ::Type{MOI.SingleVariable},
+    ::Type{<:Union{MOI.ZeroOne,MOI.Integer}},
+)
+    return true
+end
+
+MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
+MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{<:_SCALAR_FUNCTIONS}) = true
+
+# =============================================================================
+
+MOI.supports(::Optimizer, ::MOI.NLPBlock) = true
+
+function MOI.set(
+    model::Optimizer,
+    ::MOI.NLPBlock,
+    block::Union{Nothing,MOI.NLPBlockData},
+)
+    model.nlp_block = block
+    return
+end
+
+MOI.get(model::Optimizer, ::MOI.NLPBlock) = model.nlp_block
+
+# ==============================================================================
+
+function MOI.supports(
+    ::Optimizer,
+    ::MOI.VariablePrimalStart,
+    ::Type{MOI.VariableIndex},
+)
+    return true
+end
+
+function MOI.set(model::Optimizer, ::MOI.VariablePrimalStart, x, v::Real)
+    model.x[x].start = Float64(v)
+    return
+end
+
+function MOI.set(model::Optimizer, ::MOI.VariablePrimalStart, x, ::Nothing)
+    model.x[x].start = nothing
+    return
+end
+
+function MOI.get(
+    model::Optimizer,
+    ::MOI.VariablePrimalStart,
+    x::MOI.VariableIndex,
+)
+    return model.x[x].start
+end
+
+# ==============================================================================
+
+struct _LinearNLPEvaluator <: MOI.AbstractNLPEvaluator end
+MOI.features_available(::_LinearNLPEvaluator) = [:ExprGraph]
+MOI.initialize(::_LinearNLPEvaluator, ::Vector{Symbol}) = nothing
+
+MOI.Utilities.supports_default_copy_to(::Optimizer, ::Bool) = false
+
+function MOI.copy_to(
+    dest::Optimizer,
+    model::MOI.ModelLike;
+    copy_names::Bool = false,
+)
+    mapping = MOI.Utilities.IndexMap()
+    # Initialize the NLP block.
+    nlp_block = try
+        MOI.get(model, MOI.NLPBlock())
+    catch
+        MOI.NLPBlockData(MOI.NLPBoundsPair[], _LinearNLPEvaluator(), false)
+    end
+    if !(:ExprGraph in MOI.features_available(nlp_block.evaluator))
         error(
-            "Unable to solve problem using AmplNLWriter because the " *
-            "nonlinear evaluator does not supply expression graphs.",
+            "Unable to use AmplNLWriter because the nonlinear evaluator " *
+            "does not supply expression graphs.",
         )
     end
-    initialize(m.d, [:ExprGraph])
-
-    # Process constraints
-    m.constrs = map(1:m.ncon) do i
-        c = constr_expr(m.d, i)
-
-        # Remove relations and bounds from constraint expressions
-        if length(c.args) == 3
-            expected_head = :call
-            expr_index = 2
-            rel_index = 1
-
-            @assert c.head == expected_head
-            # Single relation constraint: expr rel bound
-            rel = c.args[rel_index]
-            m.r_codes[i] = relation_to_nl[rel]
-            if rel == [:<=, :(==)]
-                m.g_u[i] = c.args[3]
-            end
-            if rel in [:>=, :(==)]
-                m.g_l[i] = c.args[3]
-            end
-            c = c.args[expr_index]
-        else
-            # Double relation constraint: bound <= expr <= bound
-            @assert c.head == :comparison
-            m.r_codes[i] = relation_to_nl[:multiple]
-            m.g_u[i] = c.args[5]
-            m.g_l[i] = c.args[1]
-            c = c.args[3]
-        end
-
-        # Convert non-linear expression to non-linear, linear and constant
-        c, constant, m.conlinearities[i] =
-            process_expression!(c, m.lin_constrs[i], m.varlinearities_con)
-
-        # Update bounds on constraint
-        m.g_l[i] -= constant
-        m.g_u[i] -= constant
-
-        # Update jacobian counts using the linear constraint variables
-        for j in keys(m.lin_constrs[i])
-            m.j_counts[j] += 1
-        end
-        return c
-    end
-
-    # Process objective
-    m.obj = obj_expr(m.d)
-    if typeof(m.obj) <: Expr
-        if length(m.obj.args) < 2
-            # TODO(odow): what does this case mean?
-            m.obj = 0
-        else
-            # Convert non-linear expression to non-linear, linear and constant
-            m.obj, constant, m.objlinearity =
-                process_expression!(m.obj, m.lin_obj, m.varlinearities_obj)
-
-            # Add constant back into non-linear expression
-            if constant != 0
-                m.obj = add_constant(m.obj, constant)
-            end
-        end
-    end
-    return m
-end
-
-function SolverInterface.loadproblem!(
-    outer::AmplNLLinearQuadraticModel,
-    A::AbstractMatrix,
-    x_l,
-    x_u,
-    c,
-    g_l,
-    g_u,
-    sense,
-)
-    m = outer.inner
-    m.ncon, m.nvar = size(A)
-
-    loadcommon!(m, x_l, x_u, g_l, g_u, sense)
-
-    # Load A into the linear constraints
-    @assert (m.ncon, m.nvar) == size(A)
-    load_A!(m, A)
-    m.constrs = zeros(m.ncon)  # Dummy constraint expression trees
-
-    # Load c
-    for (index, val) in enumerate(c)
-        m.lin_obj[index] = val
-    end
-    m.obj = 0  # Dummy objective expression tree
-
-    # Process variables bounds
-    for j in 1:m.ncon
-        lower = m.g_l[j]
-        upper = m.g_u[j]
-        if lower == -Inf
-            if upper == Inf
-                error("Neither lower nor upper bound on constraint $j")
-            else
-                m.r_codes[j] = 1
-            end
-        else
-            if lower == upper
-                m.r_codes[j] = 4
-            elseif upper == Inf
-                m.r_codes[j] = 2
-            else
-                m.r_codes[j] = 0
-            end
-        end
-    end
-    return m
-end
-
-function load_A!(m::AmplNLMathProgModel, A::SparseMatrixCSC{Float64})
-    for var in 1:A.n, k in A.colptr[var]:(A.colptr[var+1]-1)
-        m.lin_constrs[A.rowval[k]][var] = A.nzval[k]
-        m.j_counts[var] += 1
-    end
-end
-
-function load_A!(m::AmplNLMathProgModel, A::Matrix{Float64})
-    for con in 1:m.ncon, var in 1:m.nvar
-        val = A[con, var]
-        if val != 0
-            m.lin_constrs[con][var] = val
-            m.j_counts[var] += 1
-        end
-    end
-end
-
-function loadcommon!(m::AmplNLMathProgModel, x_l, x_u, g_l, g_u, sense)
-    @assert m.nvar == length(x_l) == length(x_u)
-    @assert m.ncon == length(g_l) == length(g_u)
-
-    m.x_l, m.x_u = x_l, x_u
-    m.g_l, m.g_u = g_l, g_u
-    setsense!(m, sense)
-
-    m.lin_constrs = [Dict{Int,Float64}() for _ in 1:m.ncon]
-    m.j_counts = zeros(Int, m.nvar)
-
-    m.r_codes = Array{Int}(undef, m.ncon)
-
-    m.varlinearities_con = fill(:Lin, m.nvar)
-    m.varlinearities_obj = fill(:Lin, m.nvar)
-    m.conlinearities = fill(:Lin, m.ncon)
-    m.objlinearity = :Lin
-
-    m.vartypes = fill(:Cont, m.nvar)
-    return m.x_0 = zeros(m.nvar)
-end
-
-SolverInterface.getvartype(m::AmplNLMathProgModel) = copy(m.vartypes)
-function SolverInterface.setvartype!(
-    m::AmplNLMathProgModel,
-    cat::Vector{Symbol},
-)
-    @assert all(x -> (x in [:Cont, :Bin, :Int]), cat)
-    return m.vartypes = copy(cat)
-end
-
-SolverInterface.getsense(m::AmplNLMathProgModel) = m.sense
-function SolverInterface.setsense!(m::AmplNLMathProgModel, sense::Symbol)
-    @assert sense == :Min || sense == :Max
-    return m.sense = sense
-end
-
-function SolverInterface.setwarmstart!(
-    m::AmplNLMathProgModel,
-    v::Vector{Float64},
-)
-    return m.x_0 = v
-end
-
-function SolverInterface.optimize!(m::AmplNLMathProgModel)
-    m.status = :NotSolved
-    m.solve_exitcode = -1
-    m.solve_result_num = -1
-    m.solve_result = "?"
-    m.solve_message = ""
-
-    # There is no non-linear binary type, only non-linear discrete, so make
-    # sure binary vars have bounds in [0, 1]
-    for i in 1:m.nvar
-        if m.vartypes[i] == :Bin
-            if m.x_l[i] < 0
-                m.x_l[i] = 0
-            end
-            if m.x_u[i] > 1
-                m.x_u[i] = 1
-            end
-        end
-    end
-
-    make_var_index!(m)
-    make_con_index!(m)
-
-    if length(m.file_basename) == 0
-        # No filename specified - write to a randomly named file
-        file_basepath, f_prob = mktemp(solverdata_dir)
+    MOI.initialize(nlp_block.evaluator, [:ExprGraph])
+    # Objective function.
+    if nlp_block.has_objective
+        dest.f = _NLExpr(MOI.objective_expr(nlp_block.evaluator))
     else
-        file_basepath = joinpath(solverdata_dir, "$(m.file_basename)")
-        f_prob = open(file_basepath, "w")
+        F = MOI.get(model, MOI.ObjectiveFunctionType())
+        obj = MOI.get(model, MOI.ObjectiveFunction{F}())
+        dest.f = _NLExpr(obj)
     end
-    m.probfile = "$file_basepath.nl"
-    m.solfile = "$file_basepath.sol"
-
-    try
-        write_nl_file(f_prob, m)
-    finally
-        close(f_prob)
-    end
-
-    # Rename file to have .nl extension (this is required by solvers)
-    # force flag added to fix issue in Windows, where temp file are not
-    # absolutely unique and file closing is not fast enough
-    # See https://github.com/jump-dev/AmplNLWriter.jl/pull/63.
-    mv(file_basepath, m.probfile, force = true)
-
-    # Run solver and save exitcode
-    t = time()
-    try
-        cmd = pipeline(
-            `$(m.solver_command) $(m.probfile) -AMPL $(m.options)`,
-            stdout = stdout,
-            stdin = stdin,
+    # Nonlinear constraints
+    for (i, bound) in enumerate(nlp_block.constraint_bounds)
+        push!(
+            dest.g,
+            _NLConstraint(MOI.constraint_expr(nlp_block.evaluator, i), bound),
         )
-        proc = VERSION < v"0.7-" ? spawn(cmd) : run(cmd, wait = false)
-        wait(proc)
-        kill(proc)
-        m.solve_exitcode = proc.exitcode
-    catch e
-        m.solve_exitcode = 1
-        @warn("Unable to call solver. Failed with the error: $(e)")
-        m.solve_result = "$(e)"
     end
-    m.solve_time = time() - t
-
-    if m.solve_exitcode == 0
-        read_results(m)
-    else
-        m.status = :Error
-        m.solution = fill(NaN, m.nvar)
-        m.solve_result_num = 999
+    for x in MOI.get(model, MOI.ListOfVariableIndices())
+        dest.x[x] = _VariableInfo(model, x)
+        mapping[x] = x
     end
-
-    # Clean up temp files
-    if !debug
-        for temp_file in [m.probfile; m.solfile]
-            isfile(temp_file) && rm(temp_file)
+    dest.sense = MOI.get(model, MOI.ObjectiveSense())
+    resize!(dest.order, length(dest.x))
+    # Now deal with the normal MOI constraints.
+    for (F, S) in MOI.get(model, MOI.ListOfConstraints())
+        _process_constraint(dest, model, F, S, mapping)
+    end
+    # Correct bounds of binary variables. Mainly because AMPL doesn't have the
+    # concept of binary nonlinear variables, but it does have binary linear
+    # variables! How annoying.
+    for (x, v) in dest.x
+        if v.type == _BINARY
+            v.lower = max(0.0, v.lower)
+            v.upper = min(1.0, v.upper)
         end
     end
-end
-
-function process_expression!(
-    nonlin_expr::Expr,
-    lin_expr::Dict{Int,Float64},
-    varlinearities::Vector{Symbol},
-)
-    # Get list of all variables in the expression
-    extract_variables!(lin_expr, nonlin_expr)
-    # Extract linear and constant terms from non-linear expression
-    tree = LinearityExpr(nonlin_expr)
-    tree = pull_up_constants(tree)
-    _, tree, constant = prune_linear_terms!(tree, lin_expr)
-    # Make sure all terms remaining in the tree are .nl-compatible
-    nonlin_expr = convert_formula(tree)
-
-    # Track which variables appear nonlinearly
-    nonlin_vars = Dict{Int,Float64}()
-    extract_variables!(nonlin_vars, nonlin_expr)
-    for j in keys(nonlin_vars)
-        varlinearities[j] = :Nonlin
+    # Jacobian counts. The zero terms for nonlinear constraints should have
+    # been added when the expression was constructed.
+    for g in dest.g, v in keys(g.expr.linear_terms)
+        dest.x[v].jacobian_count += 1
     end
-
-    # Remove variables at coeff 0 that aren't also in the nonlinear tree
-    for (j, coeff) in lin_expr
-        if coeff == 0 && !(j in keys(nonlin_vars))
-            delete!(lin_expr, j)
-        end
+    for h in dest.h, v in keys(h.expr.linear_terms)
+        dest.x[v].jacobian_count += 1
     end
-
-    # Mark constraint as nonlinear if anything is left in the tree
-    linearity = nonlin_expr != 0 ? :Nonlin : :Lin
-
-    return nonlin_expr, constant, linearity
-end
-function process_expression!(nonlin_expr::Real, lin_expr, varlinearities)
-    # Special case where body of constraint is constant
-    # Return empty nonlinear and linear parts, and use the body as the constant
-    return 0, nonlin_expr, :Lin
-end
-
-SolverInterface.status(m::AmplNLMathProgModel) = m.status
-SolverInterface.getsolution(m::AmplNLMathProgModel) = copy(m.solution)
-SolverInterface.getobjval(m::AmplNLMathProgModel) = m.objval
-SolverInterface.numvar(m::AmplNLMathProgModel) = m.nvar
-SolverInterface.numconstr(m::AmplNLMathProgModel) = m.ncon
-SolverInterface.getsolvetime(m::AmplNLMathProgModel) = m.solve_time
-
-# Access to AMPL solve result items
-get_solve_result(m::AmplNLMathProgModel) = m.solve_result
-get_solve_result_num(m::AmplNLMathProgModel) = m.solve_result_num
-get_solve_message(m::AmplNLMathProgModel) = m.solve_message
-get_solve_exitcode(m::AmplNLMathProgModel) = m.solve_exitcode
-
-# We need to track linear coeffs of all variables present in the expression tree
-extract_variables!(lin_constr::Dict{Int,Float64}, c) = c
-function extract_variables!(lin_constr::Dict{Int,Float64}, c::LinearityExpr)
-    return extract_variables!(lin_constr, c.c)
-end
-function extract_variables!(lin_constr::Dict{Int,Float64}, c::Expr)
-    if c.head == :ref
-        if c.args[1] == :x
-            @assert isa(c.args[2], Int)
-            lin_constr[c.args[2]] = 0
-        else
-            error("Unrecognized reference expression $c")
-        end
-    else
-        map(arg -> extract_variables!(lin_constr, arg), c.args)
-    end
-end
-
-add_constant(c, constant::Real) = c + constant
-add_constant(c::Expr, constant::Real) = Expr(:call, :+, c, constant)
-
-function make_var_index!(m::AmplNLMathProgModel)
+    # Now comes the confusing part.
+    #
     # AMPL, in all its wisdom, orders variables in a _very_ specific way.
     # The only hint in "Writing NL files" is the line "Variables are ordered as
-    # described in Tables 3 and 4 of [5]," which leads us to the following order
+    # described in Tables 3 and 4 of [5]".
     #
-    # 1) Continuous variables that appear in a nonlinear objective AND a nonlinear constraint
-    # 2) Discrete variables that appear in a nonlinear objective AND a nonlinear constraint
-    # 3) Continuous variables that appear in a nonlinear constraint, but NOT a nonlinear objective
-    # 4) Discrete variables that appear in a nonlinear constraint, but NOT a nonlinear objective
-    # 5) Continuous variables that appear in a nonlinear objective, but NOT a nonlinear constraint
-    # 6) Discrete variables that appear in a nonlinear objective, but NOT a nonlinear constraint
-    # 7) Continuous variables that DO NOT appear in a nonlinear objective or a nonlinear constraint
-    # 8) Binary variables that DO NOT appear in a nonlinear objective or a nonlinear constraint
-    # 9) Integer variables that DO NOT appear in a nonlinear objective or a nonlinear constraint
-    #
-    # Yes, nonlinear variables are broken into continuous/discrete, but linear
-    # variables are partitioned into continuous, binary, and integer.
+    # Reading these
     #
     # https://cfwebprod.sandia.gov/cfdocs/CompResearch/docs/nlwrite20051130.pdf
     # https://ampl.com/REFS/hooking2.pdf
     #
+    # leads us to the following order
+    #
+    # 1) Continuous variables that appear in a
+    #       nonlinear objective AND a nonlinear constraint
+    # 2) Discrete variables that appear in a
+    #       nonlinear objective AND a nonlinear constraint
+    # 3) Continuous variables that appear in a
+    #       nonlinear constraint, but NOT a nonlinear objective
+    # 4) Discrete variables that appear in a
+    #       nonlinear constraint, but NOT a nonlinear objective
+    # 5) Continuous variables that appear in a
+    #       nonlinear objective, but NOT a nonlinear constraint
+    # 6) Discrete variables that appear in a
+    #       nonlinear objective, but NOT a nonlinear constraint
+    # 7) Continuous variables that DO NOT appear in a
+    #       nonlinear objective or a nonlinear constraint
+    # 8) Binary variables that DO NOT appear in a
+    #       nonlinear objective or a nonlinear constraint
+    # 9) Integer variables that DO NOT appear in a
+    #       nonlinear objective or a nonlinear constraint
+    #
+    # Yes, nonlinear variables are broken into continuous/discrete, but linear
+    # variables are partitioned into continuous, binary, and integer. (See also,
+    # the need to modify bounds for binary variables.)
+    if !dest.f.is_linear
+        for x in keys(dest.f.linear_terms)
+            dest.x[x].in_nonlinear_objective = true
+        end
+        for x in dest.f.nonlinear_terms
+            if x isa MOI.VariableIndex
+                dest.x[x].in_nonlinear_objective = true
+            end
+        end
+    end
+    for con in dest.g
+        for x in keys(con.expr.linear_terms)
+            dest.x[x].in_nonlinear_constraint = true
+        end
+        for x in con.expr.nonlinear_terms
+            if x isa MOI.VariableIndex
+                dest.x[x].in_nonlinear_constraint = true
+            end
+        end
+    end
+    types = dest.types
+    for (x, v) in dest.x
+        if v.in_nonlinear_constraint && v.in_nonlinear_objective
+            push!(v.type == _CONTINUOUS ? types[1] : types[2], x)
+        elseif v.in_nonlinear_constraint
+            push!(v.type == _CONTINUOUS ? types[3] : types[4], x)
+        elseif v.in_nonlinear_objective
+            push!(v.type == _CONTINUOUS ? types[5] : types[6], x)
+        elseif v.type == _CONTINUOUS
+            push!(types[7], x)
+        elseif v.type == _BINARY
+            push!(types[8], x)
+        else
+            @assert v.type == _INTEGER
+            push!(types[9], x)
+        end
+    end
     # However! Don't let Tables 3 and 4 fool you, because the ordering actually
     # depends on whether the number of nonlinear variables in the objective only
     # is _strictly_ greater than the number of nonlinear variables in the
@@ -603,332 +480,634 @@ function make_var_index!(m::AmplNLMathProgModel)
     #   all of the first nlvo variables appear nonlinearly in an objective.
     #
     # However, even this is slightly incorrect, because I think it should read
-    # "the first nlvb variables appear nonlinearly." Then, the switch on
-    # nlvo > nlvc determines whether the next block of variables are the ones
-    # that appear in the objective only, or the constraints only.
+    # "For all versions, the first nlvb variables appear nonlinearly." The "nlvo
+    # - nlvc" part is also clearly incorrect, and should probably read "nlvo -
+    # nlvb."
     #
-    # Here, for example, is the relevant code from Couenne:
+    # It's a bit confusing, so here is the relevant code from Couenne:
     # https://github.com/coin-or/Couenne/blob/683c5b305d78a009d59268a4bca01e0ad75ebf02/src/readnl/readnl.cpp#L76-L87
     #
-    # Essentially, what that means is if !(nlvo > nlvc), then swap 3-4 for 5-6 in
-    # the variable order.
-    variable_orders = [Int[] for _ in 1:9]
-    nlvo, nlvc = 0, 0
-    for i in 1:m.nvar
-        if m.varlinearities_obj[i] == :Nonlin &&
-           m.varlinearities_con[i] == :Nonlin
-            push!(variable_orders[m.vartypes[i] == :Cont ? 1 : 2], i)
-        elseif m.varlinearities_obj[i] != :Nonlin &&
-               m.varlinearities_con[i] == :Nonlin
-            push!(variable_orders[m.vartypes[i] == :Cont ? 3 : 4], i)
-            nlvc += 1
-        elseif m.varlinearities_obj[i] == :Nonlin &&
-               m.varlinearities_con[i] != :Nonlin
-            push!(variable_orders[m.vartypes[i] == :Cont ? 5 : 6], i)
-            nlvo += 1
-        else
-            if m.vartypes[i] == :Bin
-                push!(variable_orders[8], i)
-            elseif m.vartypes[i] == :Int
-                push!(variable_orders[9], i)
+    # They interpret this paragraph to mean the switch on nlvo > nlvc determines
+    # whether the next block of variables are the ones that appear in the
+    # objective only, or the constraints only.
+    #
+    # That makes sense as a design choice, because you can read them in two
+    # contiguous blocks.
+    #
+    # Essentially, what all this means is if !(nlvo > nlvc), then swap 3-4 for
+    # 5-6 in the variable order.
+    nlvc = length(types[3]) + length(types[4])
+    nlvo = length(types[5]) + length(types[6])
+    order_i = if nlvo > nlvc
+        [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    else
+        [1, 2, 5, 6, 3, 4, 7, 8, 9]
+    end
+    # Now we can order the variables.
+    n = 0
+    for i in order_i
+        # Since variables come from a dictionary, there may be differences in
+        # the order depending on platform and Julia version. Sort by creation
+        # time for consistency.
+        for x in sort!(types[i]; by = y -> y.value)
+            dest.x[x].order = n
+            dest.order[n+1] = x
+            n += 1
+        end
+    end
+    return mapping
+end
+
+_set_to_bounds(set::MOI.Interval) = (0, set.lower, set.upper)
+_set_to_bounds(set::MOI.LessThan) = (1, -Inf, set.upper)
+_set_to_bounds(set::MOI.GreaterThan) = (2, set.lower, Inf)
+_set_to_bounds(set::MOI.EqualTo) = (4, set.value, set.value)
+
+function _process_constraint(dest::Optimizer, model, F, S, mapping)
+    for ci in MOI.get(model, MOI.ListOfConstraintIndices{F,S}())
+        f = MOI.get(model, MOI.ConstraintFunction(), ci)
+        s = MOI.get(model, MOI.ConstraintSet(), ci)
+        op, l, u = _set_to_bounds(s)
+        con = _NLConstraint(l, u, op, _NLExpr(f))
+        if isempty(con.expr.linear_terms) && isempty(con.expr.nonlinear_terms)
+            if l <= con.expr.constant <= u
+                continue
             else
-                push!(variable_orders[7], i)
+                error(
+                    "Malformed constraint. There are no variables and the " *
+                    "bounds don't make sense.",
+                )
             end
-        end
-    end
-    if !(nlvo > nlvc)
-        # Swap 3 <-> 5 and 4 <-> 6
-        variable_orders[3], variable_orders[5] =
-            variable_orders[5], variable_orders[3]
-        variable_orders[4], variable_orders[6] =
-            variable_orders[6], variable_orders[4]
-    end
-
-    # Index variables in required order
-    for var_list in variable_orders
-        add_to_index_maps!(m.v_index_map, m.v_index_map_rev, var_list)
-    end
-end
-
-function make_con_index!(m::AmplNLMathProgModel)
-    nonlin_cons = Int[]
-    lin_cons = Int[]
-
-    for i in 1:m.ncon
-        if m.conlinearities[i] == :Nonlin
-            push!(nonlin_cons, i)
+        elseif con.expr.is_linear
+            push!(dest.h, con)
+            mapping[ci] = MOI.ConstraintIndex{F,S}(length(dest.h))
         else
-            push!(lin_cons, i)
+            push!(dest.g, con)
+            mapping[ci] = MOI.ConstraintIndex{F,S}(length(dest.g))
         end
     end
-    for con_list in (nonlin_cons, lin_cons)
-        add_to_index_maps!(m.c_index_map, m.c_index_map_rev, con_list)
-    end
+    return
 end
 
-function add_to_index_maps!(
-    forward_map::Dict{Int,Int},
-    backward_map::Dict{Int,Int},
-    inds::Array{Int},
+function _process_constraint(
+    dest::Optimizer,
+    model,
+    F::Type{MOI.SingleVariable},
+    S,
+    mapping,
 )
-    for i in inds
-        # Indices are 0-prefixed so the next index is the current dict length
-        index = length(forward_map)
-        forward_map[i] = index
-        backward_map[index] = i
-    end
-end
-
-function read_results(m::AmplNLMathProgModel)
-    if !isfile(m.solfile)
-        error(
-            """Unable to open the solution file. The most likely cause of this
-      is the solver executable failing unexpectedly. Unfortunately we don't
-      have any other information about the solution or what went wrong.""",
-        )
-    end
-    open(m.solfile, "r") do io
-        return read_results(io, m)
-    end
-end
-
-function read_results(resultio, m::AmplNLMathProgModel)
-    did_read_solution = read_sol(resultio, m)
-
-    # Convert solve_result
-    if 0 <= m.solve_result_num < 100
-        m.status = :Optimal
-        m.solve_result = "solved"
-    elseif 100 <= m.solve_result_num < 200
-        # Used to indicate solution present but likely incorrect.
-        m.status = :Optimal
-        m.solve_result = "solved?"
-        warn(
-            "The solver has returned the status :Optimal, but indicated that there might be an error in the solution. The status code returned by the solver was $(m.solve_result_num). Check the solver documentation for more info.",
-        )
-    elseif 200 <= m.solve_result_num < 300
-        m.status = :Infeasible
-        m.solve_result = "infeasible"
-    elseif 300 <= m.solve_result_num < 400
-        m.status = :Unbounded
-        m.solve_result = "unbounded"
-    elseif 400 <= m.solve_result_num < 500
-        m.status = :UserLimit
-        m.solve_result = "limit"
-    elseif 500 <= m.solve_result_num < 600
-        m.status = :Error
-        m.solve_result = "failure"
-    end
-
-    # If we didn't get a valid solve_result_num, try to get the status from the
-    # solve_message string.
-    # Some solvers (e.g. SCIP) don't ever print the suffixes so we need this.
-    if m.status == :NotSolved
-        message = lowercase(m.solve_message)
-        if occursin("optimal", message)
-            m.status = :Optimal
-        elseif occursin("infeasible", message)
-            m.status = :Infeasible
-        elseif occursin("unbounded", message)
-            m.status = :Unbounded
-        elseif occursin("limit", message)
-            m.status = :UserLimit
-        elseif occursin("error", message)
-            m.status = :Error
+    for ci in MOI.get(model, MOI.ListOfConstraintIndices{F,S}())
+        mapping[ci] = ci
+        f = MOI.get(model, MOI.ConstraintFunction(), ci)
+        s = MOI.get(model, MOI.ConstraintSet(), ci)
+        _, l, u = _set_to_bounds(s)
+        if l > -Inf
+            dest.x[f.variable].lower = l
+        end
+        if u < Inf
+            dest.x[f.variable].upper = u
         end
     end
+    return
+end
 
-    if did_read_solution
-        if m.objlinearity == :Nonlin
-            # Try to use NLPEvaluator if we can.
-            # Can fail due to unsupported functions so fallback to eval
-            try
-                m.objval = eval_f(m.d, m.solution)
-                return
-            catch
-                # do nothing
+function _process_constraint(
+    dest::Optimizer,
+    model,
+    F::Type{MOI.SingleVariable},
+    S::Union{Type{MOI.ZeroOne},Type{MOI.Integer}},
+    mapping,
+)
+    for ci in MOI.get(model, MOI.ListOfConstraintIndices{F,S}())
+        mapping[ci] = ci
+        f = MOI.get(model, MOI.ConstraintFunction(), ci)
+        dest.x[f.variable].type = S == MOI.ZeroOne ? _BINARY : _INTEGER
+    end
+    return
+end
+
+_str(x::Float64) = isinteger(x) ? string(round(Int, x)) : string(x)
+
+_write_term(io, x::Float64, ::Any) = println(io, "n", _str(x))
+_write_term(io, x::Int, ::Any) = println(io, "o", x)
+function _write_term(io, x::MOI.VariableIndex, nlmodel)
+    return println(io, "v", nlmodel.x[x].order)
+end
+
+_is_nary(x::Int) = x in _NARY_OPCODES
+_is_nary(x) = false
+
+function _write_nlexpr(io::IO, expr::_NLExpr, nlmodel::Optimizer)
+    if expr.is_linear || length(expr.nonlinear_terms) == 0
+        # If the expression is linear, just write out the constant term.
+        _write_term(io, expr.constant, nlmodel)
+        return
+    end
+    # If the constant term is non-zero, we need to write it out.
+    skip_terms = 0
+    if !iszero(expr.constant)
+        if expr.nonlinear_terms[1] == OPSUMLIST
+            # The nonlinear expression is a summation. We can write our constant
+            # first, but we also need to increment the number of arguments by
+            # one. In addition, since we're writing out the first two terms now,
+            # we must skip them below.
+            _write_term(io, OPSUMLIST, nlmodel)
+            println(io, expr.nonlinear_terms[2] + 1)
+            _write_term(io, expr.constant, nlmodel)
+            skip_terms = 2
+        else
+            # The nonlinear expression is something other than a summation, so
+            # add a new + node to the expression.
+            _write_term(io, OPPLUS, nlmodel)
+            _write_term(io, expr.constant, nlmodel)
+        end
+    end
+    last_nary = false
+    for term in expr.nonlinear_terms
+        if skip_terms > 0
+            skip_terms -= 1
+            continue
+        end
+        if last_nary
+            println(io, term::Int)
+            last_nary = false
+        else
+            _write_term(io, term, nlmodel)
+            last_nary = _is_nary(term)
+        end
+    end
+    return
+end
+
+function _write_linear_block(io::IO, expr::_NLExpr, nlmodel::Optimizer)
+    elements = [(c, nlmodel.x[v].order) for (v, c) in expr.linear_terms]
+    for (c, x) in sort!(elements; by = i -> i[2])
+        println(io, x, " ", _str(c))
+    end
+    return
+end
+
+function Base.write(io::IO, nlmodel::Optimizer)
+    # ==========================================================================
+    # Header
+    # Line 1: Always the same
+    # Notes:
+    #  * I think these are magic bytes used by AMPL internally for stuff.
+    println(io, "g3 1 1 0")
+
+    # Line 2: vars, constraints, objectives, ranges, eqns, logical constraints
+    # Notes:
+    #  * We assume there is always one objective, even if it is just `min 0`.
+    n_con, n_ranges, n_eqns = 0, 0, 0
+    for cons in (nlmodel.g, nlmodel.h), c in cons
+        n_con += 1
+        if c.opcode == 0
+            n_ranges += 1
+        elseif c.opcode == 4
+            n_eqns += 1
+        end
+    end
+    println(io, " $(length(nlmodel.x)) $(n_con) 1 $(n_ranges) $(n_eqns) 0")
+
+    # Line 3: nonlinear constraints, objectives
+    # Notes:
+    #  * We assume there is always one objective, even if it is just `min 0`.
+    n_nlcon = length(nlmodel.g)
+    println(io, " ", n_nlcon, " ", 1)
+
+    # Line 4: network constraints: nonlinear, linear
+    # Notes:
+    #  * We don't support network constraints. I don't know how they are
+    #    represented.
+    println(io, " 0 0")
+
+    # Line 5: nonlinear vars in constraints, objectives, both
+    # Notes:
+    #  * This order is confusingly different to the standard "b, c, o" order.
+    nlvb = length(nlmodel.types[1]) + length(nlmodel.types[2])
+    nlvc = nlvb + length(nlmodel.types[3]) + length(nlmodel.types[4])
+    nlvo = nlvb + length(nlmodel.types[5]) + length(nlmodel.types[6])
+    println(io, " ", nlvc, " ", nlvo, " ", nlvb)
+
+    # Line 6: linear network variables; functions; arith, flags
+    # Notes:
+    #  * I don't know what this line means. It is what it is. Apparently `flags`
+    #    is set to 1 to get suffixes in .sol file.
+    println(io, " 0 0 0 1")
+
+    # Line 7: discrete variables: binary, integer, nonlinear (b,c,o)
+    # Notes:
+    #  * The order is
+    #    - binary variables in linear only
+    #    - integer variables in linear only
+    #    - binary or integer variables in nonlinear objective and constraint
+    #    - binary or integer variables in nonlinear constraint
+    #    - binary or integer variables in nonlinear objective
+    nbv = length(nlmodel.types[8])
+    niv = length(nlmodel.types[9])
+    nl_both = length(nlmodel.types[2])
+    nl_cons = length(nlmodel.types[4])
+    nl_obj = length(nlmodel.types[6])
+    println(io, " ", nbv, " ", niv, " ", nl_both, " ", nl_cons, " ", nl_obj)
+
+    # Line 8: nonzeros in Jacobian, gradients
+    # Notes:
+    #  * Make sure to include a 0 element for every variable that appears in an
+    #    objective or constraint, even if the linear coefficient is 0.
+    nnz_jacobian = 0
+    for g in nlmodel.g
+        nnz_jacobian += length(g.expr.linear_terms)
+    end
+    for h in nlmodel.h
+        nnz_jacobian += length(h.expr.linear_terms)
+    end
+    nnz_gradient = length(nlmodel.f.linear_terms)
+    println(io, " ", nnz_jacobian, " ", nnz_gradient)
+
+    # Line 9: max name lengths: constraints, variables
+    # Notes:
+    #  * We don't add names, so this is just 0, 0.
+    println(io, " 0 0")
+
+    # Line 10: common exprs: b,c,o,c1,o1
+    # Notes:
+    #  * We don't add common subexpressions (i.e., V blocks).
+    #  * I assume the notation means
+    #     - b = in nonlinear objective and constraint
+    #     - c = in nonlinear constraint
+    #     - o = in nonlinear objective
+    #     - c1 = in linear constraint
+    #     - o1 = in linear objective
+    println(io, " 0 0 0 0 0")
+    # ==========================================================================
+    # Constraints
+    # Notes:
+    #  * Nonlinear constraints first, then linear.
+    #  * For linear constraints, write out the constant term here.
+    for (i, g) in enumerate(nlmodel.g)
+        println(io, "C", i - 1)
+        _write_nlexpr(io, g.expr, nlmodel)
+    end
+    for (i, h) in enumerate(nlmodel.h)
+        println(io, "C", i - 1 + n_nlcon)
+        _write_nlexpr(io, h.expr, nlmodel)
+    end
+    # ==========================================================================
+    # Objective
+    # Notes:
+    #  * NL files support multiple objectives, but we're just going to write 1,
+    #    so it's always `O0`.
+    #  * For linear objectives, write out the constant term here.
+    println(io, "O0 ", nlmodel.sense == MOI.MAX_SENSE ? "1" : "0")
+    _write_nlexpr(io, nlmodel.f, nlmodel)
+    # ==========================================================================
+    # VariablePrimalStart
+    # Notes:
+    #  * Make sure to write out the variables in order.
+    println(io, "x", length(nlmodel.x))
+    for (i, x) in enumerate(nlmodel.order)
+        start = nlmodel.x[x].start
+        println(io, i - 1, " ", start === nothing ? 0 : _str(start))
+    end
+    # ==========================================================================
+    # Constraint bounds
+    # Notes:
+    #  * Nonlinear constraints go first, then linear.
+    #  * The constant term for linear constraints gets written out in the
+    #    "C" block.
+    if n_con > 0
+        println(io, "r")
+        # Nonlinear constraints
+        for g in nlmodel.g
+            print(io, g.opcode)
+            if g.opcode == 0
+                println(io, " ", _str(g.lower), " ", _str(g.upper))
+            elseif g.opcode == 1
+                println(io, " ", _str(g.upper))
+            elseif g.opcode == 2
+                println(io, " ", _str(g.lower))
+            else
+                @assert g.opcode == 4
+                println(io, " ", _str(g.lower))
             end
         end
-
-        # Calculate objective value from nonlinear and linear parts
-        obj_nonlin = eval(substitute_vars!(deepcopy(m.obj), m.solution))
-        obj_lin = evaluate_linear(m.lin_obj, m.solution)
-        m.objval = obj_nonlin + obj_lin
-    end
-end
-
-function read_sol(m::AmplNLMathProgModel)
-    if !isfile(m.solfile)
-        error(
-            """Unable to open the solution file. The most likely cause of this
-      is the solver executable failing unexpectedly. Unfortunately we don't
-      have any other information about the solution or what went wrong.""",
-        )
-    end
-    open(m.solfile, "r") do io
-        return readsol(io, m)
-    end
-end
-
-function read_sol(f::IO, m::AmplNLMathProgModel)
-    # Reference implementation:
-    # https://github.com/ampl/mp/tree/master/src/asl/solvers/readsol.c
-    stat = :Undefined
-    line = ""
-
-    # Extract the solver message by concatenating all of the lines until
-    # "Options".
-    while true
-        line = readline(f)
-        if length(line) >= 7 && line[1:7] == "Options"
-            break
-        else
-            m.solve_message *= line
+        # Linear constraints
+        for h in nlmodel.h
+            print(io, h.opcode)
+            if h.opcode == 0
+                println(io, " ", _str(h.lower), " ", _str(h.upper))
+            elseif h.opcode == 1
+                println(io, " ", _str(h.upper))
+            elseif h.opcode == 2
+                println(io, " ", _str(h.lower))
+            else
+                @assert h.opcode == 4
+                println(io, " ", _str(h.lower))
+            end
         end
     end
+    # ==========================================================================
+    # Variable bounds
+    # Notes:
+    #  * Not much to note, other than to make sure you iterate the variables in
+    #    the correct order.
+    println(io, "b")
+    for x in nlmodel.order
+        v = nlmodel.x[x]
+        if v.lower == v.upper
+            println(io, "4 ", _str(v.lower))
+        elseif -Inf < v.lower && v.upper < Inf
+            println(io, "0 ", _str(v.lower), " ", _str(v.upper))
+        elseif -Inf == v.lower && v.upper < Inf
+            println(io, "1 ", _str(v.upper))
+        elseif -Inf < v.lower && v.upper == Inf
+            println(io, "2 ", _str(v.lower))
+        else
+            println(io, "3")
+        end
+    end
+    # ==========================================================================
+    # Jacobian block
+    # Notes:
+    #  * If a variable appears in a constraint, it needs to have a corresponding
+    #    entry in the Jacobian block, even if the linear coefficient is zero.
+    #    AMPL uses this to determine the Jacobian sparsity.
+    #  * As before, nonlinear constraints go first, then linear.
+    #  * Don't write out the `k` entry for the last variable, because it can be
+    #    inferred from the total number of elements in the Jacobian as given in
+    #    the header.
+    if n_con > 0
+        println(io, "k", length(nlmodel.x) - 1)
+        total = 0
+        for i in 1:length(nlmodel.order)-1
+            total += nlmodel.x[nlmodel.order[i]].jacobian_count
+            println(io, total)
+        end
+        for (i, g) in enumerate(nlmodel.g)
+            println(io, "J", i - 1, " ", length(g.expr.linear_terms))
+            _write_linear_block(io, g.expr, nlmodel)
+        end
+        for (i, h) in enumerate(nlmodel.h)
+            println(io, "J", i - 1 + n_nlcon, " ", length(h.expr.linear_terms))
+            _write_linear_block(io, h.expr, nlmodel)
+        end
+    end
+    # ==========================================================================
+    # Gradient block
+    # Notes:
+    #  * You only need to write this out if there are linear terms in the
+    #    objective.
+    if nnz_gradient > 0
+        println(io, "G0 ", nnz_gradient)
+        _write_linear_block(io, nlmodel.f, nlmodel)
+    end
+    return nlmodel
+end
 
+"""
+    _interpret_status(solve_result_num::Int, raw_status_string::String)
+
+Convert the `solve_result_num` and `raw_status_string` into MOI-type statuses.
+
+For the primal status, assume a solution is present. Other code is responsible
+for returning `MOI.NO_SOLUTION` if no primal solution is present.
+"""
+function _interpret_status(solve_result_num::Int, raw_status_string::String)
+    if 0 <= solve_result_num < 100
+        return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
+    elseif 100 <= solve_result_num < 200
+        return MOI.LOCALLY_SOLVED, MOI.UNKNOWN_RESULT_STATUS
+    elseif 200 <= solve_result_num < 300
+        return MOI.INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
+    elseif 300 <= solve_result_num < 400
+        return MOI.DUAL_INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
+    elseif 400 <= solve_result_num < 500
+        return MOI.OTHER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
+    elseif 500 <= solve_result_num < 600
+        return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
+    end
+    # If we didn't get a valid solve_result_num, try to get the status from the
+    # solve_message string. Some solvers (e.g. SCIP) don't ever print the
+    # suffixes so we need this.
+    message = lowercase(raw_status_string)
+    if occursin("optimal", message)
+        return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
+    elseif occursin("infeasible", message)
+        return MOI.INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
+    elseif occursin("unbounded", message)
+        return MOI.DUAL_INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
+    elseif occursin("limit", message)
+        return MOI.OTHER_LIMIT, MOI.UNKNOWN_RESULT_STATUS
+    elseif occursin("error", message)
+        return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
+    else
+        return MOI.OTHER_ERROR, MOI.UNKNOWN_RESULT_STATUS
+    end
+end
+
+function _readline(io::IO)
+    if eof(io)
+        error("Reached end of sol file unexpectedly.")
+    end
+    return strip(readline(io))
+end
+_readline(io::IO, T) = parse(T, _readline(io))
+
+function _read_sol(filename::String, model::Optimizer)
+    return open(io -> _read_sol(io, model), filename, "r")
+end
+
+"""
+    _read_sol(io::IO, model::Optimizer)
+
+This function is based on a Julia translation of readsol.c, available at
+https://github.com/ampl/asl/blob/64919f75fa7a438f4b41bce892dcbe2ae38343ee/src/solvers/readsol.c
+and under the following license:
+
+Copyright (C) 2017 AMPL Optimization, Inc.; written by David M. Gay.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and this permission notice and warranty
+disclaimer appear in supporting documentation.
+
+The author and AMPL Optimization, Inc. disclaim all warranties with
+regard to this software, including all implied warranties of
+merchantability and fitness.  In no event shall the author be liable
+for any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortious action, arising out
+of or in connection with the use or performance of this software.
+"""
+function _read_sol(io::IO, model::Optimizer)
+    raw_status_string = ""
+    line = ""
+    while !startswith(line, "Options")
+        line = _readline(io)
+        raw_status_string *= line
+    end
     # Read through all the options. Direct copy of reference implementation.
-    @assert line[1:7] == "Options"
-    options = [parse(Int, chomp(readline(f))) for _ in 1:3]
+    @assert startswith(line, "Options")
+    options = [_readline(io, Int), _readline(io, Int), _readline(io, Int)]
     num_options = options[1]
-    3 <= num_options <= 9 ||
+    if !(3 <= num_options <= 9)
         error("expected num_options between 3 and 9; " * "got $num_options")
+    end
     need_vbtol = false
     if options[3] == 3
         num_options -= 2
         need_vbtol = true
     end
     for j in 3:num_options
-        eof(f) && error()
-        push!(options, parse(Int, chomp(readline(f))))
+        push!(options, _readline(io, Int))
     end
-
     # Read number of constraints
-    num_cons = parse(Int, chomp(readline(f)))
-    @assert(num_cons == m.ncon)
-
-    # Read number of duals to read in
-    num_duals_to_read = parse(Int, chomp(readline(f)))
-    @assert(num_duals_to_read in [0; m.ncon])
-
+    num_cons = _readline(io, Int)
+    @assert(num_cons == length(model.g) + length(model.h))
+    # Read number of dual solutions to read in
+    num_duals_to_read = _readline(io, Int)
+    @assert(num_duals_to_read == 0 || num_duals_to_read == num_cons)
     # Read number of variables
-    num_vars = parse(Int, chomp(readline(f)))
-    @assert(num_vars == m.nvar)
-
-    # Read number of variables to read in
-    num_vars_to_read = parse(Int, chomp(readline(f)))
-    @assert(num_vars_to_read in [0; m.nvar])
-
+    num_vars = _readline(io, Int)
+    @assert(num_vars == length(model.x))
+    # Read number of primal solutions to read in
+    num_vars_to_read = _readline(io, Int)
+    @assert(num_vars_to_read == 0 || num_vars_to_read == num_vars)
     # Skip over vbtol line if present
-    need_vbtol && readline(f)
-
-    # Skip over duals
-    # TODO do something with these?
-    for index in 0:(num_duals_to_read-1)
-        eof(f) && error("End of file while reading duals.")
-        line = readline(f)
+    if need_vbtol
+        _readline(io)
     end
-
-    # Next, read for the variable values
-    x = fill(NaN, m.nvar)
-    m.objval = NaN
-    for index in 0:(num_vars_to_read-1)
-        eof(f) && error("End of file while reading variables.")
-        line = readline(f)
-
-        i = m.v_index_map_rev[index]
-        x[i] = parse(Float64, chomp(line))
+    # Read dual solutions
+    # TODO(odow): read in the dual solutions!
+    for _ in 1:num_duals_to_read
+        _readline(io)
     end
-    m.solution = x
-
+    # Read primal solutions
+    primal_solution = Dict{MOI.VariableIndex,Float64}()
+    if num_vars_to_read > 0
+        for xi in model.order
+            primal_solution[xi] = _readline(io, Float64)
+        end
+    end
     # Check for status code
-    while !eof(f)
-        line = readline(f)
-        linevals = split(chomp(line), " ")
-        num_vals = length(linevals)
-        if num_vals > 0 && linevals[1] == "objno"
-            # Check for objno == 0
+    solve_result_num = -1
+    while !eof(io)
+        linevals = split(_readline(io), " ")
+        if length(linevals) > 0 && linevals[1] == "objno"
             @assert parse(Int, linevals[2]) == 0
-            # Get solve_result
-            m.solve_result_num = parse(Int, linevals[3])
-
-            # We can stop looking for the 'objno' line
+            solve_result_num = parse(Int, linevals[3])
             break
         end
     end
-    return num_vars_to_read > 0
+    termination_status, primal_status =
+        _interpret_status(solve_result_num, raw_status_string)
+    objective_value = NaN
+    if length(primal_solution) > 0
+        # TODO(odow): is there a better way of getting this other than
+        # evaluating it?
+        objective_value = _evaluate(model.f, primal_solution)
+    end
+    return _NLResults(
+        raw_status_string,
+        termination_status,
+        length(primal_solution) > 0 ? primal_status : MOI.NO_SOLUTION,
+        objective_value,
+        primal_solution,
+    )
 end
 
-substitute_vars!(c, x::Array{Float64}) = c
-function substitute_vars!(c::Expr, x::Array{Float64})
-    if c.head == :ref
-        if c.args[1] == :x
-            index = c.args[2]
-            @assert isa(index, Int)
-            c = x[index]
-        else
-            error("Unrecognized reference expression $c")
-        end
-    else
-        if c.head == :call
-            # Convert .nl unary minus (:neg) back to :-
-            if c.args[1] == :neg
-                c.args[1] = :-
-                # Convert .nl :sum back to :+
-            elseif c.args[1] == :sum
-                c.args[1] = :+
+function MOI.optimize!(model::Optimizer)
+    temp_dir = mktempdir()
+    nl_file = joinpath(temp_dir, "model.nl")
+    open(io -> write(io, model), nl_file, "w")
+    try
+        model.optimizer() do solver_path
+            ret = run(
+                pipeline(
+                    `$(solver_path) $(nl_file) -AMPL $(model.options)`,
+                    stdout = stdout,
+                    stdin = stdin,
+                ),
+            )
+            if ret.exitcode != 0
+                error("Nonzero exit code: $(ret.exitcode)")
             end
         end
-        map!(arg -> substitute_vars!(arg, x), c.args, c.args)
+        model.results = _read_sol(joinpath(temp_dir, "model.sol"), model)
+    catch err
+        model.results = _NLResults(
+            "Error calling the solver. Failed with: $(err)",
+            MOI.OTHER_ERROR,
+            MOI.NO_SOLUTION,
+            NaN,
+            Dict{MOI.VariableIndex,Float64}(),
+        )
     end
-    return c
+    return
 end
 
-function evaluate_linear(linear_coeffs::Dict{Int,Float64}, x::Array{Float64})
-    total = 0.0
-    for (i, coeff) in linear_coeffs
-        total += coeff * x[i]
-    end
-    return total
+function MOI.get(model::Optimizer, attr::MOI.ObjectiveValue)
+    MOI.check_result_index_bounds(model, attr)
+    return model.results.objective_value
 end
 
-# Wrapper functions
-for f in [
-    :getvartype,
-    :getsense,
-    :optimize!,
-    :status,
-    :getsolution,
-    :getobjval,
-    :numvar,
-    :numconstr,
-    :getsolvetime,
-]
-    @eval SolverInterface.$f(m::AmplNLNonlinearModel) = $f(m.inner)
-    @eval SolverInterface.$f(m::AmplNLLinearQuadraticModel) = $f(m.inner)
-end
-for f in [
-    :get_solve_result,
-    :get_solve_result_num,
-    :get_solve_message,
-    :get_solve_exitcode,
-]
-    @eval $f(m::AmplNLNonlinearModel) = $f(m.inner)
-    @eval $f(m::AmplNLLinearQuadraticModel) = $f(m.inner)
-end
-for f in [:setvartype!, :setsense!, :setwarmstart!]
-    @eval SolverInterface.$f(m::AmplNLNonlinearModel, x) = $f(m.inner, x)
-    @eval SolverInterface.$f(m::AmplNLLinearQuadraticModel, x) = $f(m.inner, x)
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.VariablePrimal,
+    x::MOI.VariableIndex,
+)
+    MOI.check_result_index_bounds(model, attr)
+    return model.results.primal_solution[x]
 end
 
-# Utility method for deleting any leftover debug files
-function clean_solverdata()
-    for file in readdir(solverdata_dir)
-        ext = splitext(file)[2]
-        (ext == ".nl" || ext == ".sol") && rm(joinpath(solverdata_dir, file))
-    end
+function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
+    return model.results.termination_status
 end
 
-include("MOI_wrapper.jl")
+function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
+    return attr.N == 1 ? model.results.primal_status : MOI.NO_SOLUTION
+end
+
+MOI.get(::Optimizer, ::MOI.DualStatus) = MOI.NO_SOLUTION
+
+function MOI.get(model::Optimizer, ::MOI.RawStatusString)
+    return model.results.raw_status_string
+end
+
+function MOI.get(model::Optimizer, ::MOI.ResultCount)
+    return MOI.get(model, MOI.PrimalStatus()) == MOI.FEASIBLE_POINT ? 1 : 0
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintPrimal,
+    ci::MOI.ConstraintIndex{<:MOI.SingleVariable},
+)
+    MOI.check_result_index_bounds(model, attr)
+    return model.results.primal_solution[MOI.VariableIndex(ci.value)]
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintPrimal,
+    ci::MOI.ConstraintIndex{<:MOI.ScalarAffineFunction},
+)
+    MOI.check_result_index_bounds(model, attr)
+    return _evaluate(model.h[ci.value].expr, model.results.primal_solution)
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintPrimal,
+    ci::MOI.ConstraintIndex{<:MOI.ScalarQuadraticFunction},
+)
+    MOI.check_result_index_bounds(model, attr)
+    return _evaluate(model.g[ci.value].expr, model.results.primal_solution)
+end
+
+function MOI.write_to_file(model::Optimizer, filename::String)
+    open(io -> write(io, model), filename, "w")
+    return
+end
 
 end

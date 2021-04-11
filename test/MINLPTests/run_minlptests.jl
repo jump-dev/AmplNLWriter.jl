@@ -10,8 +10,14 @@ else
     run_with_ampl(f) = Ipopt_jll.amplexe(f)
 end
 
+const MOI = AmplNLWriter.MOI
+
 run_with_ampl() do path
-    OPTIMIZER = () -> AmplNLWriter.Optimizer(path, ["print_level=0"])
+    OPTIMIZER =
+        () -> MOI.Utilities.CachingOptimizer(
+            MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
+            AmplNLWriter.Optimizer(path, ["print_level=0"]),
+        )
     ###
     ### src/nlp tests.
     ###
@@ -35,7 +41,10 @@ run_with_ampl() do path
             NaN,
             NaN,
             Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.INFEASIBLE),
-            Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION),
+            Dict(
+                MINLPTests.INFEASIBLE_PROBLEM =>
+                    AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
+            ),
         )
     end
 
