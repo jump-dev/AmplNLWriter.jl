@@ -298,7 +298,7 @@ MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{<:_SCALAR_FUNCTIONS}) = true
 
 MOI.supports(::Optimizer, ::MOI.RawParameter) = true
 function MOI.get(model::Optimizer, attr::MOI.RawParameter)
-    return get(model.options, attr.name, "")
+    return get(model.options, attr.name, nothing)
 end
 function MOI.set(model::Optimizer, attr::MOI.RawParameter, value)
     model.options[attr.name] = value
