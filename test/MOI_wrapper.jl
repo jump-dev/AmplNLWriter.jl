@@ -11,7 +11,6 @@ const CONFIG = MOI.Test.TestConfig(
     rtol = 1e-4,
     optimal_status = MOI.LOCALLY_SOLVED,
     infeas_certificates = false,
-    duals = false,
 )
 
 function optimizer(path)
