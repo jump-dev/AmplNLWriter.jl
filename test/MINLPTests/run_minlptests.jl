@@ -1,18 +1,13 @@
-import AmplNLWriter
-import MINLPTests
-using Test
-
-const FUNCTIONS = if VERSION < v"1.3"
-    import Ipopt
-    [("Ipopt", Ipopt.amplexe)]
-else
-    import Bonmin_jll, Couenne_jll, Ipopt_jll
-    [
-        ("Bonmin", Bonmin_jll.amplexe),
-        ("Couenne", Couenne_jll.amplexe),
-        ("Ipopt", Ipopt_jll.amplexe),
-    ]
+if VERSION < v"1.3"
+    error("You must use Julia 1.3 or newer.")
 end
+
+import AmplNLWriter
+import Bonmin_jll
+import Couenne_jll
+import Ipopt_jll
+import MINLPTest
+using Test
 
 const TERMINATION_TARGET = Dict(
     MINLPTests.FEASIBLE_PROBLEM => AmplNLWriter.MOI.LOCALLY_SOLVED,
@@ -21,49 +16,58 @@ const TERMINATION_TARGET = Dict(
 
 const PRIMAL_TARGET = Dict(
     MINLPTests.FEASIBLE_PROBLEM => AmplNLWriter.MOI.FEASIBLE_POINT,
-    MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION,
+    MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
 )
 
-const TOL = Dict(
-    "Bonmin" => 1e-5,
-    "Couenne" => 1e-2,
-    "Ipopt" => 1e-5,
+const CONFIG = Dict(
+    "Bonmin" => Dict(
+        "amplexe" => Bonmin_jll.amplexe,
+        "options" => ["bonmin.print_level=0"],
+        "tol" => 1e-5,
+        "nlp_exclude" => ["005_011", "006_010"],
+        "nlpcvx_exclude" => ["109_010"],
+        "nlpmi_exclude" => ["005_011", "006_010"],
+    ),
+    "Couenne" => Dict(
+        "amplexe" => Couenne_jll.amplexe,
+        "options" => [],
+        "tol" => 1e-2,
+        "nlp_exclude" => ["005_011", "006_010", "008_010", "008_011"],
+        "nlpcvx_exclude" => ["109_010", "206_010"],
+        "nlpmi_exclude" => ["001_010", "005_011", "006_010"],
+    ),
+    "Ipopt" => Dict(
+        "amplexe" => Ipopt_jll.amplexe,
+        "options" => ["print_level=0"],
+        "tol" => 1e-5,
+        "nlp_exclude" => ["005_011", "006_010"],
+        "nlpcvx_exclude" => ["109_010"],
+        "nlpmi_exclude" => ["005_011", "006_010"],
+    )
 )
 
-@testset "$(name)" for (name, amplexe) in FUNCTIONS
-    OPTIMIZER = () -> AmplNLWriter.Optimizer(amplexe, ["print_level=0"])
+@testset "$(name)" for (name, config) in CONFIG
+    OPTIMIZER =
+        () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
     @testset "NLP" begin
         MINLPTests.test_nlp(
             OPTIMIZER,
-            exclude = String[
-                # Uses the function `\`
-                "005_011",
-                # User-defined function
-                "006_010",
-                # Fails to converge
-                name == "Couenne" ? "008_010" : "",
-                name == "Couenne" ? "008_011" : "",
-            ],
+            exclude = config["nlp_exlude"],
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
-            objective_tol = 1e-5,
-            primal_tol = 1e-5,
-           dual_tol = NaN,
+            objective_tol = config["tol"],
+            primal_tol = config["tol"],
+            dual_tol = NaN,
         )
     end
     @testset "NLP-CVX" begin
         MINLPTests.test_nlp_cvx(
             OPTIMIZER,
-            exclude = String[
-                # Ipopt fails to converge
-                "109_010",
-                # Unable to evaluate pow
-                name == "Couenne" ? "206_010" : "",
-            ],
+            exclude = config["nlpcvx_exlude"],
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
-            objective_tol = TOL[name],
-            primal_tol = TOL[name],
+            objective_tol = config["tol"],
+            primal_tol = config["tol"],
             dual_tol = NaN,
         )
     end
@@ -71,18 +75,11 @@ const TOL = Dict(
         @testset "NLP-MI" begin
             MINLPTests.test_nlp_mi(
                 OPTIMIZER,
-                exclude = String[
-                    # Fails to converge
-                    name == "Couenne" ? "001_010" : "",
-                    # Uses the function `\`
-                    "005_011",
-                    # User-defined function
-                    "006_010",
-                ],
+                exclude = config["nlpmi_exclude"],
                 termination_target = TERMINATION_TARGET,
                 primal_target = PRIMAL_TARGET,
-                objective_tol = TOL[name],
-                primal_tol = TOL[name],
+                objective_tol = config["tol"],
+                primal_tol = config["tol"],
                 dual_tol = NaN,
             )
         end
