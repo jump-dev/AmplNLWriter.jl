@@ -10,10 +10,12 @@ else
     run_with_ampl(f) = Ipopt_jll.amplexe(f)
 end
 
+const MOI = AmplNLWriter.MOI
+
 run_with_ampl() do path
     OPTIMIZER =
         () -> MOI.CachingOptimizer(
-            MOI.Utilities.Model{Float64}(),
+            MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
             AmplNLWriter.Optimizer(path, ["print_level=0"]),
         )
     ###
