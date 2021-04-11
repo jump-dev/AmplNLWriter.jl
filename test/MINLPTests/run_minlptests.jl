@@ -31,24 +31,30 @@ for (name, amplexe) in FUNCTIONS
         MINLPTests.test_nlp(
             OPTIMIZER,
             exclude = String[
-                "005_011",  # Uses the function `\`
-                "006_010",  # User-defined function
+                # Uses the function `\`
+                "005_011",
+                # User-defined function
+                "006_010",
             ],
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
-            # objective_tol = 1e-5,
-            # primal_tol = 1e-5,
-            # dual_tol = NaN,
+            objective_tol = 1e-5,
+            primal_tol = 1e-5,
+           dual_tol = NaN,
         )
     end
     @testset "NLP-CVX" begin
         MINLPTests.test_nlp_cvx(
             OPTIMIZER,
             exclude = String[
-                "109_010",  # Ipopt fails to converge
+                # Ipopt fails to converge
+                "109_010",
             ],
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
+            objective_tol = 1e-5,
+            primal_tol = 1e-5,
+            dual_tol = NaN,
         )
     end
     if name != "Ipopt"
@@ -56,11 +62,16 @@ for (name, amplexe) in FUNCTIONS
             MINLPTests.test_nlp_mi(
                 OPTIMIZER,
                 exclude = String[
-                    "005_011",  # Uses the function `\`
-                    "006_010",  # User-defined function
+                    # Uses the function `\`
+                    "005_011",
+                    # User-defined function
+                    "006_010",
                 ],
                 termination_target = TERMINATION_TARGET,
                 primal_target = PRIMAL_TARGET,
+                objective_tol = 1e-5,
+                primal_tol = 1e-5,
+                dual_tol = NaN,
             )
         end
     end
