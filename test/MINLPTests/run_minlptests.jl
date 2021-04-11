@@ -2,57 +2,62 @@ import AmplNLWriter
 import MINLPTests
 using Test
 
-if VERSION < v"1.3"
+const FUNCTIONS = if VERSION < v"1.3"
     import Ipopt
-    run_with_ampl(f) = f(Ipopt.amplexe)
+    [("Ipopt", Ipopt.amplexe)]
 else
-    import Ipopt_jll
-    run_with_ampl(f) = Ipopt_jll.amplexe(f)
+    import Bonmin_jll, Couenne_jll, Ipopt_jll
+    [
+        ("Bonmin", Bonmin_jll.amplexe),
+        ("Couenne", Couenne_jll.amplexe),
+        ("Ipopt", Ipopt_jll.amplexe),
+    ]
 end
 
-const MOI = AmplNLWriter.MOI
+const TERMINATION_TARGET = Dict(
+    MINLPTests.FEASIBLE_PROBLEM => AmplNLWriter.MOI.LOCALLY_SOLVED,
+    MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.INFEASIBLE,
+)
 
-run_with_ampl() do path
-    OPTIMIZER =
-        () -> MOI.Utilities.CachingOptimizer(
-            MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
-            AmplNLWriter.Optimizer(path, ["print_level=0"]),
-        )
-    ###
-    ### src/nlp tests.
-    ###
+const PRIMAL_TARGET = Dict(
+    MINLPTests.FEASIBLE_PROBLEM => AmplNLWriter.MOI.FEASIBLE_POINT,
+    MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION,
+)
 
-    MINLPTests.test_nlp(
-        OPTIMIZER,
-        exclude = [
-            "005_011",  # Uses the function `\`
-            "006_010",  # User-defined function
-            "007_010",  # Infeasible model
-        ],
-        objective_tol = 1e-5,
-        primal_tol = 1e-5,
-        dual_tol = NaN,
-    )
-
-    @testset "nlp_007_010" begin
-        MINLPTests.nlp_007_010(
+@testset "$(name)" for (name, amplexe) in FUNCTIONS
+    OPTIMIZER = () -> AmplNLWriter.Optimizer(amplexe, ["print_level=0"])
+    @testset "NLP" begin
+        MINLPTests.test_nlp(
             OPTIMIZER,
-            1e-5,
-            NaN,
-            NaN,
-            Dict(MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.INFEASIBLE),
-            Dict(
-                MINLPTests.INFEASIBLE_PROBLEM =>
-                    AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
-            ),
+            exclude = String[
+                "005_011",  # Uses the function `\`
+                "006_010",  # User-defined function
+            ],
+            termination_target = TERMINATION_TARGET,
+            primal_target = PRIMAL_TARGET,
+            objective_tol = 1e-5,
+            primal_tol = 1e-5,
+            dual_tol = NaN,
         )
     end
-
-    ###
-    ### src/nlp-cvx tests.
-    ###
-
-    return MINLPTests.test_nlp_cvx(OPTIMIZER, exclude = [
-        "109_010",  # Ipopt fails to converge
-    ])
+    @testset "NLP-CVX"
+    MINLPTests.test_nlp_cvx(
+        OPTIMIZER,
+        exclude = String[
+            "109_010"  # Ipopt fails to converge
+        ],
+    )
+    if name != "Ipopt"
+        @testset "NLP-MI" begin
+            MINLPTests.test_nlp_mi(
+                OPTIMIZER,
+                exclude = String[
+                    "005_011",  # Uses the function `\`
+                    "006_010",  # User-defined function
+                ],
+                termination_target = TERMINATION_TARGET,
+                primal_target = PRIMAL_TARGET,
+            )
+        end
+    end
 end
