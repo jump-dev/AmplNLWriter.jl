@@ -13,11 +13,13 @@ end
 const MOI = AmplNLWriter.MOI
 
 run_with_ampl() do path
-    OPTIMIZER =
+    OPTIMIZER = MOI.OptimizerWithAttributes(
         () -> MOI.Utilities.CachingOptimizer(
             MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
-            AmplNLWriter.Optimizer(path, ["print_level=0"]),
-        )
+            AmplNLWriter.Optimizer(path),
+        ),
+        "print_level" => 0,
+    )
     ###
     ### src/nlp tests.
     ###

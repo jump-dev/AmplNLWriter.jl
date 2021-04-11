@@ -15,12 +15,14 @@ const CONFIG = MOI.Test.TestConfig(
 )
 
 function optimizer(path)
+    model = AmplNLWriter.Optimizer(path)
+    MOI.set(model, MOI.RawParameter("print_level"), 0)
     return MOI.Utilities.CachingOptimizer(
         MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
         MOI.Bridges.full_bridge_optimizer(
             MOI.Utilities.CachingOptimizer(
                 MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
-                AmplNLWriter.Optimizer(path, ["print_level = 0"]),
+                model,
             ),
             Float64,
         ),

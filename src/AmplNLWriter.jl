@@ -137,7 +137,7 @@ _solver_command(x::Function) = x
 
 mutable struct Optimizer <: MOI.AbstractOptimizer
     optimizer::Function
-    options::Vector{String}
+    options::Dict{String,Any}
     results::_NLResults
     # Store MOI.Name().
     name::String
@@ -159,7 +159,7 @@ end
 """
     Optimizer(
         solver_command::Union{String,Function},
-        options::Vector{String} = String[],
+        solver_args::Vector{String},
     )
 
 Create a new Optimizer object.
@@ -171,18 +171,21 @@ Create a new Optimizer object.
   as needed, calls the input function with a path to the initialized executable,
   and then destructs the environment.
 
-# Examples
+`solver_args` is a vector of `String` arguments passed solver executable.
+However, prefer passing `key=value` options via `MOI.RawParameter`.
+
+## Examples
 
 A string to an executable:
 ```julia
-Optimizer("/path/to/ipopt.exe", ["print_level=0"])
+Optimizer("/path/to/ipopt.exe")
 ```
 
 A function or string provided by a package:
 ```julia
-Optimizer(Ipopt.amplexe, ["print_level=0"])
+Optimizer(Ipopt.amplexe)
 # or
-Optimizer(Ipopt_jll.amplexe, ["print_level=0"])
+Optimizer(Ipopt_jll.amplexe)
 ```
 
 A custom function
@@ -195,14 +198,23 @@ function solver_command(f::Function)
 end
 Optimizer(solver_command)
 ```
+
+The following two calls are equivalent:
+```julia
+# Okay:
+model = Optimizer(Ipopt_jll.amplexe, ["print_level=0"])
+# Better:
+model = Optimizer(Ipopt_jll.amplexe)
+MOI.set(model, MOI.RawParameter("print_level"), 0
+```
 """
 function Optimizer(
     solver_command::Union{String,Function} = "",
-    options::Vector{String} = String[],
+    solver_args::Vector{String} = String[],
 )
     return Optimizer(
         _solver_command(solver_command),
-        options,
+        Dict{String,String}(opt => "" for opt in solver_args),
         _NLResults(
             "Optimize not called.",
             MOI.OPTIMIZE_NOT_CALLED,
@@ -283,6 +295,15 @@ end
 
 MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{<:_SCALAR_FUNCTIONS}) = true
+
+MOI.supports(::Optimizer, ::MOI.RawParameter) = true
+function MOI.get(model::Optimizer, attr::MOI.RawParameter)
+    return get(model.options, attr.name, "")
+end
+function MOI.set(model::Optimizer, attr::MOI.RawParameter, value)
+    model.options[attr.name] = value
+    return
+end
 
 # =============================================================================
 
@@ -1020,11 +1041,12 @@ function MOI.optimize!(model::Optimizer)
     temp_dir = mktempdir()
     nl_file = joinpath(temp_dir, "model.nl")
     open(io -> write(io, model), nl_file, "w")
+    options = [isempty(v) ? k : "$(k)=$(v)" for (k, v) in model.options]
     try
         model.optimizer() do solver_path
             ret = run(
                 pipeline(
-                    `$(solver_path) $(nl_file) -AMPL $(model.options)`,
+                    `$(solver_path) $(nl_file) -AMPL $(options)`,
                     stdout = stdout,
                     stdin = stdin,
                 ),
