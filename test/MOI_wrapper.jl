@@ -15,12 +15,14 @@ const CONFIG = MOI.Test.TestConfig(
 )
 
 function optimizer(path)
+    model = AmplNLWriter.Optimizer(path)
+    MOI.set(model, MOI.RawParameter("print_level"), 0)
     return MOI.Utilities.CachingOptimizer(
         MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
         MOI.Bridges.full_bridge_optimizer(
             MOI.Utilities.CachingOptimizer(
                 MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
-                AmplNLWriter.Optimizer(path, ["print_level = 0"]),
+                model,
             ),
             Float64,
         ),
@@ -120,6 +122,15 @@ function test_function_constant_nonzero(path)
     MOI.optimize!(model)
     @test isapprox(MOI.get(model, MOI.VariablePrimal(), x), 2.0, atol = 1e-6)
     @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 3.0, atol = 1e-6)
+end
+
+function test_raw_parameter(path)
+    model = AmplNLWriter.Optimizer(path)
+    attr = MOI.RawParameter("print_level")
+    @test MOI.supports(model, attr)
+    @test MOI.get(model, attr) === nothing
+    MOI.set(model, attr, 0)
+    @test MOI.get(model, attr) == 0
 end
 
 function runtests(path)
