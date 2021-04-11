@@ -177,7 +177,7 @@ function test_nlconstraint_equalto_warn()
 end
 
 function test_nlmodel_hs071()
-    model = NL.Optimizer()
+    model = MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}())
     v = MOI.add_variables(model, 4)
     l = [1.1, 1.2, 1.3, 1.4]
     u = [5.1, 5.2, 5.3, 5.4]
@@ -190,7 +190,8 @@ function test_nlmodel_hs071()
     block_data = MOI.NLPBlockData(MOI.NLPBoundsPair.(lb, ub), evaluator, true)
     MOI.set(model, MOI.NLPBlock(), block_data)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-    n = NL._NLModel(model)
+    n = NL.Optimizer()
+    MOI.copy_to(n, model)
     @test n.sense == MOI.MIN_SENSE
     @test n.f == NL._NLExpr(MOI.objective_expr(evaluator))
     _test_nlexpr(
@@ -237,7 +238,7 @@ function test_nlmodel_hs071()
         @test 0 <= n.x[v[i]].order <= 3
     end
     @test length(n.types[1]) == 4
-    @test sprint(write, model) == """
+    @test sprint(write, n) == """
     g3 1 1 0
      4 2 1 0 1 0
      2 1
@@ -320,7 +321,7 @@ function test_nlmodel_hs071()
 end
 
 function test_nlmodel_hs071_linear_obj()
-    model = NL.Optimizer()
+    model = MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}())
     v = MOI.add_variables(model, 4)
     l = [1.1, 1.2, 1.3, 1.4]
     u = [5.1, 5.2, 5.3, 5.4]
@@ -337,7 +338,8 @@ function test_nlmodel_hs071_linear_obj()
     f = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(l, v), 2.0)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-    n = NL._NLModel(model)
+    n = NL.Optimizer()
+    MOI.copy_to(n, model)
     @test n.sense == MOI.MAX_SENSE
     @test n.f == NL._NLExpr(f)
     _test_nlexpr(
@@ -391,7 +393,7 @@ function test_nlmodel_hs071_linear_obj()
     @test v[2] in n.types[4]
     @test v[3] in n.types[4]
     @test v[4] in n.types[3]
-    @test sprint(write, model) == """
+    @test sprint(write, n) == """
     g3 1 1 0
      4 2 1 0 1 0
      2 1
@@ -464,7 +466,7 @@ function test_nlmodel_hs071_linear_obj()
 end
 
 function test_nlmodel_linear_quadratic()
-    model = NL.Optimizer()
+    model = MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}())
     x = MOI.add_variables(model, 4)
     MOI.add_constraint.(model, MOI.SingleVariable.(x), MOI.GreaterThan(0.0))
     MOI.add_constraint.(model, MOI.SingleVariable.(x), MOI.LessThan(2.0))
@@ -485,7 +487,8 @@ function test_nlmodel_linear_quadratic()
     MOI.add_constraint(model, g, MOI.LessThan(5.0))
     MOI.set(model, MOI.ObjectiveFunction{typeof(h)}(), h)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-    n = NL._NLModel(model)
+    n = NL.Optimizer()
+    MOI.copy_to(n, model)
     @test n.sense == MOI.MAX_SENSE
     @test n.f == NL._NLExpr(h)
     terms = [NL.OPMULT, 2.0, NL.OPMULT, x[1], x[2]]
@@ -501,7 +504,7 @@ function test_nlmodel_linear_quadratic()
     @test n.types[2] == [x[2]]  # Discrete in both
     @test n.types[6] == [x[3]]  # Discrete in objective only
     @test n.types[7] == [x[4]]  # Continuous in linear
-    @test sprint(write, model) == """
+    @test sprint(write, n) == """
     g3 1 1 0
      4 2 1 1 0 0
      1 1
@@ -623,7 +626,7 @@ Test the problem
          z ∈ {0, 1}
 """
 function test_issue_79()
-    model = NL.Optimizer()
+    model = MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}())
     x = MOI.add_variable(model)
     z = MOI.add_variable(model)
     MOI.add_constraint(model, MOI.SingleVariable(z), MOI.ZeroOne())
@@ -643,7 +646,8 @@ function test_issue_79()
         ),
         MOI.LessThan(0.0),
     )
-    n = NL._NLModel(model)
+    n = NL.Optimizer()
+    MOI.copy_to(n, model)
     # x is continuous in a nonlinear constraint             [Priority 3]
     # z is discrete in a nonlinear constraint and objective [Priority 2]
     @test n.x[x].order == 1
@@ -651,24 +655,26 @@ function test_issue_79()
 end
 
 function test_malformed_constraint_error()
-    model = NL.Optimizer()
+    model = MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}())
     x = MOI.add_variable(model)
     MOI.add_constraint(
         model,
         MOI.ScalarAffineFunction(MOI.ScalarAffineTerm{Float64}[], 1.0),
         MOI.LessThan(0.0),
     )
-    @test_throws ErrorException NL._NLModel(model)
+    n = NL.Optimizer()
+    @test_throws ErrorException MOI.copy_to(n, model)
 end
 
 struct NoExprGraph <: MOI.AbstractNLPEvaluator end
 MOI.features_available(::NoExprGraph) = Symbol[]
 
 function test_noexpr_graph()
-    model = NL.Optimizer()
+    model = MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}())
     block_data = MOI.NLPBlockData(MOI.NLPBoundsPair[], NoExprGraph(), false)
     MOI.set(model, MOI.NLPBlock(), block_data)
-    @test_throws ErrorException NL._NLModel(model)
+    n = NL.Optimizer()
+    @test_throws ErrorException MOI.copy_to(n, model)
 end
 
 function runtests()

@@ -11,7 +11,11 @@ else
 end
 
 run_with_ampl() do path
-    OPTIMIZER = () -> AmplNLWriter.Optimizer(path, ["print_level=0"])
+    OPTIMIZER =
+        () -> MOI.CachingOptimizer(
+            MOI.Utilities.Model{Float64}(),
+            AmplNLWriter.Optimizer(path, ["print_level=0"]),
+        )
     ###
     ### src/nlp tests.
     ###

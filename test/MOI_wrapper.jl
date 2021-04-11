@@ -15,9 +15,15 @@ const CONFIG = MOI.Test.TestConfig(
 )
 
 function optimizer(path)
-    return MOI.Bridges.full_bridge_optimizer(
-        AmplNLWriter.Optimizer(path, ["print_level = 0"]),
-        Float64,
+    return MOI.Utilities.CachingOptimizer(
+        MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
+        MOI.Bridges.full_bridge_optimizer(
+            MOI.Utilities.CachingOptimizer(
+                MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
+                AmplNLWriter.Optimizer(path, ["print_level = 0"]),
+            ),
+            Float64,
+        ),
     )
 end
 
@@ -89,13 +95,7 @@ function test_orderedindices(path)
 end
 
 function test_copytest(path)
-    return MOI.Test.copytest(
-        optimizer(path),
-        MOI.Bridges.full_bridge_optimizer(
-            AmplNLWriter.Optimizer(path),
-            Float64,
-        ),
-    )
+    return MOI.Test.copytest(optimizer(path), optimizer(path))
 end
 
 function test_nlptest(path)
@@ -103,7 +103,7 @@ function test_nlptest(path)
 end
 
 function test_bad_string(::Any)
-    model = AmplNLWriter.Optimizer("bad_solver")
+    model = optimizer("bad_solver")
     x = MOI.add_variable(model)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OTHER_ERROR
