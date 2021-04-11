@@ -124,6 +124,15 @@ function test_function_constant_nonzero(path)
     @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 3.0, atol = 1e-6)
 end
 
+function test_raw_parameter(path)
+    model = AmplNLWriter.Optimizer(path)
+    attr = MOI.RawParameter("print_level")
+    @test MOI.supports(model, attr)
+    @test MOI.get(model, attr) === nothing
+    MOI.set(model, attr, 0)
+    @test MOI.get(model, attr) == 0
+end
+
 function runtests(path)
     for name in names(@__MODULE__; all = true)
         if !startswith("$(name)", "test_")
