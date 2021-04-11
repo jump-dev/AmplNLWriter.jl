@@ -24,7 +24,8 @@ const PRIMAL_TARGET = Dict(
     MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION,
 )
 
-@testset "$(name)" for (name, amplexe) in FUNCTIONS
+# @testset "$(name)" 
+for (name, amplexe) in FUNCTIONS
     OPTIMIZER = () -> AmplNLWriter.Optimizer(amplexe, ["print_level=0"])
     @testset "NLP" begin
         MINLPTests.test_nlp(
@@ -35,17 +36,19 @@ const PRIMAL_TARGET = Dict(
             ],
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
-            objective_tol = 1e-5,
-            primal_tol = 1e-5,
-            dual_tol = NaN,
+            # objective_tol = 1e-5,
+            # primal_tol = 1e-5,
+            # dual_tol = NaN,
         )
     end
     @testset "NLP-CVX" begin
         MINLPTests.test_nlp_cvx(
             OPTIMIZER,
             exclude = String[
-                "109_010"  # Ipopt fails to converge
+                "109_010",  # Ipopt fails to converge
             ],
+            termination_target = TERMINATION_TARGET,
+            primal_target = PRIMAL_TARGET,
         )
     end
     if name != "Ipopt"
