@@ -1024,8 +1024,8 @@ function _read_sol(io::IO, model::Optimizer)
         _interpret_status(solve_result_num, raw_status_string)
     objective_value = NaN
     if length(primal_solution) > 0
-        # TODO(odow): is there a better way of getting this other than
-        # evaluating it?
+        # .sol files don't seem to be able to return the objective
+        # value. Evaluate it here instead.
         objective_value = _evaluate(model.f, primal_solution)
     end
     return _NLResults(
