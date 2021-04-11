@@ -53,10 +53,11 @@ const CONFIG = Dict(
         "nlp_exclude" => ["005_011", "006_010", "007_010"],
         "nlpcvx_exclude" => ["109_010"],
         "nlpmi_exclude" => ["005_011", "006_010"],
-    )
+    ),
 )
 
-@testset "$(name)" for (name, config) in CONFIG
+@testset "$(name)" for name in ["Ipopt", "Bonmin", "Couenne"]
+    config = CONFIG[name]
     OPTIMIZER =
         () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
     @testset "NLP" begin
