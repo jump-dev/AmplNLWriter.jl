@@ -107,9 +107,8 @@ mutable struct _VariableInfo
     in_nonlinear_constraint::Bool
     # The 0-indexed column of the variable. Computed right at the end.
     order::Int
-    function _VariableInfo(model::MOI.ModelLike, x::MOI.VariableIndex)
-        start = MOI.get(model, MOI.VariablePrimalStart(), x)
-        return new(-Inf, Inf, _CONTINUOUS, start, 0, false, false, 0)
+    function _VariableInfo()
+        return new(-Inf, Inf, _CONTINUOUS, nothing, 0, false, false, 0)
     end
 end
 
@@ -237,6 +236,8 @@ Base.show(io::IO, ::Optimizer) = print(io, "An AMPL (.nl) model")
 
 MOI.get(model::Optimizer, ::MOI.SolverName) = "AmplNLWriter"
 
+MOI.supports(::Optimizer, ::MOI.NLPBlock) = true
+
 MOI.supports(::Optimizer, ::MOI.Name) = true
 MOI.get(model::Optimizer, ::MOI.Name) = model.name
 MOI.set(model::Optimizer, ::MOI.Name, name::String) = (model.name = name)
@@ -304,21 +305,6 @@ function MOI.set(model::Optimizer, attr::MOI.RawParameter, value)
     model.options[attr.name] = value
     return
 end
-
-# =============================================================================
-
-MOI.supports(::Optimizer, ::MOI.NLPBlock) = true
-
-function MOI.set(
-    model::Optimizer,
-    ::MOI.NLPBlock,
-    block::Union{Nothing,MOI.NLPBlockData},
-)
-    model.nlp_block = block
-    return
-end
-
-MOI.get(model::Optimizer, ::MOI.NLPBlock) = model.nlp_block
 
 # ==============================================================================
 
@@ -391,7 +377,9 @@ function MOI.copy_to(
         )
     end
     for x in MOI.get(model, MOI.ListOfVariableIndices())
-        dest.x[x] = _VariableInfo(model, x)
+        dest.x[x] = _VariableInfo()
+        start = MOI.get(model, MOI.VariablePrimalStart(), x)
+        MOI.set(dest, MOI.VariablePrimalStart(), x, start)
         mapping[x] = x
     end
     dest.sense = MOI.get(model, MOI.ObjectiveSense())
@@ -787,7 +775,7 @@ function Base.write(io::IO, nlmodel::Optimizer)
     #  * Make sure to write out the variables in order.
     println(io, "x", length(nlmodel.x))
     for (i, x) in enumerate(nlmodel.order)
-        start = nlmodel.x[x].start
+        start = MOI.get(nlmodel, MOI.VariablePrimalStart(), x)
         println(io, i - 1, " ", start === nothing ? 0 : _str(start))
     end
     # ==========================================================================

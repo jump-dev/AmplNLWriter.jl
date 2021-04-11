@@ -353,6 +353,9 @@ function _process_expr!(expr::_NLExpr, arg::Real)
     return push!(expr.nonlinear_terms, Float64(arg))
 end
 
+# Assume the symbol is a numeric constant like `pi`.
+_process_expr!(expr::_NLExpr, arg::Symbol) = _process_expr!(expr, eval(arg))
+
 function _process_expr!(expr::_NLExpr, arg::MOI.VariableIndex)
     _add_or_set(expr.linear_terms, arg, 0.0)
     return push!(expr.nonlinear_terms, arg)
