@@ -40,13 +40,14 @@ const PRIMAL_TARGET = Dict(
             dual_tol = NaN,
         )
     end
-    @testset "NLP-CVX"
-    MINLPTests.test_nlp_cvx(
-        OPTIMIZER,
-        exclude = String[
-            "109_010"  # Ipopt fails to converge
-        ],
-    )
+    @testset "NLP-CVX" begin
+        MINLPTests.test_nlp_cvx(
+            OPTIMIZER,
+            exclude = String[
+                "109_010"  # Ipopt fails to converge
+            ],
+        )
+    end
     if name != "Ipopt"
         @testset "NLP-MI" begin
             MINLPTests.test_nlp_mi(
