@@ -60,6 +60,7 @@ function test_write_to_file(path)
     b
     """
     rm("foo.nl")
+    return
 end
 
 function test_unittest(path)
