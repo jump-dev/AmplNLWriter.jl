@@ -24,8 +24,13 @@ const PRIMAL_TARGET = Dict(
     MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION,
 )
 
-# @testset "$(name)" 
-for (name, amplexe) in FUNCTIONS
+const TOL = Dict(
+    "Bonmin" => 1e-5,
+    "Couenne" => 1e-2,
+    "Ipopt" => 1e-5,
+)
+
+@testset "$(name)" for (name, amplexe) in FUNCTIONS
     OPTIMIZER = () -> AmplNLWriter.Optimizer(amplexe, ["print_level=0"])
     @testset "NLP" begin
         MINLPTests.test_nlp(
@@ -35,6 +40,9 @@ for (name, amplexe) in FUNCTIONS
                 "005_011",
                 # User-defined function
                 "006_010",
+                # Fails to converge
+                name == "Couenne" ? "008_010" : "",
+                name == "Couenne" ? "008_011" : "",
             ],
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
@@ -49,11 +57,13 @@ for (name, amplexe) in FUNCTIONS
             exclude = String[
                 # Ipopt fails to converge
                 "109_010",
+                # Unable to evaluate pow
+                name == "Couenne" ? "206_010" : "",
             ],
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
-            objective_tol = 1e-5,
-            primal_tol = 1e-5,
+            objective_tol = TOL[name],
+            primal_tol = TOL[name],
             dual_tol = NaN,
         )
     end
@@ -62,6 +72,8 @@ for (name, amplexe) in FUNCTIONS
             MINLPTests.test_nlp_mi(
                 OPTIMIZER,
                 exclude = String[
+                    # Fails to converge
+                    name == "Couenne" ? "001_010" : "",
                     # Uses the function `\`
                     "005_011",
                     # User-defined function
@@ -69,8 +81,8 @@ for (name, amplexe) in FUNCTIONS
                 ],
                 termination_target = TERMINATION_TARGET,
                 primal_target = PRIMAL_TARGET,
-                objective_tol = 1e-5,
-                primal_tol = 1e-5,
+                objective_tol = TOL[name],
+                primal_tol = TOL[name],
                 dual_tol = NaN,
             )
         end
