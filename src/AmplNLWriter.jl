@@ -138,7 +138,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     optimizer::Function
     options::Dict{String,Any}
     stdin::Any
-    stdout:Any
+    stdout::Any
     results::_NLResults
     # Store MOI.Name().
     name::String
