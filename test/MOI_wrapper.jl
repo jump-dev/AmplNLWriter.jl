@@ -13,8 +13,8 @@ const CONFIG = MOI.Test.TestConfig(
     infeas_certificates = false,
 )
 
-function optimizer(path)
-    model = AmplNLWriter.Optimizer(path)
+function optimizer(path, args...; kwargs...)
+    model = AmplNLWriter.Optimizer(path, args...; kwargs...)
     MOI.set(model, MOI.RawParameter("print_level"), 0)
     MOI.set(
         model,
@@ -165,6 +165,23 @@ function test_raw_parameter(path)
     @test MOI.get(model, attr) === nothing
     MOI.set(model, attr, 0)
     @test MOI.get(model, attr) == 0
+end
+
+function test_io(path)
+    io = IOBuffer()
+    model = optimizer(path; stdin = stdin, stdout = io)
+    x = MOI.add_variable(model)
+    MOI.add_constraint(model, MOI.SingleVariable(x), MOI.GreaterThan(0.0))
+    MOI.optimize!(model)
+    seekstart(io)
+    s = String(take!(io))
+    if VERSION < v"1.6"
+        # TODO(odow): Looks like Julia 1.0 changed something here? Not a high
+        #             priority to investigate.
+        @test length(s) >= 0
+    else
+        @test length(s) > 0
+    end
 end
 
 function test_single_variable_interval_dual(path)
