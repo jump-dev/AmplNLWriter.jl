@@ -175,10 +175,10 @@ function test_single_variable_interval_dual(path)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
     MOI.optimize!(model)
-    @test isapprox(MOI.get(model, MOI.ConstraintDual(), c), -1, atol=1e-6)
+    @test isapprox(MOI.get(model, MOI.ConstraintDual(), c), -1, atol = 1e-6)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.optimize!(model)
-    @test isapprox(MOI.get(model, MOI.ConstraintDual(), c), 1, atol=1e-6)
+    @test isapprox(MOI.get(model, MOI.ConstraintDual(), c), 1, atol = 1e-6)
     return
 end
 
@@ -198,11 +198,11 @@ function test_nlpblockdual(path)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.optimize!(model)
     dual = MOI.get(model, MOI.NLPBlockDual())
-    @test isapprox(dual, [0.1787618002239518, 0.9850008232874167], atol=1e-6)
+    @test isapprox(dual, [0.1787618002239518, 0.9850008232874167], atol = 1e-6)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
     MOI.optimize!(model)
     dual = MOI.get(model, MOI.NLPBlockDual())
-    @test isapprox(dual, [0.0, -5.008488314902599], atol=1e-6)
+    @test isapprox(dual, [0.0, -5.008488314902599], atol = 1e-6)
 end
 
 function runtests(path)
