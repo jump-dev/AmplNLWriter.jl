@@ -13,14 +13,6 @@ const CONFIG = MOI.Test.TestConfig(
     infeas_certificates = false,
 )
 
-const CONFIG_NO_DUAL = MOI.Test.TestConfig(
-    atol = 1e-4,
-    rtol = 1e-4,
-    optimal_status = MOI.LOCALLY_SOLVED,
-    infeas_certificates = false,
-    duals = false,
-)
-
 function optimizer(path)
     model = AmplNLWriter.Optimizer(path)
     MOI.set(model, MOI.RawParameter("print_level"), 0)
@@ -99,12 +91,11 @@ function test_unittest(path)
 end
 
 function test_contlinear(path)
-    # TODO(odow): Linear14 gets a negated incorrect variable dual?
     return MOI.Test.contlineartest(optimizer(path), CONFIG)
 end
 
 function test_contlquadratic(path)
-    return MOI.Test.contquadratictest(optimizer(path), CONFIG_NO_DUAL)
+    return MOI.Test.contquadratictest(optimizer(path), CONFIG)
 end
 
 function test_solver_name(path)

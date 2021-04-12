@@ -1218,12 +1218,21 @@ end
 function MOI.get(
     model::Optimizer,
     attr::MOI.ConstraintDual,
-    ci::MOI.ConstraintIndex{
-        <:Union{MOI.ScalarAffineFunction,MOI.ScalarQuadraticFunction},
-    },
+    ci::MOI.ConstraintIndex{<:MOI.ScalarAffineFunction},
 )
     MOI.check_result_index_bounds(model, attr)
-    dual = model.results.dual_solution[ci.value]
+    offset = model.nlpblock_dim + length(model.g)
+    dual = model.results.dual_solution[offset + ci.value]
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintDual,
+    ci::MOI.ConstraintIndex{<:MOI.ScalarQuadraticFunction},
+)
+    MOI.check_result_index_bounds(model, attr)
+    dual = model.results.dual_solution[model.nlpblock_dim + ci.value]
     return model.sense == MOI.MIN_SENSE ? dual : -dual
 end
 
