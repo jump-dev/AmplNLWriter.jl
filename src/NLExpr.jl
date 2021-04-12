@@ -250,9 +250,7 @@ they can easily be converted into NL-compatible expressions.
 
 If you have a new binary-function that you want to support, add it here.
 """
-const _BINARY_SPECIAL_CASES = Dict{Symbol,Function}(
-    :\ => (x, y) -> :($y / $x),
-)
+const _BINARY_SPECIAL_CASES = Dict{Symbol,Function}(:\ => (x, y) -> :($y / $x))
 
 ### ============================================================================
 ### Nonlinear expressions
