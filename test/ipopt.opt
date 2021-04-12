@@ -1,0 +1,2 @@
+# Force AMPL to return duals for SingleVariable-in-EqualTo constraints.
+fixed_variable_treatment make_constraint

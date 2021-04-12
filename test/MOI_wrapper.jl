@@ -11,12 +11,16 @@ const CONFIG = MOI.Test.TestConfig(
     rtol = 1e-4,
     optimal_status = MOI.LOCALLY_SOLVED,
     infeas_certificates = false,
-    duals = false,
 )
 
 function optimizer(path)
     model = AmplNLWriter.Optimizer(path)
     MOI.set(model, MOI.RawParameter("print_level"), 0)
+    MOI.set(
+        model,
+        MOI.RawParameter("option_file_name"),
+        joinpath(@__DIR__, "ipopt.opt"),
+    )
     return MOI.Utilities.CachingOptimizer(
         MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
         MOI.Bridges.full_bridge_optimizer(
@@ -161,6 +165,44 @@ function test_raw_parameter(path)
     @test MOI.get(model, attr) === nothing
     MOI.set(model, attr, 0)
     @test MOI.get(model, attr) == 0
+end
+
+function test_single_variable_interval_dual(path)
+    model = optimizer(path)
+    x = MOI.add_variable(model)
+    c = MOI.add_constraint(model, MOI.SingleVariable(x), MOI.Interval(0.0, 1.0))
+    f = MOI.ScalarAffineFunction([MOI.ScalarAffineTerm(1.0, x)], 2.0)
+    MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    MOI.optimize!(model)
+    @test isapprox(MOI.get(model, MOI.ConstraintDual(), c), -1, atol = 1e-6)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.optimize!(model)
+    @test isapprox(MOI.get(model, MOI.ConstraintDual(), c), 1, atol = 1e-6)
+    return
+end
+
+function test_nlpblockdual(path)
+    model = optimizer(path)
+    v = MOI.add_variables(model, 4)
+    l = [1.1, 1.2, 1.3, 1.4]
+    u = [5.1, 5.2, 5.3, 5.4]
+    start = [2.1, 2.2, 2.3, 2.4]
+    MOI.add_constraint.(model, MOI.SingleVariable.(v), MOI.GreaterThan.(l))
+    MOI.add_constraint.(model, MOI.SingleVariable.(v), MOI.LessThan.(u))
+    MOI.set.(model, MOI.VariablePrimalStart(), v, start)
+    lb, ub = [25.0, 40.0], [Inf, 40.0]
+    evaluator = MOI.Test.HS071(true)
+    block_data = MOI.NLPBlockData(MOI.NLPBoundsPair.(lb, ub), evaluator, true)
+    MOI.set(model, MOI.NLPBlock(), block_data)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.optimize!(model)
+    dual = MOI.get(model, MOI.NLPBlockDual())
+    @test isapprox(dual, [0.1787618002239518, 0.9850008232874167], atol = 1e-6)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    MOI.optimize!(model)
+    dual = MOI.get(model, MOI.NLPBlockDual())
+    @test isapprox(dual, [0.0, -5.008488314902599], atol = 1e-6)
 end
 
 function runtests(path)

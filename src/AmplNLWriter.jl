@@ -118,6 +118,9 @@ struct _NLResults
     primal_status::MOI.ResultStatusCode
     objective_value::Float64
     primal_solution::Dict{MOI.VariableIndex,Float64}
+    dual_solution::Vector{Float64}
+    zL_out::Dict{MOI.VariableIndex,Float64}
+    zU_out::Dict{MOI.VariableIndex,Float64}
 end
 
 """
@@ -143,6 +146,8 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     # The objective expression.
     f::_NLExpr
     sense::MOI.OptimizationSense
+    # Number of nonlinear constraints in NLPBlock
+    nlpblock_dim::Int
     # A vector of nonlinear constraints
     g::Vector{_NLConstraint}
     # A vector of linear constraints
@@ -220,10 +225,14 @@ function Optimizer(
             MOI.NO_SOLUTION,
             NaN,
             Dict{MOI.VariableIndex,Float64}(),
+            Float64[],
+            Dict{MOI.VariableIndex,Float64}(),
+            Dict{MOI.VariableIndex,Float64}(),
         ),
         "",
         _NLExpr(false, _NLTerm[], Dict{MOI.VariableIndex,Float64}(), 0.0),
         MOI.FEASIBILITY_SENSE,
+        0,
         _NLConstraint[],
         _NLConstraint[],
         Dict{MOI.VariableIndex,_VariableInfo}(),
@@ -249,9 +258,13 @@ function MOI.empty!(model::Optimizer)
         MOI.NO_SOLUTION,
         NaN,
         Dict{MOI.VariableIndex,Float64}(),
+        Float64[],
+        Dict{MOI.VariableIndex,Float64}(),
+        Dict{MOI.VariableIndex,Float64}(),
     )
     model.f = _NLExpr(false, _NLTerm[], Dict{MOI.VariableIndex,Float64}(), 0.0)
     empty!(model.g)
+    model.nlpblock_dim = 0
     empty!(model.h)
     empty!(model.x)
     for i in 1:9
@@ -376,6 +389,7 @@ function MOI.copy_to(
             _NLConstraint(MOI.constraint_expr(nlp_block.evaluator, i), bound),
         )
     end
+    dest.nlpblock_dim = length(dest.g)
     for x in MOI.get(model, MOI.ListOfVariableIndices())
         dest.x[x] = _VariableInfo()
         start = MOI.get(model, MOI.VariablePrimalStart(), x)
@@ -987,10 +1001,7 @@ function _read_sol(io::IO, model::Optimizer)
         _readline(io)
     end
     # Read dual solutions
-    # TODO(odow): read in the dual solutions!
-    for _ in 1:num_duals_to_read
-        _readline(io)
-    end
+    dual_solution = Float64[_readline(io, Float64) for i in 1:num_duals_to_read]
     # Read primal solutions
     primal_solution = Dict{MOI.VariableIndex,Float64}()
     if num_vars_to_read > 0
@@ -1008,6 +1019,30 @@ function _read_sol(io::IO, model::Optimizer)
             break
         end
     end
+    zL_out = Dict{MOI.VariableIndex,Float64}()
+    zU_out = Dict{MOI.VariableIndex,Float64}()
+    while !eof(io)
+        line = _readline(io)
+        if startswith(line, "suffix")
+            items = split(line, " ")
+            n_suffix = parse(Int, items[3])
+            suffix = _readline(io)
+            if !(suffix == "ipopt_zU_out" || suffix == "ipopt_zL_out")
+                continue
+            end
+            for i in 1:n_suffix
+                items = split(_readline(io), " ")
+                x = model.order[parse(Int, items[1])+1]
+                dual = parse(Float64, items[2])
+                if suffix == "ipopt_zU_out"
+                    zU_out[x] = dual
+                else
+                    @assert suffix == "ipopt_zL_out"
+                    zL_out[x] = dual
+                end
+            end
+        end
+    end
     termination_status, primal_status =
         _interpret_status(solve_result_num, raw_status_string)
     objective_value = NaN
@@ -1022,6 +1057,9 @@ function _read_sol(io::IO, model::Optimizer)
         length(primal_solution) > 0 ? primal_status : MOI.NO_SOLUTION,
         objective_value,
         primal_solution,
+        dual_solution,
+        zL_out,
+        zU_out,
     )
 end
 
@@ -1051,6 +1089,9 @@ function MOI.optimize!(model::Optimizer)
             MOI.NO_SOLUTION,
             NaN,
             Dict{MOI.VariableIndex,Float64}(),
+            Float64[],
+            Dict{MOI.VariableIndex,Float64}(),
+            Dict{MOI.VariableIndex,Float64}(),
         )
     end
     return
@@ -1078,7 +1119,18 @@ function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
     return attr.N == 1 ? model.results.primal_status : MOI.NO_SOLUTION
 end
 
-MOI.get(::Optimizer, ::MOI.DualStatus) = MOI.NO_SOLUTION
+function MOI.get(model::Optimizer, attr::MOI.DualStatus)
+    n_duals =
+        length(model.results.dual_solution) +
+        length(model.results.zL_out) +
+        length(model.results.zU_out)
+    if attr.N != 1 ||
+       n_duals == 0 ||
+       model.results.termination_status != MOI.LOCALLY_SOLVED
+        return MOI.NO_SOLUTION
+    end
+    return MOI.FEASIBLE_POINT
+end
 
 function MOI.get(model::Optimizer, ::MOI.RawStatusString)
     return model.results.raw_status_string
@@ -1113,6 +1165,80 @@ function MOI.get(
 )
     MOI.check_result_index_bounds(model, attr)
     return _evaluate(model.g[ci.value].expr, model.results.primal_solution)
+end
+
+function MOI.get(model::Optimizer, attr::MOI.DualObjectiveValue)
+    MOI.check_result_index_bounds(model, attr)
+    # TODO(odow): replace this with the proper dual objective.
+    return MOI.get(model, MOI.ObjectiveValue())
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintDual,
+    ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.LessThan{Float64}},
+)
+    MOI.check_result_index_bounds(model, attr)
+    dual = get(model.results.zU_out, MOI.VariableIndex(ci.value), 0.0)
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintDual,
+    ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.GreaterThan{Float64}},
+)
+    MOI.check_result_index_bounds(model, attr)
+    dual = get(model.results.zL_out, MOI.VariableIndex(ci.value), 0.0)
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintDual,
+    ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.EqualTo{Float64}},
+)
+    MOI.check_result_index_bounds(model, attr)
+    x = MOI.VariableIndex(ci.value)
+    dual = get(model.results.zL_out, x, 0.0) + get(model.results.zU_out, x, 0.0)
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintDual,
+    ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.Interval{Float64}},
+)
+    MOI.check_result_index_bounds(model, attr)
+    x = MOI.VariableIndex(ci.value)
+    dual = get(model.results.zL_out, x, 0.0) + get(model.results.zU_out, x, 0.0)
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintDual,
+    ci::MOI.ConstraintIndex{<:MOI.ScalarAffineFunction},
+)
+    MOI.check_result_index_bounds(model, attr)
+    dual = model.results.dual_solution[length(model.g)+ci.value]
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
+end
+
+function MOI.get(
+    model::Optimizer,
+    attr::MOI.ConstraintDual,
+    ci::MOI.ConstraintIndex{<:MOI.ScalarQuadraticFunction},
+)
+    MOI.check_result_index_bounds(model, attr)
+    dual = model.results.dual_solution[ci.value]
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
+end
+
+function MOI.get(model::Optimizer, attr::MOI.NLPBlockDual)
+    MOI.check_result_index_bounds(model, attr)
+    dual = model.results.dual_solution[1:model.nlpblock_dim]
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
 end
 
 function MOI.write_to_file(model::Optimizer, filename::String)
