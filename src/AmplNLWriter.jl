@@ -1078,7 +1078,6 @@ function MOI.optimize!(model::Optimizer)
         end
         model.results = _read_sol(joinpath(temp_dir, "model.sol"), model)
     catch err
-        @warn err
         model.results = _NLResults(
             "Error calling the solver. Failed with: $(err)",
             MOI.OTHER_ERROR,
