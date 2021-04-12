@@ -1229,8 +1229,8 @@ end
 
 function MOI.get(model::Optimizer, attr::MOI.NLPBlockDual)
     MOI.check_result_index_bounds(model, attr)
-    s = model.sense == MOI.MIN_SENSE ? -1 : 1
-    return s .* model.results.dual_solution[1:model.nlpblock_dim]
+    dual = model.results.dual_solution[1:model.nlpblock_dim]
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
 end
 
 function MOI.write_to_file(model::Optimizer, filename::String)
