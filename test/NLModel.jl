@@ -92,6 +92,17 @@ function test_nlexpr_unary_specialcase()
     )
 end
 
+function test_nlexpr_binary_specialcase()
+    x = MOI.VariableIndex(1)
+    y = MOI.VariableIndex(2)
+    return _test_nlexpr(
+        :(\($x, $y)),
+        [NL.OPDIV, y, x],
+        Dict(x => 0.0, y => 0.0),
+        0.0,
+    )
+end
+
 function test_nlexpr_unsupportedoperation()
     x = MOI.VariableIndex(1)
     err = ErrorException("Unsupported operation foo")
@@ -661,6 +672,16 @@ function test_eval_unary_specialcases()
         expr = NL._NLExpr(:($k($x)))
         xv = k in S ? 1.49 : 0.49
         @test NL._evaluate(expr, Dict(x => xv)) ≈ getfield(Main, k)(xv)
+    end
+end
+
+function test_eval_binary_specialcases()
+    x = MOI.VariableIndex(1)
+    y = MOI.VariableIndex(2)
+    for (k, v) in NL._BINARY_SPECIAL_CASES
+        expr = NL._NLExpr(:($k($x, $y)))
+        target = getfield(Main, k)(1.0, 2.0)
+        @test NL._evaluate(expr, Dict(x => 1.0, y => 2.0)) ≈ target
     end
 end
 
