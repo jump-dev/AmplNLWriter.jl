@@ -14,8 +14,8 @@ const CONFIG = MOI.Test.TestConfig(
     duals = false,
 )
 
-function optimizer(path)
-    model = AmplNLWriter.Optimizer(path)
+function optimizer(path, args...; kwargs...)
+    model = AmplNLWriter.Optimizer(path, args...; kwargs...)
     MOI.set(model, MOI.RawParameter("print_level"), 0)
     return MOI.Utilities.CachingOptimizer(
         MOI.Utilities.UniversalFallback(MOI.Utilities.Model{Float64}()),
@@ -161,6 +161,17 @@ function test_raw_parameter(path)
     @test MOI.get(model, attr) === nothing
     MOI.set(model, attr, 0)
     @test MOI.get(model, attr) == 0
+end
+
+function test_io(path)
+    io_out = IOBuffer()
+    model = optimizer(path; stdin = stdin, stdout = io_out)
+    x = MOI.add_variable(model)
+    MOI.add_constraint(model, MOI.SingleVariable(x), MOI.GreaterThan(0.0))
+    MOI.optimize!(model)
+    seekstart(io)
+    s = String(take!(io))
+    @test length(s) > 0
 end
 
 function runtests(path)

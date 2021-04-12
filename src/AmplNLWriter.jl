@@ -137,6 +137,8 @@ _solver_command(x::Function) = x
 mutable struct Optimizer <: MOI.AbstractOptimizer
     optimizer::Function
     options::Dict{String,Any}
+    stdin::IO
+    stdout::IO
     results::_NLResults
     # Store MOI.Name().
     name::String
@@ -158,7 +160,9 @@ end
 """
     Optimizer(
         solver_command::Union{String,Function},
-        solver_args::Vector{String},
+        solver_args::Vector{String};
+        stdin::IO = stdin,
+        stdout::IO = stdout,
     )
 
 Create a new Optimizer object.
@@ -172,6 +176,8 @@ Create a new Optimizer object.
 
 `solver_args` is a vector of `String` arguments passed solver executable.
 However, prefer passing `key=value` options via `MOI.RawParameter`.
+
+Redirect IO using `stdin` and `stdout`.
 
 ## Examples
 
@@ -209,11 +215,15 @@ MOI.set(model, MOI.RawParameter("print_level"), 0
 """
 function Optimizer(
     solver_command::Union{String,Function} = "",
-    solver_args::Vector{String} = String[],
+    solver_args::Vector{String} = String[];
+    stdin::IO = stdin,
+    stdout::IO = stdout,
 )
     return Optimizer(
         _solver_command(solver_command),
         Dict{String,String}(opt => "" for opt in solver_args),
+        stdin,
+        stdout,
         _NLResults(
             "Optimize not called.",
             MOI.OPTIMIZE_NOT_CALLED,
@@ -1035,8 +1045,8 @@ function MOI.optimize!(model::Optimizer)
             ret = run(
                 pipeline(
                     `$(solver_path) $(nl_file) -AMPL $(options)`,
-                    stdout = stdout,
-                    stdin = stdin,
+                    stdin = model.stdin,
+                    stdout = model.stdout,
                 ),
             )
             if ret.exitcode != 0
