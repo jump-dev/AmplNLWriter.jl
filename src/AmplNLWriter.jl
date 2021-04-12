@@ -137,8 +137,8 @@ _solver_command(x::Function) = x
 mutable struct Optimizer <: MOI.AbstractOptimizer
     optimizer::Function
     options::Dict{String,Any}
-    stdin::IO
-    stdout::IO
+    stdin::Any
+    stdout:Any
     results::_NLResults
     # Store MOI.Name().
     name::String
@@ -161,8 +161,8 @@ end
     Optimizer(
         solver_command::Union{String,Function},
         solver_args::Vector{String};
-        stdin::IO = stdin,
-        stdout::IO = stdout,
+        stdin::Any = stdin,
+        stdout:Any = stdout,
     )
 
 Create a new Optimizer object.
@@ -177,7 +177,8 @@ Create a new Optimizer object.
 `solver_args` is a vector of `String` arguments passed solver executable.
 However, prefer passing `key=value` options via `MOI.RawParameter`.
 
-Redirect IO using `stdin` and `stdout`.
+Redirect IO using `stdin` and `stdout`. These arguments are passed to
+`Base.pipeline`. See the Julia documentation for more details.
 
 ## Examples
 
@@ -216,8 +217,8 @@ MOI.set(model, MOI.RawParameter("print_level"), 0
 function Optimizer(
     solver_command::Union{String,Function} = "",
     solver_args::Vector{String} = String[];
-    stdin::IO = stdin,
-    stdout::IO = stdout,
+    stdin::Any = stdin,
+    stdout::Any = stdout,
 )
     return Optimizer(
         _solver_command(solver_command),
