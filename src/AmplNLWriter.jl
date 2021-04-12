@@ -1120,7 +1120,8 @@ function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
 end
 
 function MOI.get(model::Optimizer, attr::MOI.DualStatus)
-    n_duals = length(model.results.dual_solution) +
+    n_duals =
+        length(model.results.dual_solution) +
         length(model.results.zL_out) +
         length(model.results.zU_out)
     if attr.N != 1 ||
