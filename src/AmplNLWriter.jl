@@ -1221,8 +1221,7 @@ function MOI.get(
     ci::MOI.ConstraintIndex{<:MOI.ScalarAffineFunction},
 )
     MOI.check_result_index_bounds(model, attr)
-    offset = model.nlpblock_dim + length(model.g)
-    dual = model.results.dual_solution[offset+ci.value]
+    dual = model.results.dual_solution[length(model.g)+ci.value]
     return model.sense == MOI.MIN_SENSE ? dual : -dual
 end
 
@@ -1232,7 +1231,7 @@ function MOI.get(
     ci::MOI.ConstraintIndex{<:MOI.ScalarQuadraticFunction},
 )
     MOI.check_result_index_bounds(model, attr)
-    dual = model.results.dual_solution[model.nlpblock_dim+ci.value]
+    dual = model.results.dual_solution[ci.value]
     return model.sense == MOI.MIN_SENSE ? dual : -dual
 end
 
