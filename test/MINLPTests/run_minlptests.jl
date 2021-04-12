@@ -20,7 +20,6 @@ const PRIMAL_TARGET = Dict(
 )
 
 # Reasons for exclusion:
-# nlp/005_011     : Uses the function `\`
 # nlp/006_010     : Uses a user-defined function
 # nlp/007_010     : Ipopt returns an infeasible point, not NO_SOLUTION.
 # nlp/008_010     : Couenne fails to converge
@@ -34,25 +33,25 @@ const CONFIG = Dict(
         "amplexe" => Bonmin_jll.amplexe,
         "options" => String["bonmin.nlp_log_level=0"],
         "tol" => 1e-5,
-        "nlp_exclude" => ["005_011", "006_010"],
+        "nlp_exclude" => ["006_010"],
         "nlpcvx_exclude" => ["109_010"],
-        "nlpmi_exclude" => ["005_011", "006_010"],
+        "nlpmi_exclude" => ["006_010"],
     ),
     "Couenne" => Dict(
         "amplexe" => Couenne_jll.amplexe,
         "options" => String[],
         "tol" => 1e-2,
-        "nlp_exclude" => ["005_011", "006_010", "008_010", "008_011"],
+        "nlp_exclude" => ["006_010", "008_010", "008_011"],
         "nlpcvx_exclude" => ["109_010", "206_010"],
-        "nlpmi_exclude" => ["001_010", "005_011", "006_010"],
+        "nlpmi_exclude" => ["001_010", "006_010"],
     ),
     "Ipopt" => Dict(
         "amplexe" => Ipopt_jll.amplexe,
         "options" => String["print_level=0"],
         "tol" => 1e-5,
-        "nlp_exclude" => ["005_011", "006_010", "007_010"],
+        "nlp_exclude" => ["006_010", "007_010"],
         "nlpcvx_exclude" => ["109_010"],
-        "nlpmi_exclude" => ["005_011", "006_010"],
+        "nlpmi_exclude" => ["006_010"],
     ),
 )
 

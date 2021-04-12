@@ -207,7 +207,7 @@ they can easily be converted into NL-compatible expressions.
 
 If you have a new unary-function that you want to support, add it here.
 """
-const _UNARY_SPECIAL_CASES = Dict(
+const _UNARY_SPECIAL_CASES = Dict{Symbol,Function}(
     :cbrt => (x) -> :($x^(1 / 3)),
     :abs2 => (x) -> :($x^2),
     :inv => (x) -> :(1 / $x),
@@ -239,6 +239,19 @@ const _UNARY_SPECIAL_CASES = Dict(
     :asech => (x) -> :(acosh(1 / $x)),
     :acsch => (x) -> :(asinh(1 / $x)),
     :acoth => (x) -> :(atanh(1 / $x)),
+)
+
+"""
+    _BINARY_SPECIAL_CASES
+
+This dictionary defines a set of binary functions that are special-cased. They
+don't exist in the NL file format, but they may be called from Julia, and
+they can easily be converted into NL-compatible expressions.
+
+If you have a new binary-function that you want to support, add it here.
+"""
+const _BINARY_SPECIAL_CASES = Dict{Symbol,Function}(
+    :\ => (x, y) -> :($y / $x),
 )
 
 ### ============================================================================
@@ -366,19 +379,20 @@ end
 # use recursion.
 function _process_expr!(expr::_NLExpr, arg::Expr)
     if arg.head == :call
-        f = get(_UNARY_SPECIAL_CASES, arg.args[1], nothing)
-        if f !== nothing
-            if length(arg.args) != 2
-                error("Uncorrect number of arguments to $(arg.args[1]).")
+        if length(arg.args) == 2
+            f = get(_UNARY_SPECIAL_CASES, arg.args[1], nothing)
+            if f !== nothing
+                return _process_expr!(expr, f(arg.args[2]))
             end
-            # Some unary-functions are special cased. See the associated comment
-            # next to the definition of _UNARY_SPECIAL_CASES.
-            _process_expr!(expr, f(arg.args[2]))
-        else
-            _process_expr!(expr, arg.args)
+        elseif length(arg.args) == 3
+            f = get(_BINARY_SPECIAL_CASES, arg.args[1], nothing)
+            if f !== nothing
+                return _process_expr!(expr, f(arg.args[2], arg.args[3]))
+            end
         end
+        return _process_expr!(expr, arg.args)
     elseif arg.head == :ref
-        _process_expr!(expr, arg.args[2])
+        return _process_expr!(expr, arg.args[2])
     elseif arg == :()
         return  # Some evalators return a null objective of `:()`.
     else
