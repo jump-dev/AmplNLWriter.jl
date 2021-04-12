@@ -146,6 +146,8 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     # The objective expression.
     f::_NLExpr
     sense::MOI.OptimizationSense
+    # Number of nonlinear constraints in NLPBlock
+    nlpblock_dim::Int
     # A vector of nonlinear constraints
     g::Vector{_NLConstraint}
     # A vector of linear constraints
@@ -230,6 +232,7 @@ function Optimizer(
         "",
         _NLExpr(false, _NLTerm[], Dict{MOI.VariableIndex,Float64}(), 0.0),
         MOI.FEASIBILITY_SENSE,
+        0,
         _NLConstraint[],
         _NLConstraint[],
         Dict{MOI.VariableIndex,_VariableInfo}(),
@@ -261,6 +264,7 @@ function MOI.empty!(model::Optimizer)
     )
     model.f = _NLExpr(false, _NLTerm[], Dict{MOI.VariableIndex,Float64}(), 0.0)
     empty!(model.g)
+    model.nlpblock_dim = 0
     empty!(model.h)
     empty!(model.x)
     for i in 1:9
@@ -385,6 +389,7 @@ function MOI.copy_to(
             _NLConstraint(MOI.constraint_expr(nlp_block.evaluator, i), bound),
         )
     end
+    dest.nlpblock_dim = length(dest.g)
     for x in MOI.get(model, MOI.ListOfVariableIndices())
         dest.x[x] = _VariableInfo()
         start = MOI.get(model, MOI.VariablePrimalStart(), x)
@@ -1219,6 +1224,12 @@ function MOI.get(
     MOI.check_result_index_bounds(model, attr)
     dual = model.results.dual_solution[ci.value]
     return model.sense == MOI.MIN_SENSE ? dual : -dual
+end
+
+function MOI.get(model::Optimizer, attr::MOI.NLPBlockDual)
+    MOI.check_result_index_bounds(model, attr)
+    s = model.sense == MOI.MIN_SENSE ? -1 : 1
+    return s .* model.results.dual_solution[1:model.nlpblock_dim]
 end
 
 function MOI.write_to_file(model::Optimizer, filename::String)
