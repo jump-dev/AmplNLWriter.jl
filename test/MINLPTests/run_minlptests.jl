@@ -34,6 +34,7 @@ const CONFIG = Dict(
         "amplexe" => Bonmin_jll.amplexe,
         "options" => String["bonmin.nlp_log_level=0"],
         "tol" => 1e-5,
+        "dual_tol" => NaN,
         "nlp_exclude" => ["005_011", "006_010"],
         "nlpcvx_exclude" => ["109_010"],
         "nlpmi_exclude" => ["005_011", "006_010"],
@@ -42,6 +43,7 @@ const CONFIG = Dict(
         "amplexe" => Couenne_jll.amplexe,
         "options" => String[],
         "tol" => 1e-2,
+        "dual_tol" => NaN,
         "nlp_exclude" => ["005_011", "006_010", "008_010", "008_011"],
         "nlpcvx_exclude" => ["109_010", "206_010"],
         "nlpmi_exclude" => ["001_010", "005_011", "006_010"],
@@ -50,6 +52,7 @@ const CONFIG = Dict(
         "amplexe" => Ipopt_jll.amplexe,
         "options" => String["print_level=0"],
         "tol" => 1e-5,
+        "dual_tol" => 1e-5,
         "nlp_exclude" => ["005_011", "006_010", "007_010"],
         "nlpcvx_exclude" => ["109_010"],
         "nlpmi_exclude" => ["005_011", "006_010"],
@@ -68,7 +71,7 @@ const CONFIG = Dict(
             primal_target = PRIMAL_TARGET,
             objective_tol = config["tol"],
             primal_tol = config["tol"],
-            dual_tol = NaN,
+            dual_tol = config["dual_tol"],
         )
     end
     @testset "NLP-CVX" begin
@@ -79,7 +82,7 @@ const CONFIG = Dict(
             primal_target = PRIMAL_TARGET,
             objective_tol = config["tol"],
             primal_tol = config["tol"],
-            dual_tol = NaN,
+            dual_tol = config["dual_tol"],
         )
     end
     if name != "Ipopt"
@@ -91,7 +94,7 @@ const CONFIG = Dict(
                 primal_target = PRIMAL_TARGET,
                 objective_tol = config["tol"],
                 primal_tol = config["tol"],
-                dual_tol = NaN,
+                dual_tol = config["dual_tol"],
             )
         end
     end
