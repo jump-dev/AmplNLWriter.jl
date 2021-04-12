@@ -164,8 +164,8 @@ function test_raw_parameter(path)
 end
 
 function test_io(path)
-    io_out = IOBuffer()
-    model = optimizer(path; stdin = stdin, stdout = io_out)
+    io = IOBuffer()
+    model = optimizer(path; stdin = stdin, stdout = io)
     x = MOI.add_variable(model)
     MOI.add_constraint(model, MOI.SingleVariable(x), MOI.GreaterThan(0.0))
     MOI.optimize!(model)
