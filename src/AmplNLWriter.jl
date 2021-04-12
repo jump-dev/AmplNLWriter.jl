@@ -1115,8 +1115,11 @@ function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
 end
 
 function MOI.get(model::Optimizer, attr::MOI.DualStatus)
+    n_duals = length(model.results.dual_solution) +
+        length(model.results.zL_out) +
+        length(model.results.zU_out)
     if attr.N != 1 ||
-       length(model.results.dual_solution) == 0 ||
+       n_duals == 0 ||
        model.results.termination_status != MOI.LOCALLY_SOLVED
         return MOI.NO_SOLUTION
     end
@@ -1164,19 +1167,14 @@ function MOI.get(model::Optimizer, attr::MOI.DualObjectiveValue)
     return MOI.get(model, MOI.ObjectiveValue())
 end
 
-function _corrected_dual(model::Optimizer, x)
-    s = model.sense == MOI.MIN_SENSE ? 1 : -1
-    d = get(model.results.zL_out, x, 0.0) - get(model.results.zU_out, x, 0.0)
-    return s * d
-end
-
 function MOI.get(
     model::Optimizer,
     attr::MOI.ConstraintDual,
     ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.LessThan{Float64}},
 )
     MOI.check_result_index_bounds(model, attr)
-    return min(0.0, _corrected_dual(model, MOI.VariableIndex(ci.value)))
+    dual = get(model.results.zU_out, MOI.VariableIndex(ci.value), 0.0)
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
 end
 
 function MOI.get(
@@ -1185,7 +1183,8 @@ function MOI.get(
     ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.GreaterThan{Float64}},
 )
     MOI.check_result_index_bounds(model, attr)
-    return max(0.0, _corrected_dual(model, MOI.VariableIndex(ci.value)))
+    dual = get(model.results.zL_out, MOI.VariableIndex(ci.value), 0.0)
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
 end
 
 function MOI.get(
@@ -1194,7 +1193,9 @@ function MOI.get(
     ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.EqualTo{Float64}},
 )
     MOI.check_result_index_bounds(model, attr)
-    return _corrected_dual(model, MOI.VariableIndex(ci.value))
+    x = MOI.VariableIndex(ci.value)
+    dual = get(model.results.zL_out, x, 0.0) + get(model.results.zU_out, x, 0.0)
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
 end
 
 function MOI.get(
@@ -1203,7 +1204,9 @@ function MOI.get(
     ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.Interval{Float64}},
 )
     MOI.check_result_index_bounds(model, attr)
-    return _corrected_dual(model, MOI.VariableIndex(ci.value))
+    x = MOI.VariableIndex(ci.value)
+    dual = get(model.results.zL_out, x, 0.0) + get(model.results.zU_out, x, 0.0)
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
 end
 
 function MOI.get(
@@ -1214,8 +1217,8 @@ function MOI.get(
     },
 )
     MOI.check_result_index_bounds(model, attr)
-    s = model.sense == MOI.MIN_SENSE ? 1.0 : -1.0
-    return s * model.results.dual_solution[ci.value]
+    dual = model.results.dual_solution[ci.value]
+    return model.sense == MOI.MIN_SENSE ? dual : -dual
 end
 
 function MOI.write_to_file(model::Optimizer, filename::String)

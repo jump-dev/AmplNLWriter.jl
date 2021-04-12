@@ -78,7 +78,7 @@ end
 function test_unittest(path)
     return MOI.Test.unittest(
         optimizer(path),
-        CONFIG_NO_DUAL,
+        CONFIG,
         [
             # Unsupported attributes:
             "number_threads",
@@ -100,7 +100,7 @@ end
 
 function test_contlinear(path)
     # TODO(odow): Linear14 gets a negated incorrect variable dual?
-    return MOI.Test.contlineartest(optimizer(path), CONFIG, ["linear14"])
+    return MOI.Test.contlineartest(optimizer(path), CONFIG)
 end
 
 function test_contlquadratic(path)
