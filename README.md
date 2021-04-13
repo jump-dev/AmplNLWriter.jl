@@ -18,7 +18,37 @@ import Pkg
 Pkg.add("AmplNLWriter")
 ```
 
+### Solvers
+
+You also need an AMPL compatible solver.
+
+**Note: the `_jll` packages require Julia 1.3 or later. Bonmin_jll and Couenne_jll 
+are currently broken on Linux.**
+
+#### Bonmin
+
+To install Bonmin, use:
+```julia
+Pkg.add("Bonmin_jll")
+```
+
+#### Couenne
+
+To install Couenne, use:
+```julia
+Pkg.add("Couenne_jll")
+```
+
+#### Ipopt
+
+To install Ipopt, use:
+```julia
+Pkg.add("Ipopt_jll")
+```
+
 ## Usage
+
+### JLL packages
 
 To call Ipopt via AmplNLWriter.jl, use:
 ```julia
@@ -34,8 +64,7 @@ end
 
 Replace `Ipopt_jll` with `Bonmin_jll` or `Couenne_jll` as appropriate.
 
-**Note: the `_jll` packages require Julia 1.3 or later. Bonmin_jll and Couenne_jll 
-are currently broken on Linux.**
+### Other binaries
 
 You can also pass a string pointing to an AMPL-compatible solver executable. For
 example, if the `bonmin` executable is on the system path, use:
@@ -90,29 +119,3 @@ A list of available options for the respective `.opt` files can be found here:
 - [Ipopt](https://coin-or.github.io/Ipopt/OPTIONS.html)
 - [Bonmin](https://github.com/coin-or/Bonmin/blob/master/test/bonmin.opt) (plus Ipopt options)
 - [Couenne](https://github.com/coin-or/Couenne/blob/master/src/couenne.opt) (plus Ipopt and Bonmin options)
-
-## SCIP
-
-To use SCIP, you must first compile the `scipampl` binary, which is a version of
-SCIP with support for the AMPL .nl interface.
-
-To do this, you can follow the instructions [here](http://zverovich.net/2012/08/07/using-scip-with-ampl.html),
-which we have tested on OS X and Linux.
-
-After doing this, you can access SCIP through
-`AmplNLWriter.Optimizer("/path/to/scipampl")`.
-
-Options can be specified for SCIP using a `scip.set` file, where each line is of
-the form `key = value`.
-
-For example, the following `scip.set` file will set the verbosity level to 0:
-```
-display/verblevel = 0
-```
-
-A list of valid options for the file can be found [here](http://plato.asu.edu/milp/scip.set).
-
-To use the `scip.set` file, you must pass the path to the `scip.set` file as follows:
-```julia
-AmplNLWriter.Optimizer("/path/to/scipampl", ["/path/to/scip.set"])
-```
