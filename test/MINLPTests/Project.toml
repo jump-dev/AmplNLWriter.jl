@@ -9,10 +9,10 @@ MINLPTests = "ee0a3090-8ee9-5cdb-b8cb-8eeba3165522"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-Bonmin_jll = "1.8.8"
+Bonmin_jll = "100.800.800"
 Couenne_jll = "0.5.8"
 Ipopt = "0.6"
-Ipopt_jll = "3.13.2"
+Ipopt_jll = "3.13.4"
 JuMP = "0.21"
 MINLPTests = "0.5"
 julia = "1"
