@@ -22,8 +22,7 @@ Pkg.add("AmplNLWriter")
 
 You also need an AMPL compatible solver.
 
-**Note: the `_jll` packages require Julia 1.3 or later. Bonmin_jll and Couenne_jll 
-are currently broken on Linux.**
+**Note: the `_jll` packages require Julia 1.3 or later.**
 
 #### Bonmin
 
