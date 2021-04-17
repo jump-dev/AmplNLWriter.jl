@@ -222,6 +222,12 @@ function test_nlpblockdual(path)
     @test isapprox(dual, [0.0, -5.008488314902599], atol = 1e-6)
 end
 
+function test_AbstractSolverCommand(path)
+    cmd = AmplNLWriter._DefaultSolverCommand(f -> f(path))
+    model = AmplNLWriter.Optimizer(cmd)
+    @test model.solver_command === cmd
+end
+
 function runtests(path)
     for name in names(@__MODULE__; all = true)
         if !startswith("$(name)", "test_")
