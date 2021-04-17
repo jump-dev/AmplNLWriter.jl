@@ -124,6 +124,60 @@ struct _NLResults
 end
 
 """
+    AbstractSolverCommand
+
+An abstract type that allows over-riding the call behavior of the solver.
+
+See also: [`call_solver`](@ref).
+"""
+abstract type AbstractSolverCommand end
+
+"""
+    call_solver(
+        solver::AbstractSolverCommand,
+        nl_filename::String,
+        options::Vector{String},
+        stdin::IO,
+        stdout::IO,
+    )::String
+
+Execute the `solver` given the NL file at `nl_filename`, a vector of `options`,
+and `stdin` and `stdout`. Return the filename of the resulting `.sol` file.
+
+You can assume `nl_filename` ends in `model.nl`, and that you can write a `.sol`
+file to `replace(nl_filename, "model.nl" => "model.sol")`.
+
+If anything goes wrong, throw a descriptive error.
+"""
+function call_solver end
+
+struct _DefaultSolverCommand{F} <: AbstractSolverCommand
+    f::F
+end
+
+function call_solver(
+    solver::_DefaultSolverCommand,
+    nl_filename::String,
+    options::Vector{String},
+    stdin::IO,
+    stdout::IO,
+)
+    solver.f() do solver_path
+        ret = run(
+            pipeline(
+                `$(solver_path) $(nl_filename) -AMPL $(options)`,
+                stdin = stdin,
+                stdout = stdout,
+            ),
+        )
+        if ret.exitcode != 0
+            error("Nonzero exit code: $(ret.exitcode)")
+        end
+    end
+    return replace(nl_filename, "model.nl" => "model.sol")
+end
+
+"""
     _solver_command(x::Union{Function,String})
 
 Functionify the solver command so it can be called as follows:
@@ -134,11 +188,12 @@ foo() do path
 end
 ```
 """
-_solver_command(x::String) = f -> f(x)
-_solver_command(x::Function) = x
+_solver_command(x::String) = _DefaultSolverCommand(f -> f(x))
+_solver_command(x::Function) = _DefaultSolverCommand(x)
+_solver_command(x::AbstractSolverCommand) = x
 
 mutable struct Optimizer <: MOI.AbstractOptimizer
-    optimizer::Function
+    solver_command::AbstractSolverCommand
     options::Dict{String,Any}
     stdin::Any
     stdout::Any
@@ -220,7 +275,7 @@ MOI.set(model, MOI.RawParameter("print_level"), 0
 ```
 """
 function Optimizer(
-    solver_command::Union{String,Function} = "",
+    solver_command::Union{AbstractSolverCommand,String,Function} = "",
     solver_args::Vector{String} = String[];
     stdin::Any = stdin,
     stdout::Any = stdout,
@@ -1080,19 +1135,14 @@ function MOI.optimize!(model::Optimizer)
     open(io -> write(io, model), nl_file, "w")
     options = [isempty(v) ? k : "$(k)=$(v)" for (k, v) in model.options]
     try
-        model.optimizer() do solver_path
-            ret = run(
-                pipeline(
-                    `$(solver_path) $(nl_file) -AMPL $(options)`,
-                    stdin = model.stdin,
-                    stdout = model.stdout,
-                ),
-            )
-            if ret.exitcode != 0
-                error("Nonzero exit code: $(ret.exitcode)")
-            end
-        end
-        model.results = _read_sol(joinpath(temp_dir, "model.sol"), model)
+        sol_file = call_solver(
+            model.solver_command,
+            nl_file,
+            options,
+            model.stdin,
+            model.stdout,
+        )
+        model.results = _read_sol(sol_file, model)
     catch err
         model.results = _NLResults(
             "Error calling the solver. Failed with: $(err)",
