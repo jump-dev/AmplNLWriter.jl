@@ -275,7 +275,7 @@ MOI.set(model, MOI.RawParameter("print_level"), 0
 ```
 """
 function Optimizer(
-    solver_command::Union{String,Function} = "",
+    solver_command::Union{AbstractSolverCommand,String,Function} = "",
     solver_args::Vector{String} = String[];
     stdin::Any = stdin,
     stdout::Any = stdout,
