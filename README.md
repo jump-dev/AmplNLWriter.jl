@@ -7,6 +7,7 @@ and [AMPL-enabled solvers](http://ampl.com/products/solvers/all-solvers-for-ampl
 connection with the AMPL modeling language or AMPL Optimization Inc.*
 
 [![Build Status](https://github.com/jump-dev/AmplNLWriter.jl/workflows/CI/badge.svg?branch=master)](https://github.com/jump-dev/AmplNLWriter.jl/actions?query=workflow%3ACI)
+[![MINLPTests](https://github.com/jump-dev/AmplNLWriter.jl/workflows/MINLPTests/badge.svg?branch=master)](https://github.com/jump-dev/AmplNLWriter.jl/actions?query=workflow%3AMINLPTests)
 [![codecov](https://codecov.io/gh/jump-dev/AmplNLWriter.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/jump-dev/AmplNLWriter.jl)
 
 ## Installation
