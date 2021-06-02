@@ -8,9 +8,9 @@ Ipopt_jll = "9cc047cb-c261-5740-88fc-0cf96f7bdcc7"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 
 [compat]
-Ipopt = "0.7"
+Ipopt = "0.8"
 Ipopt_jll = "3.13.2"
-MathOptInterface = "0.9.13"
+MathOptInterface = "0.9.15"
 julia = "1"
 
 [extras]
