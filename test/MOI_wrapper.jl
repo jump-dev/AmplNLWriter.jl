@@ -6,7 +6,7 @@ import MathOptInterface
 
 const MOI = MathOptInterface
 
-const CONFIG = MOI.Test.TestConfig(
+const CONFIG = MOI.Test.Config(
     atol = 1e-4,
     rtol = 1e-4,
     optimal_status = MOI.LOCALLY_SOLVED,
@@ -15,10 +15,10 @@ const CONFIG = MOI.Test.TestConfig(
 
 function optimizer(path, args...; kwargs...)
     model = AmplNLWriter.Optimizer(path, args...; kwargs...)
-    MOI.set(model, MOI.RawParameter("print_level"), 0)
+    MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 0)
     MOI.set(
         model,
-        MOI.RawParameter("option_file_name"),
+        MOI.RawOptimizerAttribute("option_file_name"),
         joinpath(@__DIR__, "ipopt.opt"),
     )
     return MOI.Utilities.CachingOptimizer(
@@ -160,7 +160,7 @@ end
 
 function test_raw_parameter(path)
     model = AmplNLWriter.Optimizer(path)
-    attr = MOI.RawParameter("print_level")
+    attr = MOI.RawOptimizerAttribute("print_level")
     @test MOI.supports(model, attr)
     @test MOI.get(model, attr) === nothing
     MOI.set(model, attr, 0)
