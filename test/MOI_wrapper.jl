@@ -44,29 +44,6 @@ function test_name(path)
     @test MOI.get(model, MOI.Name()) == "Foo"
 end
 
-function test_write_to_file(path)
-    model = AmplNLWriter.Optimizer(path)
-    MOI.write_to_file(model, "foo.nl")
-    @test read("foo.nl", String) == """
-    g3 1 1 0
-     0 0 1 0 0 0
-     0 1
-     0 0
-     0 0 0
-     0 0 0 1
-     0 0 0 0 0
-     0 0
-     0 0
-     0 0 0 0 0
-    O0 0
-    n0
-    x0
-    b
-    """
-    rm("foo.nl")
-    return
-end
-
 function test_unittest(path)
     return MOI.Test.unittest(
         optimizer(path),
