@@ -37,6 +37,17 @@ function optimizer(path, args...; kwargs...)
     )
 end
 
+function test_show(path)
+    @test sprint(show, AmplNLWriter.Optimizer(path)) == "An AMPL (.nl) model"
+end
+
+function test_name(path)
+    model = AmplNLWriter.Optimizer(path)
+    @test MOI.supports(model, MOI.Name())
+    MOI.set(model, MOI.Name(), "Foo")
+    @test MOI.get(model, MOI.Name()) == "Foo"
+end
+
 function test_runtests(path)
     MOI.Test.runtests(
         optimizer(path),
