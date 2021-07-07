@@ -1037,18 +1037,20 @@ function _read_sol(io::IO, model::Optimizer)
     end
     # Read through all the options. Direct copy of reference implementation.
     @assert startswith(line, "Options")
-    options = [_readline(io, Int), _readline(io, Int), _readline(io, Int)]
-    num_options = options[1]
-    if !(3 <= num_options <= 9)
-        error("expected num_options between 3 and 9; " * "got $num_options")
-    end
+    num_options = _readline(io, Int)
     need_vbtol = false
-    if options[3] == 3
-        num_options -= 2
-        need_vbtol = true
-    end
-    for j in 3:num_options
-        push!(options, _readline(io, Int))
+    if num_options > 0
+        if !(3 <= num_options <= 9)
+            error("expected num_options between 3 and 9; " * "got $num_options")
+        end
+        _readline(io, Int)  # Skip this line
+        if _readline(io, Int) == 3
+            num_options -= 2
+            need_vbtol = true
+        end
+        for _ in 3:num_options
+            _readline(io, Int)  # Skip the rest of the option lines
+        end
     end
     # Read number of constraints
     num_cons = _readline(io, Int)
