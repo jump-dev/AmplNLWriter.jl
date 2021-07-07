@@ -963,9 +963,14 @@ for returning `MOI.NO_SOLUTION` if no primal solution is present.
 """
 function _interpret_status(solve_result_num::Int, raw_status_string::String)
     if 0 <= solve_result_num < 100
+        # Solved, and nothing went wrong. Even though we say `LOCALLY_SOLVED`,
+        # some solvers like SHOT use this status to represent problems that are
+        # provably globally optimal.
         return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
     elseif 100 <= solve_result_num < 200
-        return MOI.LOCALLY_SOLVED, MOI.UNKNOWN_RESULT_STATUS
+        # Solved, but the solver can't be sure for some reason. e.g., SHOT
+        # uses this for non-convex problems it isn't sure is the global optima.
+        return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
     elseif 200 <= solve_result_num < 300
         return MOI.INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
     elseif 300 <= solve_result_num < 400
