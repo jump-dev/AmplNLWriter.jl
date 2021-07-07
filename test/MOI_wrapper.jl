@@ -230,7 +230,7 @@ end
 
 function test_solve_time(path)
     model = optimizer(path)
-    @test MOI.get(model, MOI.SolveTime()) == NaN
+    @test isnan(MOI.get(model, MOI.SolveTime()))
     v = MOI.add_variables(model, 4)
     l = [1.1, 1.2, 1.3, 1.4]
     u = [5.1, 5.2, 5.3, 5.4]
