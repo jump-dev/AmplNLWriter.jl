@@ -60,10 +60,8 @@ const CONFIG = Dict(
     ),
     "SHOT" => Dict(
         "amplexe" => SHOT_jll.amplexe,
-        "options" => String[
-            "Output.Console.LogLevel=0",
-            "Output.File.LogLevel",
-        ],
+        "options" => 
+            String["Output.Console.LogLevel=0", "Output.File.LogLevel"],
         "tol" => 1e-5,
         "dual_tol" => NaN,
         "nlp_exclude" => ["005_011", "006_010"],
