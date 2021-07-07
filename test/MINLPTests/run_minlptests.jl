@@ -1,11 +1,12 @@
-if VERSION < v"1.3"
-    error("You must use Julia 1.3 or newer.")
+if VERSION < v"1.6"
+    error("You must use Julia 1.6 or newer.")
 end
 
 import AmplNLWriter
 import Bonmin_jll
 import Couenne_jll
 import Ipopt_jll
+import SHOT_jll
 import MINLPTests
 using Test
 
@@ -57,9 +58,21 @@ const CONFIG = Dict(
         "nlpcvx_exclude" => ["109_010"],
         "nlpmi_exclude" => ["005_011", "006_010"],
     ),
+    "SHOT" => Dict(
+        "amplexe" => SHOT_jll.amplexe,
+        "options" => String[
+            "Output.Console.LogLevel=0",
+            "Output.File.LogLevel",
+        ],
+        "tol" => 1e-5,
+        "dual_tol" => NaN,
+        "nlp_exclude" => ["005_011", "006_010"],
+        "nlpcvx_exclude" => ["109_010"],
+        "nlpmi_exclude" => ["005_011", "006_010"],
+    ),
 )
 
-@testset "$(name)" for name in ["Ipopt", "Bonmin", "Couenne"]
+@testset "$(name)" for name in ["Ipopt", "Bonmin", "Couenne", "SHOT"]
     config = CONFIG[name]
     OPTIMIZER =
         () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
