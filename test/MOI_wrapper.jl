@@ -228,6 +228,26 @@ function test_AbstractSolverCommand(path)
     @test model.solver_command === cmd
 end
 
+function test_solve_time(path)
+    model = optimizer(path)
+    @test MOI.get(model, MOI.SolveTime()) == NaN
+    v = MOI.add_variables(model, 4)
+    l = [1.1, 1.2, 1.3, 1.4]
+    u = [5.1, 5.2, 5.3, 5.4]
+    start = [2.1, 2.2, 2.3, 2.4]
+    MOI.add_constraint.(model, MOI.SingleVariable.(v), MOI.GreaterThan.(l))
+    MOI.add_constraint.(model, MOI.SingleVariable.(v), MOI.LessThan.(u))
+    MOI.set.(model, MOI.VariablePrimalStart(), v, start)
+    lb, ub = [25.0, 40.0], [Inf, 40.0]
+    evaluator = MOI.Test.HS071(true)
+    block_data = MOI.NLPBlockData(MOI.NLPBoundsPair.(lb, ub), evaluator, true)
+    MOI.set(model, MOI.NLPBlock(), block_data)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.SolveTime()) > 0.0
+    return
+end
+
 function runtests(path)
     for name in names(@__MODULE__; all = true)
         if !startswith("$(name)", "test_")

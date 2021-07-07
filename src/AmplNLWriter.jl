@@ -198,6 +198,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     stdin::Any
     stdout::Any
     results::_NLResults
+    solve_time::Float64
     # Store MOI.Name().
     name::String
     # The objective expression.
@@ -295,6 +296,7 @@ function Optimizer(
             Dict{MOI.VariableIndex,Float64}(),
             Dict{MOI.VariableIndex,Float64}(),
         ),
+        NaN,
         "",
         _NLExpr(false, _NLTerm[], Dict{MOI.VariableIndex,Float64}(), 0.0),
         MOI.FEASIBILITY_SENSE,
@@ -328,6 +330,7 @@ function MOI.empty!(model::Optimizer)
         Dict{MOI.VariableIndex,Float64}(),
         Dict{MOI.VariableIndex,Float64}(),
     )
+    model.solve_time = NaN
     model.f = _NLExpr(false, _NLTerm[], Dict{MOI.VariableIndex,Float64}(), 0.0)
     empty!(model.g)
     model.nlpblock_dim = 0
@@ -1130,6 +1133,7 @@ function _read_sol(io::IO, model::Optimizer)
 end
 
 function MOI.optimize!(model::Optimizer)
+    start_time = time()
     temp_dir = mktempdir()
     nl_file = joinpath(temp_dir, "model.nl")
     open(io -> write(io, model), nl_file, "w")
@@ -1155,6 +1159,7 @@ function MOI.optimize!(model::Optimizer)
             Dict{MOI.VariableIndex,Float64}(),
         )
     end
+    model.solve_time = time() - start_time
     return
 end
 
@@ -1171,6 +1176,8 @@ function MOI.get(
     MOI.check_result_index_bounds(model, attr)
     return model.results.primal_solution[x]
 end
+
+MOI.get(model::Optimizer, ::MOI.SolveTime) = model.solve_time
 
 function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
     return model.results.termination_status
