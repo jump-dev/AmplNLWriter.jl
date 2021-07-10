@@ -63,8 +63,10 @@ const CONFIG = Dict(
         "options" => String[
             "Output.Console.LogLevel=6",
             "Output.File.LogLevel=6",
+            "Termination.ObjectiveGap.Absolute=1e-6",
+            "Termination.ObjectiveGap.Relative=1e-6",
         ],
-        "tol" => 1e-5,
+        "tol" => 1e-4,
         "dual_tol" => NaN,
         "nlp_exclude" => ["005_011", "006_010"],
         "nlpcvx_exclude" => ["109_010"],
