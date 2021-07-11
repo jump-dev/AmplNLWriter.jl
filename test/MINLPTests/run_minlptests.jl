@@ -66,7 +66,7 @@ const CONFIG = Dict(
             "Termination.ObjectiveGap.Absolute=1e-6",
             "Termination.ObjectiveGap.Relative=1e-6",
         ],
-        "tol" => 1e-4,
+        "tol" => 1e-2,
         "dual_tol" => NaN,
         "nlp_exclude" => ["005_011", "006_010"],
         "nlpcvx_exclude" => ["109_010"],
