@@ -39,6 +39,7 @@ const CONFIG = Dict(
         "nlp_exclude" => ["005_011", "006_010"],
         "nlpcvx_exclude" => ["109_010"],
         "nlpmi_exclude" => ["005_011", "006_010"],
+        "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
     ),
     "Couenne" => Dict(
         "amplexe" => Couenne_jll.amplexe,
@@ -48,6 +49,7 @@ const CONFIG = Dict(
         "nlp_exclude" => ["005_011", "006_010", "008_010", "008_011"],
         "nlpcvx_exclude" => ["109_010", "206_010"],
         "nlpmi_exclude" => ["001_010", "005_011", "006_010"],
+        "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
     ),
     "Ipopt" => Dict(
         "amplexe" => Ipopt_jll.amplexe,
@@ -57,6 +59,7 @@ const CONFIG = Dict(
         "nlp_exclude" => ["005_011", "006_010", "007_010"],
         "nlpcvx_exclude" => ["109_010"],
         "nlpmi_exclude" => ["005_011", "006_010"],
+        "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
     ),
     "SHOT" => Dict(
         "amplexe" => SHOT_jll.amplexe,
@@ -71,6 +74,7 @@ const CONFIG = Dict(
         "nlp_exclude" => ["005_011", "006_010"],
         "nlpcvx_exclude" => ["109_010"],
         "nlpmi_exclude" => ["005_011", "006_010"],
+        "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
     ),
 )
 
@@ -78,6 +82,7 @@ const CONFIG = Dict(
     config = CONFIG[name]
     OPTIMIZER =
         () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
+    PRIMAL_TARGET[MINLPTests.INFEASIBLE_PROBLEM] = config["infeasible_point"]
     @testset "NLP" begin
         MINLPTests.test_nlp(
             OPTIMIZER,
