@@ -966,9 +966,14 @@ for returning `MOI.NO_SOLUTION` if no primal solution is present.
 """
 function _interpret_status(solve_result_num::Int, raw_status_string::String)
     if 0 <= solve_result_num < 100
+        # Solved, and nothing went wrong. Even though we say `LOCALLY_SOLVED`,
+        # some solvers like SHOT use this status to represent problems that are
+        # provably globally optimal.
         return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
     elseif 100 <= solve_result_num < 200
-        return MOI.LOCALLY_SOLVED, MOI.UNKNOWN_RESULT_STATUS
+        # Solved, but the solver can't be sure for some reason. e.g., SHOT
+        # uses this for non-convex problems it isn't sure is the global optima.
+        return MOI.LOCALLY_SOLVED, MOI.FEASIBLE_POINT
     elseif 200 <= solve_result_num < 300
         return MOI.INFEASIBLE, MOI.UNKNOWN_RESULT_STATUS
     elseif 300 <= solve_result_num < 400
@@ -1040,18 +1045,20 @@ function _read_sol(io::IO, model::Optimizer)
     end
     # Read through all the options. Direct copy of reference implementation.
     @assert startswith(line, "Options")
-    options = [_readline(io, Int), _readline(io, Int), _readline(io, Int)]
-    num_options = options[1]
-    if !(3 <= num_options <= 9)
-        error("expected num_options between 3 and 9; " * "got $num_options")
-    end
+    num_options = _readline(io, Int)
     need_vbtol = false
-    if options[3] == 3
-        num_options -= 2
-        need_vbtol = true
-    end
-    for j in 3:num_options
-        push!(options, _readline(io, Int))
+    if num_options > 0
+        if !(3 <= num_options <= 9)
+            error("expected num_options between 3 and 9; " * "got $num_options")
+        end
+        _readline(io, Int)  # Skip this line
+        if _readline(io, Int) == 3
+            num_options -= 2
+            need_vbtol = true
+        end
+        for _ in 3:num_options
+            _readline(io, Int)  # Skip the rest of the option lines
+        end
     end
     # Read number of constraints
     num_cons = _readline(io, Int)
