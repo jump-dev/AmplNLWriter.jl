@@ -286,12 +286,8 @@ MOI.initialize(::_LinearNLPEvaluator, ::Vector{Symbol}) = nothing
 
 MOI.Utilities.supports_default_copy_to(::Optimizer, ::Bool) = false
 
-function MOI.copy_to(
-    dest::Optimizer,
-    model::MOI.ModelLike;
-    copy_names::Bool = false,
-)
-    return MOI.copy_to(dest.inner, model; copy_names = copy_names)
+function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; kwargs...)
+    return MOI.copy_to(dest.inner, src; kwargs...)
 end
 
 """
@@ -522,18 +518,17 @@ function MOI.get(
     return model.results.primal_solution[x]
 end
 
-MOI.get(model::Optimizer, ::MOI.SolveTime) = model.solve_time
+MOI.get(model::Optimizer, ::MOI.SolveTimeSec) = model.solve_time
 
 function MOI.get(model::Optimizer, ::MOI.TerminationStatus)
     return model.results.termination_status
 end
 
 function MOI.get(model::Optimizer, attr::MOI.PrimalStatus)
-    if attr.result_index == 1
-        return model.results.primal_status
-    else
-        MOI.NO_SOLUTION
+    if attr.result_index != 1
+        return MOI.NO_SOLUTION
     end
+    return model.results.primal_status
 end
 
 function MOI.get(model::Optimizer, attr::MOI.DualStatus)

@@ -6,6 +6,6 @@ end
 
 using Test
 
-@testset "MOI" begin
+@testset "MOI_wrapper" begin
     include("MOI_wrapper.jl")
 end

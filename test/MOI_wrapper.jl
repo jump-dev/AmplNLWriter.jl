@@ -1,17 +1,21 @@
 module TestMOIWrapper
 
-using AmplNLWriter
 using Test
-import MathOptInterface
 
-const MOI = MathOptInterface
+import AmplNLWriter
 
-const CONFIG = MOI.Test.Config(
-    atol = 1e-4,
-    rtol = 1e-4,
-    optimal_status = MOI.LOCALLY_SOLVED,
-    infeas_certificates = false,
-)
+const MOI = AmplNLWriter.MOI
+
+function runtests(path)
+    for name in names(@__MODULE__; all = true)
+        if !startswith("$(name)", "test_")
+            continue
+        end
+        @testset "$(name)" begin
+            getfield(@__MODULE__, name)(path)
+        end
+    end
+end
 
 function optimizer(path, args...; kwargs...)
     model = AmplNLWriter.Optimizer(path, args...; kwargs...)
@@ -33,46 +37,40 @@ function optimizer(path, args...; kwargs...)
     )
 end
 
+function test_runtests(path)
+    MOI.Test.runtests(
+        optimizer(path),
+        MOI.Test.Config(
+            atol = 1e-4,
+            rtol = 1e-4,
+            optimal_status = MOI.LOCALLY_SOLVED,
+            exclude = Any[
+                MOI.VariableBasisStatus,
+                MOI.ConstraintBasisStatus,
+                MOI.ObjectiveBound,
+            ]
+        ),
+        exclude = [
+            # TODO(odow): Bug in MOI/AmplNLWriter
+            "test_model_copy_to_",
+            # Returns UnknownResultStatus
+            "test_conic_NormInfinityCone_INFEASIBLE",
+            "test_conic_NormOneCone_INFEASIBLE",
+            "test_conic_linear_VectorOfVariables_2",
+            # Ipopt doesn't support integrality
+            "_ObjectiveBound_",
+            "_ZeroOne_",
+            "_Semicontinuous_",
+            "_Semiinteger_",
+            "_Integer_",
+            "test_linear_integer_",
+        ]
+    )
+    return
+end
+
 function test_show(path)
     @test sprint(show, AmplNLWriter.Optimizer(path)) == "An AMPL (.nl) model"
-end
-
-function test_name(path)
-    model = AmplNLWriter.Optimizer(path)
-    @test MOI.supports(model, MOI.Name())
-    MOI.set(model, MOI.Name(), "Foo")
-    @test MOI.get(model, MOI.Name()) == "Foo"
-end
-
-function test_unittest(path)
-    return MOI.Test.unittest(
-        optimizer(path),
-        CONFIG,
-        [
-            # Unsupported attributes:
-            "number_threads",
-            "silent",
-            "solve_objbound_edge_cases",
-            "solve_time",
-            "time_limit_sec",
-
-            # Ipopt doesn't handle integer
-            "solve_integer_edge_cases",
-            "solve_zero_one_with_bounds_2",
-            "solve_zero_one_with_bounds_3",
-
-            # No support for VectorOfVariables-in-SecondOrderCone
-            "delete_soc_variables",
-        ],
-    )
-end
-
-function test_contlinear(path)
-    return MOI.Test.contlineartest(optimizer(path), CONFIG)
-end
-
-function test_contlquadratic(path)
-    return MOI.Test.contquadratictest(optimizer(path), CONFIG)
 end
 
 function test_solver_name(path)
@@ -81,38 +79,6 @@ end
 
 function test_abstractoptimizer(path)
     @test optimizer(path) isa MOI.AbstractOptimizer
-end
-
-function test_defaultobjective(path)
-    return MOI.Test.default_objective_test(optimizer(path))
-end
-
-function test_default_status_test(path)
-    return MOI.Test.default_status_test(optimizer(path))
-end
-
-function test_nametest(path)
-    return MOI.Test.nametest(optimizer(path))
-end
-
-function test_validtest(path)
-    return MOI.Test.validtest(optimizer(path))
-end
-
-function test_emptytest(path)
-    return MOI.Test.emptytest(optimizer(path))
-end
-
-function test_orderedindices(path)
-    return MOI.Test.orderedindicestest(optimizer(path))
-end
-
-function test_copytest(path)
-    return MOI.Test.copytest(optimizer(path), optimizer(path))
-end
-
-function test_nlptest(path)
-    return MOI.Test.nlptest(optimizer(path), CONFIG)
 end
 
 function test_bad_string(::Any)
@@ -207,7 +173,7 @@ end
 
 function test_solve_time(path)
     model = optimizer(path)
-    @test isnan(MOI.get(model, MOI.SolveTime()))
+    @test isnan(MOI.get(model, MOI.SolveTimeSec()))
     v = MOI.add_variables(model, 4)
     l = [1.1, 1.2, 1.3, 1.4]
     u = [5.1, 5.2, 5.3, 5.4]
@@ -221,19 +187,8 @@ function test_solve_time(path)
     MOI.set(model, MOI.NLPBlock(), block_data)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.optimize!(model)
-    @test MOI.get(model, MOI.SolveTime()) > 0.0
+    @test MOI.get(model, MOI.SolveTimeSec()) > 0.0
     return
-end
-
-function runtests(path)
-    for name in names(@__MODULE__; all = true)
-        if !startswith("$(name)", "test_")
-            continue
-        end
-        @testset "$(name)" begin
-            getfield(@__MODULE__, name)(path)
-        end
-    end
 end
 
 end
