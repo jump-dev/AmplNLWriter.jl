@@ -272,7 +272,7 @@ The following two calls are equivalent:
 model = Optimizer(Ipopt_jll.amplexe, ["print_level=0"])
 # Better:
 model = Optimizer(Ipopt_jll.amplexe)
-MOI.set(model, MOI.RawParameter("print_level"), 0
+MOI.set(model, MOI.RawParameter("print_level"), 0)
 ```
 """
 function Optimizer(
