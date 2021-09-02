@@ -114,7 +114,7 @@ function test_io(path)
     io = IOBuffer()
     model = optimizer(path; stdin = stdin, stdout = io)
     x = MOI.add_variable(model)
-    MOI.add_constraint(model, MOI.SingleVariable(x), MOI.GreaterThan(0.0))
+    MOI.add_constraint(model, x, MOI.GreaterThan(0.0))
     MOI.optimize!(model)
     seekstart(io)
     s = String(take!(io))
@@ -130,7 +130,7 @@ end
 function test_single_variable_interval_dual(path)
     model = optimizer(path)
     x = MOI.add_variable(model)
-    c = MOI.add_constraint(model, MOI.SingleVariable(x), MOI.Interval(0.0, 1.0))
+    c = MOI.add_constraint(model, x, MOI.Interval(0.0, 1.0))
     f = MOI.ScalarAffineFunction([MOI.ScalarAffineTerm(1.0, x)], 2.0)
     MOI.set(model, MOI.ObjectiveFunction{typeof(f)}(), f)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
@@ -148,8 +148,8 @@ function test_nlpblockdual(path)
     l = [1.1, 1.2, 1.3, 1.4]
     u = [5.1, 5.2, 5.3, 5.4]
     start = [2.1, 2.2, 2.3, 2.4]
-    MOI.add_constraint.(model, MOI.SingleVariable.(v), MOI.GreaterThan.(l))
-    MOI.add_constraint.(model, MOI.SingleVariable.(v), MOI.LessThan.(u))
+    MOI.add_constraint.(model, v, MOI.GreaterThan.(l))
+    MOI.add_constraint.(model, v, MOI.LessThan.(u))
     MOI.set.(model, MOI.VariablePrimalStart(), v, start)
     lb, ub = [25.0, 40.0], [Inf, 40.0]
     evaluator = MOI.Test.HS071(true)
@@ -178,8 +178,8 @@ function test_solve_time(path)
     l = [1.1, 1.2, 1.3, 1.4]
     u = [5.1, 5.2, 5.3, 5.4]
     start = [2.1, 2.2, 2.3, 2.4]
-    MOI.add_constraint.(model, MOI.SingleVariable.(v), MOI.GreaterThan.(l))
-    MOI.add_constraint.(model, MOI.SingleVariable.(v), MOI.LessThan.(u))
+    MOI.add_constraint.(model, v, MOI.GreaterThan.(l))
+    MOI.add_constraint.(model, v, MOI.LessThan.(u))
     MOI.set.(model, MOI.VariablePrimalStart(), v, start)
     lb, ub = [25.0, 40.0], [Inf, 40.0]
     evaluator = MOI.Test.HS071(true)

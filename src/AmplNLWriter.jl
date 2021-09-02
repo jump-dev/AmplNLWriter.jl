@@ -210,7 +210,7 @@ end
 MOI.is_empty(model::Optimizer) = MOI.is_empty(model.inner)
 
 const _SCALAR_FUNCTIONS = Union{
-    MOI.SingleVariable,
+    MOI.VariableIndex,
     MOI.ScalarAffineFunction{Float64},
     MOI.ScalarQuadraticFunction{Float64},
 }
@@ -232,7 +232,7 @@ end
 
 function MOI.supports_constraint(
     ::Optimizer,
-    ::Type{MOI.SingleVariable},
+    ::Type{MOI.VariableIndex},
     ::Type{<:Union{MOI.ZeroOne,MOI.Integer}},
 )
     return true
@@ -284,10 +284,10 @@ struct _LinearNLPEvaluator <: MOI.AbstractNLPEvaluator end
 MOI.features_available(::_LinearNLPEvaluator) = [:ExprGraph]
 MOI.initialize(::_LinearNLPEvaluator, ::Vector{Symbol}) = nothing
 
-MOI.Utilities.supports_default_copy_to(::Optimizer, ::Bool) = false
+MOI.supports_incremental_interface(::Optimizer) = false
 
-function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; kwargs...)
-    return MOI.copy_to(dest.inner, src; kwargs...)
+function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
+    return MOI.copy_to(dest.inner, src)
 end
 
 """
@@ -555,7 +555,7 @@ end
 function MOI.get(
     model::Optimizer,
     attr::MOI.ConstraintPrimal,
-    ci::MOI.ConstraintIndex{<:MOI.SingleVariable},
+    ci::MOI.ConstraintIndex{<:MOI.VariableIndex},
 )
     MOI.check_result_index_bounds(model, attr)
     return model.results.primal_solution[MOI.VariableIndex(ci.value)]
@@ -594,7 +594,7 @@ end
 function MOI.get(
     model::Optimizer,
     attr::MOI.ConstraintDual,
-    ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.LessThan{Float64}},
+    ci::MOI.ConstraintIndex{MOI.VariableIndex,MOI.LessThan{Float64}},
 )
     MOI.check_result_index_bounds(model, attr)
     dual = get(model.results.zU_out, MOI.VariableIndex(ci.value), 0.0)
@@ -604,7 +604,7 @@ end
 function MOI.get(
     model::Optimizer,
     attr::MOI.ConstraintDual,
-    ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.GreaterThan{Float64}},
+    ci::MOI.ConstraintIndex{MOI.VariableIndex,MOI.GreaterThan{Float64}},
 )
     MOI.check_result_index_bounds(model, attr)
     dual = get(model.results.zL_out, MOI.VariableIndex(ci.value), 0.0)
@@ -614,7 +614,7 @@ end
 function MOI.get(
     model::Optimizer,
     attr::MOI.ConstraintDual,
-    ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.EqualTo{Float64}},
+    ci::MOI.ConstraintIndex{MOI.VariableIndex,MOI.EqualTo{Float64}},
 )
     MOI.check_result_index_bounds(model, attr)
     x = MOI.VariableIndex(ci.value)
@@ -625,7 +625,7 @@ end
 function MOI.get(
     model::Optimizer,
     attr::MOI.ConstraintDual,
-    ci::MOI.ConstraintIndex{MOI.SingleVariable,MOI.Interval{Float64}},
+    ci::MOI.ConstraintIndex{MOI.VariableIndex,MOI.Interval{Float64}},
 )
     MOI.check_result_index_bounds(model, attr)
     x = MOI.VariableIndex(ci.value)
