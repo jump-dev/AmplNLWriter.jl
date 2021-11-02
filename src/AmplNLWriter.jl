@@ -1144,7 +1144,7 @@ function MOI.optimize!(model::Optimizer)
     temp_dir = mktempdir()
     nl_file = joinpath(temp_dir, "model.nl")
     open(io -> write(io, model), nl_file, "w")
-    options = [isempty(v) ? k : "$(k)=$(v)" for (k, v) in model.options]
+    options = String[isempty(v) ? k : "$(k)=$(v)" for (k, v) in model.options]
     try
         sol_file = call_solver(
             model.solver_command,
