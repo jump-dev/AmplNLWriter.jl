@@ -59,7 +59,7 @@ function test_runtests(path)
                 MOI.VariableBasisStatus,
                 MOI.ConstraintBasisStatus,
                 MOI.ObjectiveBound,
-            ]
+            ],
         ),
         exclude = [
             # TODO(odow): Bug in MOI/AmplNLWriter
@@ -77,7 +77,7 @@ function test_runtests(path)
             "_Semiinteger_",
             "_Integer_",
             "test_linear_integer_",
-        ]
+        ],
     )
     return
 end
