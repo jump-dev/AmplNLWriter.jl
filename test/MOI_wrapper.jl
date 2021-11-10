@@ -64,6 +64,8 @@ function test_runtests(path)
         exclude = [
             # TODO(odow): Bug in MOI/AmplNLWriter
             "test_model_copy_to_",
+            # TODO(odow): implement
+            "test_attribute_SolverVersion",
             # Returns UnknownResultStatus
             "test_conic_NormInfinityCone_INFEASIBLE",
             "test_conic_NormOneCone_INFEASIBLE",
