@@ -66,6 +66,8 @@ function test_runtests(path)
             "test_model_copy_to_",
             # TODO(odow): implement
             "test_attribute_SolverVersion",
+            # Skip the test with NaNs
+            "test_nonlinear_invalid",
             # Returns UnknownResultStatus
             "test_conic_NormInfinityCone_INFEASIBLE",
             "test_conic_NormOneCone_INFEASIBLE",

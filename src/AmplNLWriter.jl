@@ -473,9 +473,6 @@ function _read_sol(io::IO, model::MOI.FileFormats.NL.Model)
     )
 end
 
-# TODO(odow): Very scary type piracy!
-MOI.FileFormats.NL._evaluate(::Symbol, ::Any) = NaN
-
 function MOI.optimize!(model::Optimizer)
     start_time = time()
     temp_dir = mktempdir()
