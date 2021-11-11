@@ -1,9 +1,5 @@
 using Test
 
-@testset "NLModel" begin
-    include("NLModel.jl")
-end
-
-@testset "MOI" begin
+@testset "MOI_wrapper" begin
     include("MOI_wrapper.jl")
 end

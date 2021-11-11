@@ -1,7 +1,3 @@
-if VERSION < v"1.6"
-    error("You must use Julia 1.6 or newer.")
-end
-
 import AmplNLWriter
 import Bonmin_jll
 import Couenne_jll

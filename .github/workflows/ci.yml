@@ -11,12 +11,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ['1.0', '1']  # Test against LTS and current minor release
+        version: ['1']  # Test against current minor release
         os: [ubuntu-latest]
         arch: [x64]
         include:
-          # Also test against 32-bit Linux on LTS.
-          - version: '1.0'
+          # Also test against 32-bit Linux
+          - version: '1'
             os: ubuntu-latest
             arch: x86
     steps:

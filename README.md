@@ -1,29 +1,29 @@
 # AmplNLWriter.jl
 
-AmplNLWriter.jl is an interface between [MathOptInterface.jl](https://github.com/jump-dev/MathOptInterface.jl)
-and [AMPL-enabled solvers](http://ampl.com/products/solvers/all-solvers-for-ampl/).
-
-*Development of AmplNLWriter.jl is community driven and has no official
-connection with the AMPL modeling language or AMPL Optimization Inc.*
-
 [![Build Status](https://github.com/jump-dev/AmplNLWriter.jl/workflows/CI/badge.svg?branch=master)](https://github.com/jump-dev/AmplNLWriter.jl/actions?query=workflow%3ACI)
 [![MINLPTests](https://github.com/jump-dev/AmplNLWriter.jl/workflows/MINLPTests/badge.svg?branch=master)](https://github.com/jump-dev/AmplNLWriter.jl/actions?query=workflow%3AMINLPTests)
 [![codecov](https://codecov.io/gh/jump-dev/AmplNLWriter.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/jump-dev/AmplNLWriter.jl)
 
+AmplNLWriter.jl is an interface between [MathOptInterface.jl](https://github.com/jump-dev/MathOptInterface.jl)
+and [AMPL-enabled solvers](http://ampl.com/products/solvers/all-solvers-for-ampl/).
+
+*Note: this wrapper is maintained by the JuMP community and has no official
+connection with the AMPL modeling language or AMPL Optimization Inc.*
+
 ## Installation
 
-The package can be installed with `Pkg.add`.
+Install AmplNLWriter using `Pkg.add`.
 
 ```julia
 import Pkg
 Pkg.add("AmplNLWriter")
 ```
 
+**Note: AmplNLWriter requires Julia 1.6 or later.**
+
 ### Solvers
 
 You also need an AMPL compatible solver.
-
-**Note: the `_jll` packages require Julia 1.6 or later.**
 
 #### Bonmin (https://github.com/coin-or/Bonmin)
 
@@ -92,7 +92,7 @@ A list of available options for each solver can be found here:
 - [Ipopt](https://coin-or.github.io/Ipopt/OPTIONS.html)
 - [SHOT](https://shotsolver.dev/shot/using-shot/solver-options)
 
-Set an option using `set_optimizer_attribute`. For example, to set the 
+Set an option using `set_optimizer_attribute`. For example, to set the
 `"bonmin.nlp_log_level"` option to 0 in Bonmin, use:
 ```julia
 using JuMP, AmplNLWriter, Bonmin_jll
@@ -102,10 +102,10 @@ set_optimizer_attribute(model, "bonmin.nlp_log_level", 0)
 
 ### opt files
 
-Some of the options need to be specified via an `.opt` file. This file must be 
+Some of the options need to be specified via an `.opt` file. This file must be
 located in the current working directory whenever the model is solved.
 
-The `.opt` file must be named after the name of the solver, e.g. `bonmin.opt`, and 
+The `.opt` file must be named after the name of the solver, e.g. `bonmin.opt`, and
 each line must contain an option name and the desired value separated by a space.
 For instance, to set the absolute and relative tolerances in Couenne to 1 and
 0.05 respectively, the `couenne.opt` is:
