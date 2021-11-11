@@ -3,21 +3,16 @@ uuid = "7c4d4715-977e-5154-bfe0-e096adeac482"
 version = "0.8.0"
 
 [deps]
-Ipopt = "b6b21f68-93f8-5de0-b562-5493be1d77c9"
-Ipopt_jll = "9cc047cb-c261-5740-88fc-0cf96f7bdcc7"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 
 [compat]
-Ipopt = "0.8"
 Ipopt_jll = "3.13.2"
 MathOptInterface = "0.10.5"
 julia = "1.6"
 
 [extras]
-Ipopt = "b6b21f68-93f8-5de0-b562-5493be1d77c9"
 Ipopt_jll = "9cc047cb-c261-5740-88fc-0cf96f7bdcc7"
-Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Pkg", "Test", "Ipopt", "Ipopt_jll"]
+test = ["Test", "Ipopt_jll"]
