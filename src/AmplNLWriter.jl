@@ -103,18 +103,18 @@ end
 
 Create a new Optimizer object.
 
-`solver_command` should be one of two things:
+## Arguments
 
-* A `String` of the full path of an AMPL-compatible executable
-* A function that takes takes a function as input, initializes any environment
-  as needed, calls the input function with a path to the initialized executable,
-  and then destructs the environment.
-
-`solver_args` is a vector of `String` arguments passed solver executable.
-However, prefer passing `key=value` options via `MOI.RawOptimizerAttribute`.
-
-Redirect IO using `stdin` and `stdout`. These arguments are passed to
-`Base.pipeline`. See the Julia documentation for more details.
+ * `solver_command`: one of two things:
+   * A `String` of the full path of an AMPL-compatible executable
+   * A function that takes takes a function as input, initializes any
+     environment as needed, calls the input function with a path to the
+     initialized executable, and then destructs the environment.
+ * `solver_args`: a vector of `String` arguments passed solver executable.
+   However, prefer passing `key=value` options via `MOI.RawOptimizerAttribute`.
+ * `stdin` and `stdio`: arguments passed to `Base.pipeline` to redirect IO. See
+   the Julia documentation for more details by typing `? pipeline` at the Julia
+   REPL.
 
 ## Examples
 
@@ -178,19 +178,6 @@ end
 
 Base.show(io::IO, ::Optimizer) = print(io, "An AMPL (.nl) model")
 
-MOI.get(model::Optimizer, ::MOI.SolverName) = "AmplNLWriter"
-
-MOI.supports(::Optimizer, ::MOI.NLPBlock) = true
-
-MOI.supports(::Optimizer, ::MOI.Name) = true
-
-MOI.get(model::Optimizer, ::MOI.Name) = MOI.get(model.inner, MOI.Name())
-
-function MOI.set(model::Optimizer, ::MOI.Name, name::String)
-    MOI.set(model.inner, MOI.Name(), name)
-    return
-end
-
 function MOI.empty!(model::Optimizer)
     MOI.empty!(model.inner)
     model.results = _NLResults(
@@ -208,6 +195,28 @@ function MOI.empty!(model::Optimizer)
 end
 
 MOI.is_empty(model::Optimizer) = MOI.is_empty(model.inner)
+
+MOI.get(model::Optimizer, ::MOI.SolverName) = "AmplNLWriter"
+
+MOI.supports(::Optimizer, ::MOI.Name) = true
+
+MOI.get(model::Optimizer, ::MOI.Name) = MOI.get(model.inner, MOI.Name())
+
+function MOI.set(model::Optimizer, ::MOI.Name, name::String)
+    MOI.set(model.inner, MOI.Name(), name)
+    return
+end
+
+MOI.supports(::Optimizer, ::MOI.RawOptimizerAttribute) = true
+
+function MOI.get(model::Optimizer, attr::MOI.RawOptimizerAttribute)
+    return get(model.options, attr.name, nothing)
+end
+
+function MOI.set(model::Optimizer, attr::MOI.RawOptimizerAttribute, value)
+    model.options[attr.name] = value
+    return
+end
 
 const _SCALAR_FUNCTIONS = Union{
     MOI.VariableIndex,
@@ -238,19 +247,15 @@ function MOI.supports_constraint(
     return true
 end
 
-MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{<:_SCALAR_FUNCTIONS}) = true
 
-MOI.supports(::Optimizer, ::MOI.RawOptimizerAttribute) = true
-function MOI.get(model::Optimizer, attr::MOI.RawOptimizerAttribute)
-    return get(model.options, attr.name, nothing)
-end
-function MOI.set(model::Optimizer, attr::MOI.RawOptimizerAttribute, value)
-    model.options[attr.name] = value
-    return
-end
+MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 
-# ==============================================================================
+MOI.supports(::Optimizer, ::MOI.NLPBlock) = true
+
+MOI.supports_incremental_interface(::Optimizer) = false
+
+MOI.copy_to(dest::Optimizer, src::MOI.ModelLike) = MOI.copy_to(dest.inner, src)
 
 function MOI.supports(
     ::Optimizer,
@@ -276,18 +281,6 @@ function MOI.get(
     x::MOI.VariableIndex,
 )
     return model.inner.x[x].start
-end
-
-# ==============================================================================
-
-struct _LinearNLPEvaluator <: MOI.AbstractNLPEvaluator end
-MOI.features_available(::_LinearNLPEvaluator) = [:ExprGraph]
-MOI.initialize(::_LinearNLPEvaluator, ::Vector{Symbol}) = nothing
-
-MOI.supports_incremental_interface(::Optimizer) = false
-
-function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike)
-    return MOI.copy_to(dest.inner, src)
 end
 
 """
