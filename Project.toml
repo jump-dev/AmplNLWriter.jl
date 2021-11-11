@@ -1,6 +1,6 @@
 name = "AmplNLWriter"
 uuid = "7c4d4715-977e-5154-bfe0-e096adeac482"
-version = "0.7.2"
+version = "0.8.0"
 
 [deps]
 Ipopt = "b6b21f68-93f8-5de0-b562-5493be1d77c9"
@@ -11,7 +11,7 @@ MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 Ipopt = "0.8"
 Ipopt_jll = "3.13.2"
 MathOptInterface = "0.10.5"
-julia = "1"
+julia = "1.6"
 
 [extras]
 Ipopt = "b6b21f68-93f8-5de0-b562-5493be1d77c9"
