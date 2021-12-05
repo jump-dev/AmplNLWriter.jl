@@ -29,7 +29,7 @@ const PRIMAL_TARGET = Dict(
 const CONFIG = Dict(
     "Bonmin" => Dict(
         "amplexe" => Bonmin_jll.amplexe,
-        "options" => String["bonmin.nlp_log_level=0"],
+        "options" => String["bonmin.nlp_log_level=0", "tol=1e-9"],
         "tol" => 1e-5,
         "dual_tol" => NaN,
         "nlp_exclude" => ["005_011", "006_010"],
