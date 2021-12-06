@@ -1,8 +1,4 @@
 import AmplNLWriter
-import Bonmin_jll
-import Couenne_jll
-import Ipopt_jll
-# import SHOT_jll
 import MINLPTests
 using Test
 
@@ -16,7 +12,7 @@ const PRIMAL_TARGET = Dict(
     MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.NO_SOLUTION,
 )
 
-# Reasons for exclusion:
+# Common reasons for exclusion:
 # nlp/005_011     : Uses the function `\`
 # nlp/006_010     : Uses a user-defined function
 # nlp/007_010     : Ipopt returns an infeasible point, not NO_SOLUTION.
@@ -26,65 +22,73 @@ const PRIMAL_TARGET = Dict(
 # nlp-cvx/206_010 : Couenne can't evaluate pow
 # nlp-mi/001_010  : Couenne fails to converge
 
-const CONFIG = Dict(
-    "Bonmin" => Dict(
-        "amplexe" => Bonmin_jll.amplexe,
-        "options" => String["bonmin.nlp_log_level=0"],
-        "tol" => 1e-5,
-        "dual_tol" => NaN,
-        "nlp_exclude" => ["005_011", "006_010"],
-        "nlpcvx_exclude" => ["109_010"],
-        # 004_010 and 004_011 are tolerance failures on Bonmin
-        "nlpmi_exclude" => ["004_010", "004_011", "005_011", "006_010"],
-        "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
-    ),
-    "Couenne" => Dict(
-        "amplexe" => Couenne_jll.amplexe,
-        "options" => String[],
-        "tol" => 1e-2,
-        "dual_tol" => NaN,
-        "nlp_exclude" => ["005_011", "006_010", "008_010", "008_011"],
-        "nlpcvx_exclude" => ["109_010", "206_010"],
-        "nlpmi_exclude" => ["001_010", "005_011", "006_010"],
-        "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
-    ),
-    "Ipopt" => Dict(
-        "amplexe" => Ipopt_jll.amplexe,
-        "options" => String["print_level=0"],
-        "tol" => 1e-5,
-        "dual_tol" => 1e-5,
-        "nlp_exclude" => ["005_011", "006_010", "007_010"],
-        "nlpcvx_exclude" => ["109_010"],
-        "nlpmi_exclude" => ["005_011", "006_010"],
-        "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
-    ),
+const CONFIG = Dict{String,Any}()
+
+import Bonmin_jll
+CONFIG["Bonmin"] = Dict(
+    "amplexe" => Bonmin_jll.amplexe,
+    "options" => String["bonmin.nlp_log_level=0"],
+    "tol" => 1e-5,
+    "dual_tol" => NaN,
+    "nlp_exclude" => ["005_011", "006_010"],
+    "nlpcvx_exclude" => ["109_010"],
+    # 004_010 and 004_011 are tolerance failures on Bonmin
+    "nlpmi_exclude" => ["004_010", "004_011", "005_011", "006_010"],
+    "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
+)
+
+import Couenne_jll
+CONFIG["Couenne"] = Dict(
+    "amplexe" => Couenne_jll.amplexe,
+    "options" => String[],
+    "tol" => 1e-2,
+    "dual_tol" => NaN,
+    "nlp_exclude" => ["005_011", "006_010", "008_010", "008_011"],
+    "nlpcvx_exclude" => ["109_010", "206_010"],
+    "nlpmi_exclude" => ["001_010", "005_011", "006_010"],
+    "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
+)
+
+import Ipopt_jll
+CONFIG["Ipopt"] = Dict(
+    "amplexe" => Ipopt_jll.amplexe,
+    "options" => String["print_level=0"],
+    "tol" => 1e-5,
+    "dual_tol" => 1e-5,
+    "nlp_exclude" => ["005_011", "006_010", "007_010"],
+    "nlpcvx_exclude" => ["109_010"],
+    "nlpmi_exclude" => ["005_011", "006_010"],
+    "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
+)
+
 # SHOT fails too many tests to recommend using it. 
 # e.g., https://github.com/coin-or/SHOT/issues/134
 # Even problems such as `@variable(model, x); @objective(model, Min, (x-1)^2)`
-#     "SHOT" => Dict(
-#         "amplexe" => SHOT_jll.amplexe,
-#         "options" => String[
-#             "Output.Console.LogLevel=6",
-#             "Output.File.LogLevel=6",
-#             "Termination.ObjectiveGap.Absolute=1e-6",
-#             "Termination.ObjectiveGap.Relative=1e-6",
-#         ],
-#         "tol" => 1e-2,
-#         "dual_tol" => NaN,
-#         "nlp_exclude" => [
-#             "005_011",  # `\` function
-#             "006_010",  # User-defined function
-#         ],
-#         "nlpcvx_exclude" => [
-#             "501_011",  # `\` function
-#         ],
-#         "nlpmi_exclude" => [
-#             "005_011",  # `\` function
-#             "006_010",  # User-defined function
-#         ],
-#         "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
-#     ),
-)
+#
+# import SHOT_jll
+# CONFIG["SHOT"] = Dict(
+#     "amplexe" => SHOT_jll.amplexe,
+#     "options" => String[
+#         "Output.Console.LogLevel=6",
+#         "Output.File.LogLevel=6",
+#         "Termination.ObjectiveGap.Absolute=1e-6",
+#         "Termination.ObjectiveGap.Relative=1e-6",
+#     ],
+#     "tol" => 1e-2,
+#     "dual_tol" => NaN,
+#     "nlp_exclude" => [
+#         "005_011",  # `\` function
+#         "006_010",  # User-defined function
+#     ],
+#     "nlpcvx_exclude" => [
+#         "501_011",  # `\` function
+#     ],
+#     "nlpmi_exclude" => [
+#         "005_011",  # `\` function
+#         "006_010",  # User-defined function
+#     ],
+#     "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
+# )
 
 @testset "$(name)" for name in ["Ipopt", "Bonmin", "Couenne"]
     config = CONFIG[name]
