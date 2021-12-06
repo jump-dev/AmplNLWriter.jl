@@ -52,6 +52,7 @@ To install SHOT, use:
 ```julia
 Pkg.add("SHOT_jll")
 ```
+**Warning: SHOT_jll uses open-source solvers and fails many of our unit tests. You may want to compile your own binary with commercial solvers.**
 
 ## Usage
 
