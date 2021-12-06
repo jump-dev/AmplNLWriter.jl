@@ -34,7 +34,8 @@ const CONFIG = Dict(
         "dual_tol" => NaN,
         "nlp_exclude" => ["005_011", "006_010"],
         "nlpcvx_exclude" => ["109_010"],
-        "nlpmi_exclude" => ["005_011", "006_010"],
+        # 004_010 and 004_011 are tolerance failures on Bonmin
+        "nlpmi_exclude" => ["004_010", "004_011", "005_011", "006_010"],
         "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
     ),
     "Couenne" => Dict(
