@@ -2,7 +2,7 @@ import AmplNLWriter
 import Bonmin_jll
 import Couenne_jll
 import Ipopt_jll
-import SHOT_jll
+# import SHOT_jll
 import MINLPTests
 using Test
 
@@ -58,32 +58,35 @@ const CONFIG = Dict(
         "nlpmi_exclude" => ["005_011", "006_010"],
         "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
     ),
-    "SHOT" => Dict(
-        "amplexe" => SHOT_jll.amplexe,
-        "options" => String[
-            "Output.Console.LogLevel=6",
-            "Output.File.LogLevel=6",
-            "Termination.ObjectiveGap.Absolute=1e-6",
-            "Termination.ObjectiveGap.Relative=1e-6",
-        ],
-        "tol" => 1e-2,
-        "dual_tol" => NaN,
-        "nlp_exclude" => [
-            "005_011",  # `\` function
-            "006_010",  # User-defined function
-        ],
-        "nlpcvx_exclude" => [
-            "501_011",  # `\` function
-        ],
-        "nlpmi_exclude" => [
-            "005_011",  # `\` function
-            "006_010",  # User-defined function
-        ],
-        "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
-    ),
+# SHOT fails too many tests to recommend using it. 
+# e.g., https://github.com/coin-or/SHOT/issues/134
+# Even problems such as `@variable(model, x); @objective(model, Min, (x-1)^2)`
+#     "SHOT" => Dict(
+#         "amplexe" => SHOT_jll.amplexe,
+#         "options" => String[
+#             "Output.Console.LogLevel=6",
+#             "Output.File.LogLevel=6",
+#             "Termination.ObjectiveGap.Absolute=1e-6",
+#             "Termination.ObjectiveGap.Relative=1e-6",
+#         ],
+#         "tol" => 1e-2,
+#         "dual_tol" => NaN,
+#         "nlp_exclude" => [
+#             "005_011",  # `\` function
+#             "006_010",  # User-defined function
+#         ],
+#         "nlpcvx_exclude" => [
+#             "501_011",  # `\` function
+#         ],
+#         "nlpmi_exclude" => [
+#             "005_011",  # `\` function
+#             "006_010",  # User-defined function
+#         ],
+#         "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
+#     ),
 )
 
-@testset "$(name)" for name in ["Ipopt", "Bonmin", "Couenne", "SHOT"]
+@testset "$(name)" for name in ["Ipopt", "Bonmin", "Couenne"]
     config = CONFIG[name]
     OPTIMIZER =
         () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
