@@ -239,32 +239,6 @@ MOI.supports_incremental_interface(::Optimizer) = false
 
 MOI.copy_to(dest::Optimizer, src::MOI.ModelLike) = MOI.copy_to(dest.inner, src)
 
-function MOI.supports(
-    ::Optimizer,
-    ::MOI.VariablePrimalStart,
-    ::Type{MOI.VariableIndex},
-)
-    return true
-end
-
-function MOI.set(
-    model::Optimizer,
-    attr::MOI.VariablePrimalStart,
-    x::MOI.VariableIndex,
-    v,
-)
-    MOI.set(model.inner, attr, x, v)
-    return
-end
-
-function MOI.get(
-    model::Optimizer,
-    attr::MOI.VariablePrimalStart,
-    x::MOI.VariableIndex,
-)
-    return MOI.get(model.inner, attr, x)
-end
-
 function MOI.optimize!(model::Optimizer)
     start_time = time()
     temp_dir = mktempdir()
