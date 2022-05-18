@@ -60,6 +60,7 @@ function test_runtests(path)
             atol = 1e-4,
             rtol = 1e-4,
             optimal_status = MOI.LOCALLY_SOLVED,
+            infeasible_status = MOI.LOCALLY_INFEASIBLE,
             exclude = Any[
                 MOI.VariableBasisStatus,
                 MOI.ConstraintBasisStatus,
