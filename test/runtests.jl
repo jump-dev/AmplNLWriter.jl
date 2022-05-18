@@ -4,7 +4,7 @@
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
 
 import Pkg
-Pkg.add(Pkg.PackageSpec(;name = "MathOptInterface", rev = "od/nl-sol"))
+Pkg.add(Pkg.PackageSpec(; name = "MathOptInterface", rev = "od/nl-sol"))
 
 using Test
 

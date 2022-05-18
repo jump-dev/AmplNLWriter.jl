@@ -4,7 +4,7 @@
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
 
 import Pkg
-Pkg.add(Pkg.PackageSpec(;name = "MathOptInterface", rev = "od/nl-sol"))
+Pkg.add(Pkg.PackageSpec(; name = "MathOptInterface", rev = "od/nl-sol"))
 
 import AmplNLWriter
 import MINLPTests
@@ -12,7 +12,7 @@ using Test
 
 const TERMINATION_TARGET = Dict(
     MINLPTests.FEASIBLE_PROBLEM => AmplNLWriter.MOI.LOCALLY_SOLVED,
-    MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.INFEASIBLE,
+    MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.LOCALLY_INFEASIBLE,
 )
 
 const PRIMAL_TARGET = Dict(
