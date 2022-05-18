@@ -235,6 +235,14 @@ MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 
 MOI.supports(::Optimizer, ::MOI.NLPBlock) = true
 
+function MOI.supports(
+    ::Optimizer,
+    ::MOI.VariablePrimalStart,
+    ::Type{MOI.VariableIndex},
+)
+    return true
+end
+
 MOI.supports_incremental_interface(::Optimizer) = false
 
 MOI.copy_to(dest::Optimizer, src::MOI.ModelLike) = MOI.copy_to(dest.inner, src)
