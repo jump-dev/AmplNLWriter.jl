@@ -4,6 +4,7 @@ Couenne_jll = "f09e9e23-9010-5c9e-b679-9f1d8f79b85c"
 Ipopt_jll = "9cc047cb-c261-5740-88fc-0cf96f7bdcc7"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 MINLPTests = "ee0a3090-8ee9-5cdb-b8cb-8eeba3165522"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 SHOT_jll = "c1ab834c-c4a5-50f5-9156-8f0fe7758b0e"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 

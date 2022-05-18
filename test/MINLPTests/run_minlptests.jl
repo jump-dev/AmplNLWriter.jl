@@ -3,6 +3,9 @@
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
 
+import Pkg
+Pkg.add(Pkg.PackageSpec(;name = "MathOptInterface", rev = "od/nl-sol"))
+
 import AmplNLWriter
 import MINLPTests
 using Test
@@ -66,7 +69,7 @@ CONFIG["Ipopt"] = Dict(
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
 )
 
-# SHOT fails too many tests to recommend using it. 
+# SHOT fails too many tests to recommend using it.
 # e.g., https://github.com/coin-or/SHOT/issues/134
 # Even problems such as `@variable(model, x); @objective(model, Min, (x-1)^2)`
 #
