@@ -98,7 +98,7 @@ CONFIG["SHOT"] = Dict(
     "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
 )
 
-@testset "$(name)" for name in ["Ipopt", "Bonmin", "Couenne", "SHOT"]
+@testset "$(name)" for name in ["Ipopt", "Bonmin", "Couenne"]
     config = CONFIG[name]
     OPTIMIZER =
         () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
