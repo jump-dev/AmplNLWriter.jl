@@ -3,9 +3,6 @@
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
 
-import Pkg
-Pkg.add(Pkg.PackageSpec(; name = "MathOptInterface", rev = "master"))
-
 import AmplNLWriter
 import MINLPTests
 using Test
@@ -72,31 +69,31 @@ CONFIG["Ipopt"] = Dict(
 # SHOT fails too many tests to recommend using it.
 # e.g., https://github.com/coin-or/SHOT/issues/134
 # Even problems such as `@variable(model, x); @objective(model, Min, (x-1)^2)`
-
-import SHOT_jll
-CONFIG["SHOT"] = Dict(
-    "amplexe" => SHOT_jll.amplexe,
-    "options" => String[
-        "Output.Console.LogLevel=6",
-        "Output.File.LogLevel=6",
-        "Termination.ObjectiveGap.Absolute=1e-6",
-        "Termination.ObjectiveGap.Relative=1e-6",
-    ],
-    "tol" => 1e-2,
-    "dual_tol" => NaN,
-    "nlp_exclude" => [
-        "005_011",  # `\` function
-        "006_010",  # User-defined function
-    ],
-    "nlpcvx_exclude" => [
-        "501_011",  # `\` function
-    ],
-    "nlpmi_exclude" => [
-        "005_011",  # `\` function
-        "006_010",  # User-defined function
-    ],
-    "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
-)
+#
+# import SHOT_jll
+# CONFIG["SHOT"] = Dict(
+#     "amplexe" => SHOT_jll.amplexe,
+#     "options" => String[
+#         "Output.Console.LogLevel=6",
+#         "Output.File.LogLevel=6",
+#         "Termination.ObjectiveGap.Absolute=1e-6",
+#         "Termination.ObjectiveGap.Relative=1e-6",
+#     ],
+#     "tol" => 1e-2,
+#     "dual_tol" => NaN,
+#     "nlp_exclude" => [
+#         "005_011",  # `\` function
+#         "006_010",  # User-defined function
+#     ],
+#     "nlpcvx_exclude" => [
+#         "501_011",  # `\` function
+#     ],
+#     "nlpmi_exclude" => [
+#         "005_011",  # `\` function
+#         "006_010",  # User-defined function
+#     ],
+#     "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
+# )
 
 @testset "$(name)" for name in ["Ipopt", "Bonmin", "Couenne"]
     config = CONFIG[name]
