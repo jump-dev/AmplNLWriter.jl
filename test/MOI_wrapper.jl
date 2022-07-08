@@ -85,6 +85,7 @@ function test_runtests(path)
             "_Semiinteger_",
             "_Integer_",
             "test_linear_integer_",
+            "test_cpsat_",
         ],
     )
     return
