@@ -9,7 +9,7 @@ using Test
 
 const TERMINATION_TARGET = Dict(
     MINLPTests.FEASIBLE_PROBLEM => AmplNLWriter.MOI.LOCALLY_SOLVED,
-    MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.INFEASIBLE,
+    MINLPTests.INFEASIBLE_PROBLEM => AmplNLWriter.MOI.LOCALLY_INFEASIBLE,
 )
 
 const PRIMAL_TARGET = Dict(
@@ -66,7 +66,7 @@ CONFIG["Ipopt"] = Dict(
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
 )
 
-# SHOT fails too many tests to recommend using it. 
+# SHOT fails too many tests to recommend using it.
 # e.g., https://github.com/coin-or/SHOT/issues/134
 # Even problems such as `@variable(model, x); @objective(model, Min, (x-1)^2)`
 #
