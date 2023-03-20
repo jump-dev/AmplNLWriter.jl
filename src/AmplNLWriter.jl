@@ -5,8 +5,7 @@
 
 module AmplNLWriter
 
-import MathOptInterface
-const MOI = MathOptInterface
+import MathOptInterface as MOI
 
 """
     AbstractSolverCommand
