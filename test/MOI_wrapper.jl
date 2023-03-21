@@ -135,6 +135,7 @@ end
 function test_io(path)
     io = IOBuffer()
     model = optimizer(path; stdin = stdin, stdout = io)
+    MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 1)
     x = MOI.add_variable(model)
     MOI.add_constraint(model, x, MOI.GreaterThan(0.0))
     MOI.optimize!(model)
