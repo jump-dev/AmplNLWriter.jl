@@ -7,6 +7,25 @@ module AmplNLWriter
 
 import MathOptInterface as MOI
 
+# These are need for solvers, like Ipopt_jll, which use LBT. We could ask the
+# user to set this, but it's probably easier just to do it here.
+import LinearAlgebra
+import OpenBLAS32_jll
+
+function __init__()
+    if VERSION >= v"1.8"
+        config = LinearAlgebra.BLAS.lbt_get_config()
+        if !any(lib -> lib.interface == :lp64, config.loaded_libs)
+            LinearAlgebra.BLAS.lbt_forward(
+                OpenBLAS32_jll.libopenblas_path;
+                verbose = false,
+                clear = false,
+            )
+        end
+    end
+    return
+end
+
 """
     AbstractSolverCommand
 
