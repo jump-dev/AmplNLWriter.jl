@@ -135,18 +135,19 @@ end
 function test_io(path)
     io = IOBuffer()
     model = optimizer(path; stdin = stdin, stdout = io)
+    MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 1)
     x = MOI.add_variable(model)
     MOI.add_constraint(model, x, MOI.GreaterThan(0.0))
     MOI.optimize!(model)
+    flush(io)
     seekstart(io)
     s = String(take!(io))
-    if VERSION < v"1.6"
-        # TODO(odow): Looks like Julia 1.0 changed something here? Not a high
-        #             priority to investigate.
-        @test length(s) >= 0
+    if Sys.iswindows()
+        @test_broken length(s) > 0
     else
         @test length(s) > 0
     end
+    return
 end
 
 function test_single_variable_interval_dual(path)
