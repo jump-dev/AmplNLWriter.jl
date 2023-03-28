@@ -7,6 +7,8 @@ module AmplNLWriter
 
 import MathOptInterface as MOI
 
+using Ipopt_jll
+
 """
     AbstractSolverCommand
 
