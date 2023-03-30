@@ -82,6 +82,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     options::Dict{String,Any}
     stdin::Any
     stdout::Any
+    directory::String
     results::MOI.FileFormats.NL.SolFileResults
     solve_time::Float64
 end
@@ -92,6 +93,7 @@ end
         solver_args::Vector{String};
         stdin::Any = stdin,
         stdout:Any = stdout,
+        directory::String = "",
     )
 
 Create a new Optimizer object.
@@ -108,6 +110,9 @@ Create a new Optimizer object.
  * `stdin` and `stdio`: arguments passed to `Base.pipeline` to redirect IO. See
    the Julia documentation for more details by typing `? pipeline` at the Julia
    REPL.
+ * `directory`: the directory in which to write the `model.nl` and `model.sol`
+   files. If left empty, this defaults to a temporary directory. This argument
+   may be useful when debugging.
 
 ## Examples
 
@@ -148,6 +153,7 @@ function Optimizer(
     solver_args::Vector{String} = String[];
     stdin::Any = stdin,
     stdout::Any = stdout,
+    directory::String = "",
 )
     return Optimizer(
         MOI.FileFormats.NL.Model(),
@@ -155,6 +161,7 @@ function Optimizer(
         Dict{String,String}(opt => "" for opt in solver_args),
         stdin,
         stdout,
+        directory,
         MOI.FileFormats.NL.SolFileResults(
             "Optimize not called.",
             MOI.OPTIMIZE_NOT_CALLED,
@@ -248,8 +255,11 @@ MOI.copy_to(dest::Optimizer, src::MOI.ModelLike) = MOI.copy_to(dest.inner, src)
 
 function MOI.optimize!(model::Optimizer)
     start_time = time()
-    temp_dir = mktempdir()
-    nl_file = joinpath(temp_dir, "model.nl")
+    directory = model.directory
+    if isempty(model.directory)
+        directory = mktempdir()
+    end
+    nl_file = joinpath(directory, "model.nl")
     open(io -> write(io, model.inner), nl_file, "w")
     options = String[isempty(v) ? k : "$(k)=$(v)" for (k, v) in model.options]
     try
