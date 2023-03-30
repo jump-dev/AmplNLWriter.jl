@@ -214,6 +214,27 @@ function test_solve_time(path)
     return
 end
 
+function test_directory(path)
+    temp_dir = mktempdir()
+    model = optimizer(path; directory = temp_dir)
+    v = MOI.add_variables(model, 4)
+    l = [1.1, 1.2, 1.3, 1.4]
+    u = [5.1, 5.2, 5.3, 5.4]
+    start = [2.1, 2.2, 2.3, 2.4]
+    MOI.add_constraint.(model, v, MOI.GreaterThan.(l))
+    MOI.add_constraint.(model, v, MOI.LessThan.(u))
+    MOI.set.(model, MOI.VariablePrimalStart(), v, start)
+    lb, ub = [25.0, 40.0], [Inf, 40.0]
+    evaluator = MOI.Test.HS071(true)
+    block_data = MOI.NLPBlockData(MOI.NLPBoundsPair.(lb, ub), evaluator, true)
+    MOI.set(model, MOI.NLPBlock(), block_data)
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    MOI.optimize!(model)
+    @test isfile(joinpath(temp_dir, "model.nl"))
+    @test isfile(joinpath(temp_dir, "model.sol"))
+    return
+end
+
 end
 
 import Ipopt_jll
