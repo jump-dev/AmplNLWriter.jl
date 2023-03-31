@@ -56,6 +56,38 @@ Other packages include:
 | [Ipopt](https://github.com/coin-or/Ipopt) | `Ipopt_jll` | `Ipopt_jll.amplexe` |
 | [SHOT](https://github.com/coin-or/SHOT) | `SHOT_jll` | `SHOT_jll.amplexe` |
 
+## Supported problem types
+
+List of supported model attributes:
+
+ * `MOI.NLPBlock`
+ * `MOI.Name`
+ * `MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}`
+ * `MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}`
+ * `MOI.ObjectiveFunction{MOI.VariableIndex}`
+ * `MOI.ObjectiveSense`
+
+List of supported constraint types:
+
+ * `MOI.ScalarAffineFunction{Float64}` in `MOI.EqualTo{Float64}`
+ * `MOI.ScalarAffineFunction{Float64}` in `MOI.GreaterThan{Float64}`
+ * `MOI.ScalarAffineFunction{Float64}` in `MOI.Interval{Float64}`
+ * `MOI.ScalarAffineFunction{Float64}` in `MOI.LessThan{Float64}`
+ * `MOI.ScalarQuadraticFunction{Float64}` in `MOI.EqualTo{Float64}`
+ * `MOI.ScalarQuadraticFunction{Float64}` in `MOI.GreaterThan{Float64}`
+ * `MOI.ScalarQuadraticFunction{Float64}` in `MOI.Interval{Float64}`
+ * `MOI.ScalarQuadraticFunction{Float64}` in `MOI.LessThan{Float64}`
+ * `MOI.VariableIndex` in `MOI.EqualTo{Float64}`
+ * `MOI.VariableIndex` in `MOI.GreaterThan{Float64}`
+ * `MOI.VariableIndex` in `MOI.Integer`
+ * `MOI.VariableIndex` in `MOI.Interval{Float64}`
+ * `MOI.VariableIndex` in `MOI.LessThan{Float64}`
+ * `MOI.VariableIndex` in `MOI.ZeroOne`
+
+Note that some solver executables may not support the full list of constraint
+types. For example, `Ipopt_jll` does not support `MOI.Integer` or `MOI.ZeroOne`
+constraints.
+
 ## Options
 
 A list of available options for each solver can be found here:
