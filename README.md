@@ -66,6 +66,10 @@ List of supported objective functions:
  * [`MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}`](@ref)
  * [`MOI.ObjectiveFunction{MOI.VariableIndex}`](@ref)
 
+List of supported variable types:
+
+ * [`MOI.Reals`](@ref)
+
 List of supported constraint types:
 
  * [`MOI.ScalarAffineFunction{Float64}`](@ref) in [`MOI.EqualTo{Float64}`](@ref)
