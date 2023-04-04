@@ -26,7 +26,7 @@ Pkg.add("AmplNLWriter")
 
 AmplNLWriter requires an AMPL compatible solver binary to function.
 
-Pass a string pointing to an AMPL-compatible solver binary as the first
+Pass a string pointing to any AMPL-compatible solver binary as the first
 positional argument to `AmplNLWriter`.
 
 For example, if the `bonmin` executable is on the system path, use:
