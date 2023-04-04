@@ -32,14 +32,14 @@ system path, use:
 using JuMP, AmplNLWriter
 model = Model(() -> AmplNLWriter.Optimizer("bonmin"))
 ```
-If the solver is not on the path, the full path to the solver will need to be
-passed in.
+If the solver is not on the system path, pass the full path to the solver.
 
 ## JLL packages
 
-A number of Julia packages provide precompiled binaries that are compatible with
-AmplNLWriter. These are generally the name of the solver, followed by `_jll`.
-For example, `bomin` is provided by the `Bonmin_jll` package.
+To simplify the process of installing solver binaries, a number of Julia
+packages provide precompiled binaries that are compatible with AmplNLWriter.
+These are generally the name of the solver, followed by `_jll`. For example,
+`bomin` is provided by the `Bonmin_jll` package.
 
 To call Bonmin via AmplNLWriter.jl, install the `Bonmin_jll` package, then run:
 ```julia
@@ -47,14 +47,14 @@ using JuMP, AmplNLWriter, Bonmin_jll
 model = Model(() -> AmplNLWriter.Optimizer(Bonmin_jll.amplexe))
 ```
 
-Other packages include:
+Supported packages include:
 
-| Solver | Julia Package | Executable |
-| ------ | ------------- | ---------- |
-| [Bonmin](https://github.com/coin-or/Bonmin) | `Bonmin_jll` | `Bomin_jll.amplexe` |
-| [Couenne](https://github.com/coin-or/Couenne) | `Couenne_jll` | `Couenne_jll.amplexe` |
-| [Ipopt](https://github.com/coin-or/Ipopt) | `Ipopt_jll` | `Ipopt_jll.amplexe` |
-| [SHOT](https://github.com/coin-or/SHOT) | `SHOT_jll` | `SHOT_jll.amplexe` |
+| Solver                                        | Julia Package     | Executable            |
+| --------------------------------------------- | ----------------- | --------------------- |
+| [Bonmin](https://github.com/coin-or/Bonmin)   | `Bonmin_jll.jl`   | `Bomin_jll.amplexe`   |
+| [Couenne](https://github.com/coin-or/Couenne) | `Couenne_jll.jl`  | `Couenne_jll.amplexe` |
+| [Ipopt](https://github.com/coin-or/Ipopt)     | `Ipopt_jll.jl`    | `Ipopt_jll.amplexe`   |
+| [SHOT](https://github.com/coin-or/SHOT)       | `SHOT_jll.jl`     | `SHOT_jll.amplexe`    |
 
 ## MathOptInterface API
 
@@ -118,13 +118,13 @@ set_attribute(model, "bonmin.nlp_log_level", 0)
 
 ### opt files
 
-Some of the options need to be specified via an `.opt` file.
+Some options need to be specified via an `.opt` file.
 
 This file must be located in the current working directory whenever the model is
 solved.
 
 The `.opt` file must be named after the name of the solver, for example,
-`bonmin.opt`, and each line must contain an option name and the desired value
+`bonmin.opt`, and each line must contain an option name and the desired value,
 separated by a space.
 
 For example, to set the absolute and relative tolerances in Couenne to `1`
