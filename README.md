@@ -55,6 +55,7 @@ Supported packages include:
 | [Couenne](https://github.com/coin-or/Couenne) | `Couenne_jll.jl`  | `Couenne_jll.amplexe` |
 | [Ipopt](https://github.com/coin-or/Ipopt)     | `Ipopt_jll.jl`    | `Ipopt_jll.amplexe`   |
 | [SHOT](https://github.com/coin-or/SHOT)       | `SHOT_jll.jl`     | `SHOT_jll.amplexe`    |
+| [KNITRO](https://github.comjump-dev/KNITRO.jl)| `KNITRO.jl`       | `KNITRO.amplexe`      |
 
 ## MathOptInterface API
 
