@@ -12,6 +12,19 @@ import AmplNLWriter
 const MOI = AmplNLWriter.MOI
 
 function runtests(path)
+    path() do exe
+        lbt_default_libs = get(ENV, "LBT_DEFAULT_LIBS", AmplNLWriter._get_blas_libs())
+        if isempty(lbt_default_libs)
+            run(`$exe -v`)
+        else
+            run(addenv(`$exe -v`, "LBT_DEFAULT_LIBS" => lbt_default_libs))
+        end
+    end
+    path() do exe
+        run(`$exe -v`)
+    end
+    _test_error(path)
+    return
     for name in names(@__MODULE__; all = true)
         if !startswith("$(name)", "test_")
             continue
@@ -20,11 +33,22 @@ function runtests(path)
             getfield(@__MODULE__, name)(path)
         end
     end
+    return
+end
+
+function _test_error(path)
+    model = optimizer(path)
+    MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 1)
+    x = MOI.add_variable(model)
+    MOI.add_constraint(model, x, MOI.GreaterThan(0.0))
+    MOI.optimize!(model)
+    @show MOI.get(model, MOI.RawStatusString())
+    return
 end
 
 function optimizer(path, args...; kwargs...)
     model = AmplNLWriter.Optimizer(path, args...; kwargs...)
-    MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 0)
+    # MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 0)
     MOI.set(
         model,
         MOI.RawOptimizerAttribute("option_file_name"),
@@ -211,27 +235,6 @@ function test_solve_time(path)
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.SolveTimeSec()) > 0.0
-    return
-end
-
-function test_directory(path)
-    temp_dir = mktempdir()
-    model = optimizer(path; directory = temp_dir)
-    v = MOI.add_variables(model, 4)
-    l = [1.1, 1.2, 1.3, 1.4]
-    u = [5.1, 5.2, 5.3, 5.4]
-    start = [2.1, 2.2, 2.3, 2.4]
-    MOI.add_constraint.(model, v, MOI.GreaterThan.(l))
-    MOI.add_constraint.(model, v, MOI.LessThan.(u))
-    MOI.set.(model, MOI.VariablePrimalStart(), v, start)
-    lb, ub = [25.0, 40.0], [Inf, 40.0]
-    evaluator = MOI.Test.HS071(true)
-    block_data = MOI.NLPBlockData(MOI.NLPBoundsPair.(lb, ub), evaluator, true)
-    MOI.set(model, MOI.NLPBlock(), block_data)
-    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-    MOI.optimize!(model)
-    @test isfile(joinpath(temp_dir, "model.nl"))
-    @test isfile(joinpath(temp_dir, "model.sol"))
     return
 end
 

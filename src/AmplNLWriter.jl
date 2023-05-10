@@ -5,7 +5,23 @@
 
 module AmplNLWriter
 
+import LinearAlgebra
 import MathOptInterface as MOI
+import OpenBLAS32_jll
+
+function __init__()
+    if VERSION >= v"1.8" && !Sys.iswindows()
+        config = LinearAlgebra.BLAS.lbt_get_config()
+        if !any(lib -> lib.interface == :lp64, config.loaded_libs)
+            LinearAlgebra.BLAS.lbt_forward(
+                OpenBLAS32_jll.libopenblas_path;
+                verbose = false,
+                clear = false,
+            )
+        end
+    end
+    return
+end
 
 """
     AbstractSolverCommand
@@ -39,6 +55,15 @@ struct _DefaultSolverCommand{F} <: AbstractSolverCommand
     f::F
 end
 
+@static if VERSION < v"1.8" || Sys.iswindows()
+    _get_blas_libs() = ""
+else
+    function _get_blas_libs()
+        config = LinearAlgebra.BLAS.lbt_get_config()
+        return join([lib.libname for lib in config.loaded_libs], ";")
+    end
+end
+
 function call_solver(
     solver::_DefaultSolverCommand,
     nl_filename::String,
@@ -47,13 +72,15 @@ function call_solver(
     stdout::IO,
 )
     solver.f() do solver_path
-        ret = run(
-            pipeline(
-                `$(solver_path) $(nl_filename) -AMPL $(options)`,
-                stdin = stdin,
-                stdout = stdout,
-            ),
-        )
+        # Solvers like Ipopt_jll use libblastrampoline. That requires us to set
+        # the BLAS library via the LBT_DEFAULT_LIBS environment variable.
+        # Provide a default in case the user doesn't set.
+        lbt_default_libs = get(ENV, "LBT_DEFAULT_LIBS", _get_blas_libs())
+        cmd = `$(solver_path) $(nl_filename) -AMPL $(options)`
+        if !isempty(lbt_default_libs)
+            cmd = addenv(cmd, "LBT_DEFAULT_LIBS" => lbt_default_libs)
+        end
+        ret = run(pipeline(cmd; stdin = stdin, stdout = stdout))
         if ret.exitcode != 0
             error("Nonzero exit code: $(ret.exitcode)")
         end
@@ -82,7 +109,6 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     options::Dict{String,Any}
     stdin::Any
     stdout::Any
-    directory::String
     results::MOI.FileFormats.NL.SolFileResults
     solve_time::Float64
 end
@@ -93,7 +119,6 @@ end
         solver_args::Vector{String};
         stdin::Any = stdin,
         stdout:Any = stdout,
-        directory::String = "",
     )
 
 Create a new Optimizer object.
@@ -110,9 +135,6 @@ Create a new Optimizer object.
  * `stdin` and `stdio`: arguments passed to `Base.pipeline` to redirect IO. See
    the Julia documentation for more details by typing `? pipeline` at the Julia
    REPL.
- * `directory`: the directory in which to write the `model.nl` and `model.sol`
-   files. If left empty, this defaults to a temporary directory. This argument
-   may be useful when debugging.
 
 ## Examples
 
@@ -153,7 +175,6 @@ function Optimizer(
     solver_args::Vector{String} = String[];
     stdin::Any = stdin,
     stdout::Any = stdout,
-    directory::String = "",
 )
     return Optimizer(
         MOI.FileFormats.NL.Model(),
@@ -161,7 +182,6 @@ function Optimizer(
         Dict{String,String}(opt => "" for opt in solver_args),
         stdin,
         stdout,
-        directory,
         MOI.FileFormats.NL.SolFileResults(
             "Optimize not called.",
             MOI.OPTIMIZE_NOT_CALLED,
@@ -255,11 +275,8 @@ MOI.copy_to(dest::Optimizer, src::MOI.ModelLike) = MOI.copy_to(dest.inner, src)
 
 function MOI.optimize!(model::Optimizer)
     start_time = time()
-    directory = model.directory
-    if isempty(model.directory)
-        directory = mktempdir()
-    end
-    nl_file = joinpath(directory, "model.nl")
+    temp_dir = mktempdir()
+    nl_file = joinpath(temp_dir, "model.nl")
     open(io -> write(io, model.inner), nl_file, "w")
     options = String[isempty(v) ? k : "$(k)=$(v)" for (k, v) in model.options]
     try
