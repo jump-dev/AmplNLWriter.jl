@@ -10,7 +10,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 [compat]
 Bonmin_jll = "100.800.801"
 Couenne_jll = "0.500.801"
-Ipopt_jll = "=300.1400.1066"
+Ipopt_jll = "=300.1400.1067"
 JuMP = "1"
 MINLPTests = "0.5"
 SHOT_jll = "100.100.0"

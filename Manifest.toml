@@ -2,7 +2,13 @@
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "dd58dfef253b5bea34f187b763bc4439e8db4538"
+project_hash = "93d0bddd7ef156f55931c52bd8c91ef0ec535bdd"
+
+[[deps.ASL_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "6252039f98492252f9e47c312c8ffda0e3b9e78d"
+uuid = "ae81ac8f-d209-56e5-92de-9978fef736f9"
+version = "0.1.3+0"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -111,6 +117,14 @@ version = "0.10.35"
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
+[[deps.Ipopt_jll]]
+deps = ["ASL_jll", "Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "MUMPS_seq_jll", "OpenBLAS32_jll", "Pkg", "libblastrampoline_jll"]
+git-tree-sha1 = "65479434de485d3af622de76558f70536b8bfa26"
+repo-rev = "main"
+repo-url = "https://github.com/amontoison/Ipopt_jll.jl"
+uuid = "9cc047cb-c261-5740-88fc-0cf96f7bdcc7"
+version = "300.1400.1067+0"
+
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
@@ -172,6 +186,18 @@ version = "0.3.23"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+
+[[deps.METIS_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "1fd0a97409e418b78c53fac671cf4622efdf0f21"
+uuid = "d00139f3-1899-568f-a2f0-47f597d42d70"
+version = "5.1.2+0"
+
+[[deps.MUMPS_seq_jll]]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "METIS_jll", "OpenBLAS32_jll", "Pkg", "libblastrampoline_jll"]
+git-tree-sha1 = "f429d6bbe9ad015a2477077c9e89b978b8c26558"
+uuid = "d7ed1dd3-d0ae-5e8e-bfb4-87a502085b8d"
+version = "500.500.101+0"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
