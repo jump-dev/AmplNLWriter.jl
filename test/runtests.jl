@@ -5,6 +5,8 @@
 
 using Test
 
+println(Base.BinaryPlatforms.host_triplet())
+
 @testset "MOI_wrapper" begin
     include("MOI_wrapper.jl")
 end
