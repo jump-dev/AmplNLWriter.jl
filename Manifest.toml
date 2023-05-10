@@ -2,7 +2,7 @@
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "5b2efe04c180f45a3bd86b314dbd5b9af2d70478"
+project_hash = "1e8a86bfe1bca221f0153ab8ea95954ccb4bfb3f"
 
 [[deps.ASL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -119,11 +119,11 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[deps.Ipopt_jll]]
 deps = ["ASL_jll", "Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "MUMPS_seq_jll", "OpenBLAS32_jll", "Pkg", "libblastrampoline_jll"]
-git-tree-sha1 = "8a722499b84752bc4183ce2419e8297603afa5aa"
+git-tree-sha1 = "7995eb476d9822720e614526521d93a7ecc0344d"
 repo-rev = "main"
 repo-url = "https://github.com/amontoison/Ipopt_jll.jl"
 uuid = "9cc047cb-c261-5740-88fc-0cf96f7bdcc7"
-version = "300.1400.1069+0"
+version = "300.1400.1070+0"
 
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
