@@ -142,7 +142,7 @@ function test_io(path)
     flush(io)
     seekstart(io)
     s = String(take!(io))
-    if Sys.iswindows()
+    if Sys.iswindows() && VERSION < v"1.9"
         @test_broken length(s) > 0
     else
         @test length(s) > 0
