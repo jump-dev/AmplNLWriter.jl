@@ -277,6 +277,7 @@ function MOI.optimize!(model::Optimizer)
             MOI.OTHER_ERROR,
         )
     end
+    Base.Libc.flush_cstdio()
     model.solve_time = time() - start_time
     return
 end
