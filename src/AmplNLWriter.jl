@@ -10,14 +10,10 @@ import MathOptInterface as MOI
 import OpenBLAS32_jll
 
 function __init__()
-    if VERSION >= v"1.8" && !Sys.iswindows()
+    if VERSION >= v"1.9"
         config = LinearAlgebra.BLAS.lbt_get_config()
         if !any(lib -> lib.interface == :lp64, config.loaded_libs)
-            LinearAlgebra.BLAS.lbt_forward(
-                OpenBLAS32_jll.libopenblas_path;
-                verbose = false,
-                clear = false,
-            )
+            LinearAlgebra.BLAS.lbt_forward(OpenBLAS32_jll.libopenblas_path)
         end
     end
     return
@@ -55,7 +51,7 @@ struct _DefaultSolverCommand{F} <: AbstractSolverCommand
     f::F
 end
 
-@static if VERSION < v"1.8" || Sys.iswindows()
+@static if VERSION < v"1.9"
     _get_blas_libs() = ""
 else
     function _get_blas_libs()
