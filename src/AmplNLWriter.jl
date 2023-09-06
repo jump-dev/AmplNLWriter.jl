@@ -210,6 +210,7 @@ const _SCALAR_FUNCTIONS = Union{
     MOI.VariableIndex,
     MOI.ScalarAffineFunction{Float64},
     MOI.ScalarQuadraticFunction{Float64},
+    MOI.ScalarNonlinearFunction,
 }
 
 const _SCALAR_SETS = Union{
