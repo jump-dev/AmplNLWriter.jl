@@ -4,7 +4,6 @@
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
 
 import Pkg
-Pkg.pkg"add JuMP#master"
 Pkg.pkg"add MINLPTests#od/nlp-expr"
 
 import AmplNLWriter
