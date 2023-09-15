@@ -110,9 +110,27 @@ CONFIG["Ipopt"] = Dict(
             primal_tol = config["tol"],
             dual_tol = config["dual_tol"],
         )
+        MINLPTests.test_nlp_expr(
+            OPTIMIZER,
+            exclude = config["nlp_exclude"],
+            termination_target = TERMINATION_TARGET,
+            primal_target = PRIMAL_TARGET,
+            objective_tol = config["tol"],
+            primal_tol = config["tol"],
+            dual_tol = config["dual_tol"],
+        )
     end
     @testset "NLP-CVX" begin
         MINLPTests.test_nlp_cvx(
+            OPTIMIZER,
+            exclude = config["nlpcvx_exclude"],
+            termination_target = TERMINATION_TARGET,
+            primal_target = PRIMAL_TARGET,
+            objective_tol = config["tol"],
+            primal_tol = config["tol"],
+            dual_tol = config["dual_tol"],
+        )
+        MINLPTests.test_nlp_cvx_expr(
             OPTIMIZER,
             exclude = config["nlpcvx_exclude"],
             termination_target = TERMINATION_TARGET,
@@ -125,6 +143,15 @@ CONFIG["Ipopt"] = Dict(
     if name != "Ipopt"
         @testset "NLP-MI" begin
             MINLPTests.test_nlp_mi(
+                OPTIMIZER,
+                exclude = config["nlpmi_exclude"],
+                termination_target = TERMINATION_TARGET,
+                primal_target = PRIMAL_TARGET,
+                objective_tol = config["tol"],
+                primal_tol = config["tol"],
+                dual_tol = config["dual_tol"],
+            )
+            MINLPTests.test_nlp_mi_expr(
                 OPTIMIZER,
                 exclude = config["nlpmi_exclude"],
                 termination_target = TERMINATION_TARGET,
