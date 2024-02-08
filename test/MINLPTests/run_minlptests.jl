@@ -23,6 +23,8 @@ const PRIMAL_TARGET = Dict(
 # nlp/007_010     : Ipopt returns an infeasible point, not NO_SOLUTION.
 # nlp/008_010     : Couenne fails to converge
 # nlp/008_011     : Couenne fails to converge
+# nlp/009_010     : min not implemented
+# nlp/009_011     : max not implemented
 # nlp-cvx/109_010 : Ipopt fails to converge
 # nlp-cvx/206_010 : Couenne can't evaluate pow
 # nlp-mi/001_010  : Couenne fails to converge
@@ -48,7 +50,7 @@ CONFIG["Couenne"] = Dict(
     "options" => String[],
     "tol" => 1e-2,
     "dual_tol" => NaN,
-    "nlp_exclude" => ["005_011", "006_010", "008_010", "008_011"],
+    "nlp_exclude" => ["005_011", "006_010", "008_010", "008_011", "009_010", "009_011"],
     "nlpcvx_exclude" => ["109_010", "206_010"],
     "nlpmi_exclude" => ["001_010", "005_011", "006_010"],
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
