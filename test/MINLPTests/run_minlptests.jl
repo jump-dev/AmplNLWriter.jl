@@ -50,7 +50,8 @@ CONFIG["Couenne"] = Dict(
     "options" => String[],
     "tol" => 1e-2,
     "dual_tol" => NaN,
-    "nlp_exclude" => ["005_011", "006_010", "008_010", "008_011", "009_010", "009_011"],
+    "nlp_exclude" =>
+        ["005_011", "006_010", "008_010", "008_011", "009_010", "009_011"],
     "nlpcvx_exclude" => ["109_010", "206_010"],
     "nlpmi_exclude" => ["001_010", "005_011", "006_010"],
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
