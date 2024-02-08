@@ -20,6 +20,7 @@ function runtests(path)
             getfield(@__MODULE__, name)(path)
         end
     end
+    return
 end
 
 function optimizer(path, args...; kwargs...)
@@ -84,6 +85,8 @@ function test_runtests(path)
             "_Semicontinuous_",
             "_Semiinteger_",
             "_Integer_",
+            "_Indicator_",
+            "_SOS2_",
             "test_linear_integer_",
             "test_cpsat_",
         ],
