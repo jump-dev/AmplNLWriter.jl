@@ -20,6 +20,7 @@ function runtests(path)
             getfield(@__MODULE__, name)(path)
         end
     end
+    return
 end
 
 function optimizer(path, args...; kwargs...)
@@ -84,6 +85,8 @@ function test_runtests(path)
             "_Semicontinuous_",
             "_Semiinteger_",
             "_Integer_",
+            "_Indicator_",
+            "_SOS2_",
             "test_linear_integer_",
             "test_cpsat_",
         ],
@@ -142,7 +145,7 @@ function test_io(path)
     flush(io)
     seekstart(io)
     s = String(take!(io))
-    if Sys.iswindows() && VERSION < v"1.9"
+    if Sys.iswindows()
         @test length(s) >= 0
     else
         @test length(s) > 0
