@@ -12,14 +12,6 @@ import AmplNLWriter
 const MOI = AmplNLWriter.MOI
 
 function runtests(path)
-    # path() do exe
-    #     lbt_default_libs = get(ENV, "LBT_DEFAULT_LIBS", AmplNLWriter._get_blas_libs())
-    #     if isempty(lbt_default_libs)
-    #         run(`$exe -v`)
-    #     else
-    #         run(addenv(`$exe -v`, "LBT_DEFAULT_LIBS" => lbt_default_libs))
-    #     end
-    # end
     for name in names(@__MODULE__; all = true)
         if !startswith("$(name)", "test_")
             continue

@@ -19,6 +19,14 @@ function __init__()
     return
 end
 
+function _get_blas_loaded_libs()
+    if VERSION >= v"1.8"
+        config = LinearAlgebra.BLAS.lbt_get_config()
+        return join([lib.libname for lib in config.loaded_libs], ";")
+    end
+    return ""
+end
+
 """
     AbstractSolverCommand
 
@@ -51,14 +59,6 @@ struct _DefaultSolverCommand{F} <: AbstractSolverCommand
     f::F
 end
 
-function _get_blas_libs()
-    @static if VERSION < v"1.9"
-        return ""
-    end
-    config = LinearAlgebra.BLAS.lbt_get_config()
-    return join([lib.libname for lib in config.loaded_libs], ";")
-end
-
 function call_solver(
     solver::_DefaultSolverCommand,
     nl_filename::String,
@@ -70,7 +70,7 @@ function call_solver(
         # Solvers like Ipopt_jll use libblastrampoline. That requires us to set
         # the BLAS library via the LBT_DEFAULT_LIBS environment variable.
         # Provide a default in case the user doesn't set.
-        lbt_default_libs = get(ENV, "LBT_DEFAULT_LIBS", _get_blas_libs())
+        lbt_default_libs = get(ENV, "LBT_DEFAULT_LIBS", _get_blas_loaded_libs())
         cmd = `$(solver_path) $(nl_filename) -AMPL $(options)`
         if !isempty(lbt_default_libs)
             cmd = addenv(cmd, "LBT_DEFAULT_LIBS" => lbt_default_libs)

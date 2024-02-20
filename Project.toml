@@ -6,7 +6,6 @@ version = "1.2.0"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 OpenBLAS32_jll = "656ef2d0-ae68-5445-9ca0-591084a874a2"
-Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [compat]
 Ipopt_jll = "=300.1400.400, =300.1400.1400"
