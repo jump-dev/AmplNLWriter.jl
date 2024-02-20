@@ -12,42 +12,28 @@ import AmplNLWriter
 const MOI = AmplNLWriter.MOI
 
 function runtests(path)
-    path() do exe
-        lbt_default_libs = get(ENV, "LBT_DEFAULT_LIBS", AmplNLWriter._get_blas_libs())
-        if isempty(lbt_default_libs)
-            run(`$exe -v`)
-        else
-            run(addenv(`$exe -v`, "LBT_DEFAULT_LIBS" => lbt_default_libs))
-        end
-    end
-    path() do exe
-        run(`$exe -v`)
-    end
-    _test_error(path)
-    # for name in names(@__MODULE__; all = true)
-    #     if !startswith("$(name)", "test_")
-    #         continue
-    #     end
-    #     @testset "$(name)" begin
-    #         getfield(@__MODULE__, name)(path)
+    # path() do exe
+    #     lbt_default_libs = get(ENV, "LBT_DEFAULT_LIBS", AmplNLWriter._get_blas_libs())
+    #     if isempty(lbt_default_libs)
+    #         run(`$exe -v`)
+    #     else
+    #         run(addenv(`$exe -v`, "LBT_DEFAULT_LIBS" => lbt_default_libs))
     #     end
     # end
-    return
-end
-
-function _test_error(path)
-    model = optimizer(path)
-    MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 1)
-    x = MOI.add_variable(model)
-    MOI.add_constraint(model, x, MOI.GreaterThan(0.0))
-    MOI.optimize!(model)
-    @show MOI.get(model, MOI.RawStatusString())
+    for name in names(@__MODULE__; all = true)
+        if !startswith("$(name)", "test_")
+            continue
+        end
+        @testset "$(name)" begin
+            getfield(@__MODULE__, name)(path)
+        end
+    end
     return
 end
 
 function optimizer(path, args...; kwargs...)
     model = AmplNLWriter.Optimizer(path, args...; kwargs...)
-    # MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 0)
+    MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 0)
     MOI.set(
         model,
         MOI.RawOptimizerAttribute("option_file_name"),

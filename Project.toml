@@ -9,10 +9,10 @@ OpenBLAS32_jll = "656ef2d0-ae68-5445-9ca0-591084a874a2"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [compat]
-Ipopt_jll = "=300.1400.1400"
+Ipopt_jll = "=300.1400.400, =300.1400.1400"
 LinearAlgebra = "<0.0.1, 1.6"
 MathOptInterface = "1.18"
-OpenBLAS32_jll = "0.3.24"
+OpenBLAS32_jll = "0.3.12, 0.3.24"
 Test = "<0.0.1, 1.6"
 julia = "1.6"
 
