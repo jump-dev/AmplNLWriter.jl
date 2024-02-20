@@ -5,7 +5,27 @@
 
 module AmplNLWriter
 
+import LinearAlgebra
 import MathOptInterface as MOI
+import OpenBLAS32_jll
+
+function __init__()
+    if VERSION >= v"1.8"
+        config = LinearAlgebra.BLAS.lbt_get_config()
+        if !any(lib -> lib.interface == :lp64, config.loaded_libs)
+            LinearAlgebra.BLAS.lbt_forward(OpenBLAS32_jll.libopenblas_path)
+        end
+    end
+    return
+end
+
+function _get_blas_loaded_libs()
+    if VERSION >= v"1.8"
+        config = LinearAlgebra.BLAS.lbt_get_config()
+        return join([lib.libname for lib in config.loaded_libs], ";")
+    end
+    return ""
+end
 
 """
     AbstractSolverCommand
@@ -47,13 +67,15 @@ function call_solver(
     stdout::IO,
 )
     solver.f() do solver_path
-        ret = run(
-            pipeline(
-                `$(solver_path) $(nl_filename) -AMPL $(options)`,
-                stdin = stdin,
-                stdout = stdout,
-            ),
-        )
+        # Solvers like Ipopt_jll use libblastrampoline. That requires us to set
+        # the BLAS library via the LBT_DEFAULT_LIBS environment variable.
+        # Provide a default in case the user doesn't set.
+        lbt_default_libs = get(ENV, "LBT_DEFAULT_LIBS", _get_blas_loaded_libs())
+        cmd = `$(solver_path) $(nl_filename) -AMPL $(options)`
+        if !isempty(lbt_default_libs)
+            cmd = addenv(cmd, "LBT_DEFAULT_LIBS" => lbt_default_libs)
+        end
+        ret = run(pipeline(cmd; stdin = stdin, stdout = stdout))
         if ret.exitcode != 0
             error("Nonzero exit code: $(ret.exitcode)")
         end
