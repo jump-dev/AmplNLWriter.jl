@@ -13,6 +13,12 @@ and [AMPL-enabled solvers](http://ampl.com/products/solvers/all-solvers-for-ampl
 This wrapper is maintained by the JuMP community and has no official connection
 with the AMPL modeling language or AMPL Optimization Inc.
 
+## Getting help
+
+If you need help, please ask a question on the [JuMP community forum](https://jump.dev/forum).
+
+If you have a reproducible example of a bug, please [open a GitHub issue](https://github.com/jump-dev/AmplNLWriter.jl/issues/new).
+
 ## Installation
 
 Install AmplNLWriter using `Pkg.add`:
