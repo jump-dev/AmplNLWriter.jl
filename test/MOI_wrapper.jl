@@ -251,6 +251,12 @@ function test_no_sol_file(path)
     return
 end
 
+function test_supports_incremental_interface(path)
+    model = AmplNLWriter.Optimizer(path)
+    @test !MOI.supports_incremental_interface(model)
+    return
+end
+
 end  # module
 
 import Ipopt_jll
