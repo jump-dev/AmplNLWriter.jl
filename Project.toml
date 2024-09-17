@@ -1,6 +1,6 @@
 name = "AmplNLWriter"
 uuid = "7c4d4715-977e-5154-bfe0-e096adeac482"
-version = "1.2.1"
+version = "1.2.2"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
