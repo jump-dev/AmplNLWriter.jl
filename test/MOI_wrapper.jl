@@ -251,8 +251,7 @@ function test_no_sol_file(path)
     return
 end
 
-
-end
+end  # module
 
 import Ipopt_jll
 TestMOIWrapper.runtests(Ipopt_jll.amplexe)
