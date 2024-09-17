@@ -293,6 +293,15 @@ function MOI.optimize!(model::Optimizer)
             model.stdin,
             model.stdout,
         )
+        if !isfile(sol_file)
+            model.results = MOI.FileFormats.NL.SolFileResults(
+                "Error calling the solver. The solver executed normally, but " *
+                "no `.sol` file was created. This usually means that there " *
+                "is an issue with the formulation of your model. Check the " *
+                "solver's logs for details.",
+                MOI.OTHER_ERROR,
+            )
+        end
         model.results = MOI.FileFormats.NL.SolFileResults(sol_file, model.inner)
     catch err
         model.results = MOI.FileFormats.NL.SolFileResults(

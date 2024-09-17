@@ -8,8 +8,7 @@ module TestMOIWrapper
 using Test
 
 import AmplNLWriter
-
-const MOI = AmplNLWriter.MOI
+import AmplNLWriter: MOI
 
 function runtests(path)
     for name in names(@__MODULE__; all = true)
@@ -237,6 +236,21 @@ function test_directory(path)
     @test isfile(joinpath(temp_dir, "model.sol"))
     return
 end
+
+function test_no_sol_file(path)
+    model = optimizer(path)
+    x = MOI.add_variable(model)
+    MOI.add_constraint(model, x, MOI.GreaterThan(2.0))
+    MOI.add_constraint(model, x, MOI.LessThan(1.0))
+    MOI.optimize!(model)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OTHER_ERROR
+    @test occursin(
+        "The solver executed normally, but no `.sol` file was created",
+        MOI.get(model, MOI.RawStatusString()),
+    )
+    return
+end
+
 
 end
 
