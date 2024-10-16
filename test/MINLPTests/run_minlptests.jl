@@ -33,6 +33,7 @@ const CONFIG = Dict{String,Any}()
 
 import Bonmin_jll
 CONFIG["Bonmin"] = Dict(
+    "mixed-integer" => true,
     "amplexe" => Bonmin_jll.amplexe,
     "options" => String["bonmin.nlp_log_level=0"],
     "tol" => 1e-5,
@@ -46,6 +47,7 @@ CONFIG["Bonmin"] = Dict(
 
 import Couenne_jll
 CONFIG["Couenne"] = Dict(
+    "mixed-integer" => true,
     "amplexe" => Couenne_jll.amplexe,
     "options" => String[],
     "tol" => 1e-2,
@@ -59,6 +61,7 @@ CONFIG["Couenne"] = Dict(
 
 import Ipopt_jll
 CONFIG["Ipopt"] = Dict(
+    "mixed-integer" => false,
     "amplexe" => Ipopt_jll.amplexe,
     "options" => String["print_level=0"],
     "tol" => 1e-5,
@@ -98,7 +101,20 @@ CONFIG["Ipopt"] = Dict(
 #     "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
 # )
 
-@testset "$(name)" for name in ["Ipopt", "Bonmin", "Couenne"]
+import Uno_jll
+CONFIG["Uno"] = Dict(
+    "mixed-integer" => false,
+    "amplexe" => Uno_jll.amplexe,
+    "options" => String[],
+    "tol" => 1e-5,
+    "dual_tol" => 1e-5,
+    "nlp_exclude" => String[],
+    "nlpcvx_exclude" => String[],
+    "nlpmi_exclude" => String[],
+    "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
+)
+
+@testset "$(name)" for name in ["Uno", "Ipopt", "Bonmin", "Couenne"]
     config = CONFIG[name]
     OPTIMIZER =
         () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
@@ -143,7 +159,7 @@ CONFIG["Ipopt"] = Dict(
             dual_tol = config["dual_tol"],
         )
     end
-    if name != "Ipopt"
+    if config["mixed-integer"]
         @testset "NLP-MI" begin
             MINLPTests.test_nlp_mi(
                 OPTIMIZER,
