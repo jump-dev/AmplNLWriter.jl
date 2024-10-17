@@ -108,7 +108,7 @@ run(
     `curl https://raw.githubusercontent.com/cvanaret/Uno/refs/heads/main/uno.options -o uno.options`,
 )
 
-struct UnoSolverCommand <: AbstractSolverCommand
+struct UnoSolverCommand <: AmplNLWriter.AbstractSolverCommand end
 
 function AmplNLWriter.call_solver(
     solver::UnoSolverCommand,
