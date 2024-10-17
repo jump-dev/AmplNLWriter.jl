@@ -191,7 +191,7 @@ function test_nlpblockdual(path)
 end
 
 function test_AbstractSolverCommand(path)
-    cmd = AmplNLWriter._DefaultSolverCommand(f -> f(path))
+    cmd = AmplNLWriter._DefaultSolverCommand(f -> f(path), ["-AMPL"])
     model = AmplNLWriter.Optimizer(cmd)
     @test model.solver_command === cmd
 end
