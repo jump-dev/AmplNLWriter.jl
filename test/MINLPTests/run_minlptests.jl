@@ -102,10 +102,40 @@ CONFIG["Ipopt"] = Dict(
 # )
 
 import Uno_jll
+
+# Uno needs the full uno.options file...
+run(
+    `curl https://raw.githubusercontent.com/cvanaret/Uno/refs/heads/main/uno.options -o uno.options`,
+)
+
+struct UnoSolverCommand <: AbstractSolverCommand
+
+function AmplNLWriter.call_solver(
+    solver::UnoSolverCommand,
+    nl_filename::String,
+    options::Vector{String},
+    stdin::IO,
+    stdout::IO,
+)
+    Uno_jll.amplexe() do solver_path
+        lbt_default_libs =
+            get(ENV, "LBT_DEFAULT_LIBS", AmplNLWriter._get_blas_loaded_libs())
+        cmd = `$solver_path $options $nl_filename`
+        if !isempty(lbt_default_libs)
+            cmd = addenv(cmd, "LBT_DEFAULT_LIBS" => lbt_default_libs)
+        end
+        ret = run(pipeline(cmd; stdin = stdin, stdout = stdout))
+        if ret.exitcode != 0
+            error("Nonzero exit code: $(ret.exitcode)")
+        end
+    end
+    return replace(nl_filename, "model.nl" => "model.sol")
+end
+
 CONFIG["Uno"] = Dict(
     "mixed-integer" => false,
-    "amplexe" => Uno_jll.amplexe,
-    "options" => String[],
+    "amplexe" => UnoSolverCommand(),
+    "options" => String["-preset ipopt"],
     "tol" => 1e-5,
     "dual_tol" => 1e-5,
     "nlp_exclude" => String[],
@@ -114,22 +144,10 @@ CONFIG["Uno"] = Dict(
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
 )
 
-# Uno needs the full uno.options file...
-run(
-    `curl https://raw.githubusercontent.com/cvanaret/Uno/refs/heads/main/uno.options -o uno.options`,
-)
-
 @testset "$(name)" for name in ["Uno", "Ipopt", "Bonmin", "Couenne"]
     config = CONFIG[name]
-    OPTIMIZER = if name == "Uno"
-        () -> AmplNLWriter.Optimizer(
-            config["amplexe"],
-            config["options"];
-            flags = String[],
-        )
-    else
+    OPTIMIZER =
         () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
-    end
     PRIMAL_TARGET[MINLPTests.INFEASIBLE_PROBLEM] = config["infeasible_point"]
     @testset "NLP" begin
         MINLPTests.test_nlp(
