@@ -57,6 +57,7 @@ function call_solver end
 
 struct _DefaultSolverCommand{F} <: AbstractSolverCommand
     f::F
+    flags::Vector{String}
 end
 
 function call_solver(
@@ -71,7 +72,7 @@ function call_solver(
         # the BLAS library via the LBT_DEFAULT_LIBS environment variable.
         # Provide a default in case the user doesn't set.
         lbt_default_libs = get(ENV, "LBT_DEFAULT_LIBS", _get_blas_loaded_libs())
-        cmd = `$(solver_path) $(nl_filename) $(options)`
+        cmd = `$solver_path $nl_filename $(solver.flags) $options`
         if !isempty(lbt_default_libs)
             cmd = addenv(cmd, "LBT_DEFAULT_LIBS" => lbt_default_libs)
         end
@@ -94,9 +95,9 @@ foo() do path
 end
 ```
 """
-_solver_command(x::String) = _DefaultSolverCommand(f -> f(x))
-_solver_command(x::Function) = _DefaultSolverCommand(x)
-_solver_command(x::AbstractSolverCommand) = x
+_solver_command(x::String, flags) = _DefaultSolverCommand(f -> f(x), flags)
+_solver_command(x::Function, flags) = _DefaultSolverCommand(x, flags)
+_solver_command(x::AbstractSolverCommand, flags) = x
 
 mutable struct Optimizer <: MOI.AbstractOptimizer
     inner::MOI.FileFormats.NL.Model
@@ -176,10 +177,11 @@ function Optimizer(
     stdin::Any = stdin,
     stdout::Any = stdout,
     directory::String = "",
+    flags::Vector{String} = ["-AMPL"],
 )
     return Optimizer(
         MOI.FileFormats.NL.Model(),
-        _solver_command(solver_command),
+        _solver_command(solver_command, flags),
         Dict{String,String}(opt => "" for opt in solver_args),
         stdin,
         stdout,

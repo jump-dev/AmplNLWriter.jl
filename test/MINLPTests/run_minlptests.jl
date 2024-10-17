@@ -116,13 +116,20 @@ CONFIG["Uno"] = Dict(
 
 # Uno needs the full uno.options file...
 run(
-    `curl https://raw.githubusercontent.com/cvanaret/Uno/refs/heads/main/uno.options -o uno.options`
+    `curl https://raw.githubusercontent.com/cvanaret/Uno/refs/heads/main/uno.options -o uno.options`,
 )
 
 @testset "$(name)" for name in ["Uno", "Ipopt", "Bonmin", "Couenne"]
     config = CONFIG[name]
-    OPTIMIZER =
+    OPTIMIZER = if name == "Uno"
+        () -> AmplNLWriter.Optimizer(
+            config["amplexe"],
+            config["options"];
+            flags = String[],
+        )
+    else
         () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
+    end
     PRIMAL_TARGET[MINLPTests.INFEASIBLE_PROBLEM] = config["infeasible_point"]
     @testset "NLP" begin
         MINLPTests.test_nlp(
