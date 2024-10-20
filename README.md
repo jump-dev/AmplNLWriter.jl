@@ -69,7 +69,7 @@ Supported packages include:
 | [Ipopt](https://github.com/coin-or/Ipopt)     | `Ipopt_jll.jl`    | `Ipopt_jll.amplexe`   |
 | [KNITRO](https://github.comjump-dev/KNITRO.jl)| `KNITRO.jl`       | `KNITRO.amplexe`      |
 | [SHOT](https://github.com/coin-or/SHOT)       | `SHOT_jll.jl`     | `SHOT_jll.amplexe`    |
-| [Uno](https://github.com/cvanaret/Uno)       | `Uno_jll.jl`       | `Uno_jll.amplexe`     |
+| [Uno](https://github.com/cvanaret/Uno)        | `Uno_jll.jl`      | `Uno_jll.amplexe`     |
 
 
 ## MathOptInterface API
