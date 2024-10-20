@@ -116,11 +116,6 @@ CONFIG["Uno"] = Dict(
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
 )
 
-# Uno needs the full uno.options file...
-run(
-    `curl https://raw.githubusercontent.com/cvanaret/Uno/refs/heads/main/uno.options -o uno.options`,
-)
-
 @testset "$(name)" for name in ["Uno", "Ipopt", "Bonmin", "Couenne"]
     config = CONFIG[name]
     OPTIMIZER =
