@@ -11,7 +11,7 @@ Uno_jll = "396d5378-14f1-5ab1-981d-48acd51740ed"
 [compat]
 Bonmin_jll = "100.800.801"
 Couenne_jll = "0.500.801"
-Ipopt_jll = "=300.1400.400, =300.1400.1400"
+Ipopt_jll = "=300.1400.1600"
 JuMP = "1"
 MINLPTests = "0.6"
 SHOT_jll = "100.100.0"
