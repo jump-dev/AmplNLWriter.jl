@@ -106,7 +106,7 @@ import Uno_jll
 CONFIG["Uno"] = Dict(
     "mixed-integer" => false,
     "amplexe" => Uno_jll.amplexe,
-    "options" => String["preset=ipopt", "linear_solver=MUMPS"],
+    "options" => String["logger=ERROR", "preset=ipopt", "linear_solver=MUMPS"],
     "tol" => 1e-5,
     "dual_tol" => 1e-5,
     "nlp_exclude" =>
