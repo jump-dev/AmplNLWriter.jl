@@ -261,3 +261,6 @@ end  # module
 
 import Ipopt_jll
 TestMOIWrapper.runtests(Ipopt_jll.amplexe)
+
+import Uno_jll
+TestMOIWrapper.runtests(Uno_jll.amplexe)
