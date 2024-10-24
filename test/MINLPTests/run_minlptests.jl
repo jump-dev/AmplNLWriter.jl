@@ -106,12 +106,10 @@ import Uno_jll
 CONFIG["Uno"] = Dict(
     "mixed-integer" => false,
     "amplexe" => Uno_jll.amplexe,
-    "options" =>
-        String["logger=ERROR", "preset=ipopt", "linear_solver=MUMPS"],
+    "options" => ["logger=SILENT", "preset=ipopt"],
     "tol" => 1e-5,
     "dual_tol" => 1e-5,
-    "nlp_exclude" =>
-        ["005_010", "005_011", "006_010", "007_010", "008_010", "008_011"],
+    "nlp_exclude" => ["005_010", "006_010", "007_010", "008_010", "008_011"],
     "nlpcvx_exclude" => String[],
     "nlpmi_exclude" => String[],
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
