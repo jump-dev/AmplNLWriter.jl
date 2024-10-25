@@ -109,7 +109,14 @@ CONFIG["Uno"] = Dict(
     "options" => ["logger=SILENT"],
     "tol" => 1e-5,
     "dual_tol" => 1e-5,
-    "nlp_exclude" => ["005_010", "006_010", "007_010"],
+    "nlp_exclude" => [
+        # See https://github.com/cvanaret/Uno/issues/39
+        "005_010",
+        # Unsupported user-defined function
+        "006_010",
+        # See https://github.com/cvanaret/Uno/issues/38
+        "007_010",
+    ],
     "nlpcvx_exclude" => String[],
     "nlpmi_exclude" => String[],
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
