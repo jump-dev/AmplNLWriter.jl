@@ -109,8 +109,8 @@ CONFIG["Uno"] = Dict(
     "options" => ["logger=SILENT", "preset=ipopt"],
     "tol" => 1e-5,
     "dual_tol" => 1e-5,
-    "nlp_exclude" =>
-        ["005_010", "006_010", "007_010", "008_010", "008_011"],
+    "nlp_exclude" => String[],
+    #    ["005_010", "006_010", "007_010", "008_010", "008_011"],
     "nlpcvx_exclude" => String[],
     "nlpmi_exclude" => String[],
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
