@@ -9,21 +9,21 @@ using Test
 
 import AmplNLWriter
 import AmplNLWriter: MOI
+import Ipopt_jll
 
-function runtests(path)
+function runtests()
     for name in names(@__MODULE__; all = true)
-        if !startswith("$(name)", "test_")
-            continue
-        end
-        @testset "$(name)" begin
-            getfield(@__MODULE__, name)(path)
+        if startswith("$(name)", "test_")
+            @testset "$(name)" begin
+                getfield(@__MODULE__, name)()
+            end
         end
     end
     return
 end
 
-function optimizer(path, args...; kwargs...)
-    model = AmplNLWriter.Optimizer(path, args...; kwargs...)
+function ipopt_optimizer(args...; kwargs...)
+    model = AmplNLWriter.Optimizer(Ipopt_jll.amplexe, args...; kwargs...)
     MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 0)
     MOI.set(
         model,
@@ -42,20 +42,9 @@ function optimizer(path, args...; kwargs...)
     )
 end
 
-function test_show(path)
-    @test sprint(show, AmplNLWriter.Optimizer(path)) == "An AMPL (.nl) model"
-end
-
-function test_name(path)
-    model = AmplNLWriter.Optimizer(path)
-    @test MOI.supports(model, MOI.Name())
-    MOI.set(model, MOI.Name(), "Foo")
-    @test MOI.get(model, MOI.Name()) == "Foo"
-end
-
-function test_runtests(path)
+function test_ipopt_runtests()
     MOI.Test.runtests(
-        optimizer(path),
+        ipopt_optimizer(),
         MOI.Test.Config(
             atol = 1e-4,
             rtol = 1e-4,
@@ -93,28 +82,45 @@ function test_runtests(path)
     return
 end
 
-function test_show(path)
-    @test sprint(show, AmplNLWriter.Optimizer(path)) == "An AMPL (.nl) model"
+function test_show()
+    @test sprint(show, AmplNLWriter.Optimizer()) == "An AMPL (.nl) model"
+    return
 end
 
-function test_solver_name(path)
-    @test MOI.get(optimizer(path), MOI.SolverName()) == "AmplNLWriter"
+function test_name()
+    model = AmplNLWriter.Optimizer()
+    @test MOI.supports(model, MOI.Name())
+    MOI.set(model, MOI.Name(), "Foo")
+    @test MOI.get(model, MOI.Name()) == "Foo"
+    return
 end
 
-function test_abstractoptimizer(path)
-    @test optimizer(path) isa MOI.AbstractOptimizer
+function test_show()
+    @test sprint(show, AmplNLWriter.Optimizer()) == "An AMPL (.nl) model"
+    return
 end
 
-function test_bad_string(::Any)
-    model = optimizer("bad_solver")
+function test_solver_name()
+    @test MOI.get(ipopt_optimizer(), MOI.SolverName()) == "AmplNLWriter"
+    return
+end
+
+function test_abstractoptimizer()
+    @test ipopt_optimizer() isa MOI.AbstractOptimizer
+    return
+end
+
+function test_bad_string()
+    model = AmplNLWriter.Optimizer("bad_solver")
     x = MOI.add_variable(model)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OTHER_ERROR
     @test occursin("IOError", MOI.get(model, MOI.RawStatusString()))
+    return
 end
 
-function test_function_constant_nonzero(path)
-    model = optimizer(path)
+function test_function_constant_nonzero()
+    model = ipopt_optimizer()
     x = MOI.add_variable(model)
     f = MOI.ScalarAffineFunction([MOI.ScalarAffineTerm(1.0, x)], 1.0)
     MOI.add_constraint(model, f, MOI.GreaterThan(3.0))
@@ -123,20 +129,22 @@ function test_function_constant_nonzero(path)
     MOI.optimize!(model)
     @test isapprox(MOI.get(model, MOI.VariablePrimal(), x), 2.0, atol = 1e-6)
     @test isapprox(MOI.get(model, MOI.ObjectiveValue()), 3.0, atol = 1e-6)
+    return
 end
 
-function test_raw_parameter(path)
-    model = AmplNLWriter.Optimizer(path)
+function test_raw_parameter()
+    model = AmplNLWriter.Optimizer()
     attr = MOI.RawOptimizerAttribute("print_level")
     @test MOI.supports(model, attr)
     @test MOI.get(model, attr) === nothing
     MOI.set(model, attr, 0)
     @test MOI.get(model, attr) == 0
+    return
 end
 
-function test_io(path)
+function test_io()
     io = IOBuffer()
-    model = optimizer(path; stdin = stdin, stdout = io)
+    model = ipopt_optimizer(; stdin = stdin, stdout = io)
     MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 1)
     x = MOI.add_variable(model)
     MOI.add_constraint(model, x, MOI.GreaterThan(0.0))
@@ -152,8 +160,8 @@ function test_io(path)
     return
 end
 
-function test_single_variable_interval_dual(path)
-    model = optimizer(path)
+function test_single_variable_interval_dual()
+    model = ipopt_optimizer()
     x = MOI.add_variable(model)
     c = MOI.add_constraint(model, x, MOI.Interval(0.0, 1.0))
     f = MOI.ScalarAffineFunction([MOI.ScalarAffineTerm(1.0, x)], 2.0)
@@ -167,8 +175,8 @@ function test_single_variable_interval_dual(path)
     return
 end
 
-function test_nlpblockdual(path)
-    model = optimizer(path)
+function test_nlpblockdual()
+    model = ipopt_optimizer()
     v = MOI.add_variables(model, 4)
     l = [1.1, 1.2, 1.3, 1.4]
     u = [5.1, 5.2, 5.3, 5.4]
@@ -188,16 +196,18 @@ function test_nlpblockdual(path)
     MOI.optimize!(model)
     dual = MOI.get(model, MOI.NLPBlockDual())
     @test isapprox(dual, [0.0, -5.008488314902599], atol = 1e-6)
+    return
 end
 
-function test_AbstractSolverCommand(path)
-    cmd = AmplNLWriter._DefaultSolverCommand(f -> f(path))
+function test_AbstractSolverCommand()
+    cmd = AmplNLWriter._DefaultSolverCommand(f -> f())
     model = AmplNLWriter.Optimizer(cmd)
     @test model.solver_command === cmd
+    return
 end
 
-function test_solve_time(path)
-    model = optimizer(path)
+function test_solve_time()
+    model = ipopt_optimizer()
     @test isnan(MOI.get(model, MOI.SolveTimeSec()))
     v = MOI.add_variables(model, 4)
     l = [1.1, 1.2, 1.3, 1.4]
@@ -216,9 +226,9 @@ function test_solve_time(path)
     return
 end
 
-function test_directory(path)
+function test_directory()
     temp_dir = mktempdir()
-    model = optimizer(path; directory = temp_dir)
+    model = ipopt_optimizer(; directory = temp_dir)
     v = MOI.add_variables(model, 4)
     l = [1.1, 1.2, 1.3, 1.4]
     u = [5.1, 5.2, 5.3, 5.4]
@@ -237,8 +247,8 @@ function test_directory(path)
     return
 end
 
-function test_no_sol_file(path)
-    model = optimizer(path)
+function test_no_sol_file()
+    model = ipopt_optimizer()
     x = MOI.add_variable(model)
     MOI.add_constraint(model, x, MOI.GreaterThan(2.0))
     MOI.add_constraint(model, x, MOI.LessThan(1.0))
@@ -251,13 +261,12 @@ function test_no_sol_file(path)
     return
 end
 
-function test_supports_incremental_interface(path)
-    model = AmplNLWriter.Optimizer(path)
+function test_supports_incremental_interface()
+    model = AmplNLWriter.Optimizer()
     @test !MOI.supports_incremental_interface(model)
     return
 end
 
 end  # module
 
-import Ipopt_jll
-TestMOIWrapper.runtests(Ipopt_jll.amplexe)
+TestMOIWrapper.runtests()
