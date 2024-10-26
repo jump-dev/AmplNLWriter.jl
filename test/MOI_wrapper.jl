@@ -10,6 +10,7 @@ using Test
 import AmplNLWriter
 import AmplNLWriter: MOI
 import Ipopt_jll
+import Uno_jll
 
 function runtests()
     for name in names(@__MODULE__; all = true)
@@ -78,6 +79,65 @@ function test_ipopt_runtests()
             "_SOS2_",
             "test_linear_integer_",
             "test_cpsat_",
+        ],
+    )
+    return
+end
+
+function test_uno_runtests()
+    optimizer = MOI.instantiate(
+        () -> AmplNLWriter.Optimizer(Uno_jll.amplexe, ["logger=SILENT"]);
+        with_cache_type = Float64,
+        with_bridge_type = Float64,
+    )
+    MOI.Test.runtests(
+        optimizer,
+        MOI.Test.Config(
+            atol = 1e-4,
+            rtol = 1e-4,
+            optimal_status = MOI.LOCALLY_SOLVED,
+            infeasible_status = MOI.LOCALLY_INFEASIBLE,
+            exclude = Any[
+                MOI.VariableBasisStatus,
+                MOI.ConstraintBasisStatus,
+                MOI.ObjectiveBound,
+                # Bug: Uno returns incorrect duals, and does not support
+                # variable duals.
+                MOI.ConstraintDual,
+                MOI.NLPBlockDual,
+            ],
+        ),
+        exclude = [
+            # OTHER_LIMIT instead of LOCALLY_SOLVED
+            "test_conic_linear_VectorOfVariables_2",
+            "test_nonlinear_expression_hs109",
+            "test_quadratic_constraint_GreaterThan",
+            "test_quadratic_constraint_LessThan",
+            # OTHER_ERROR instead of LOCALLY_SOLVED
+            "test_linear_integer_integration",
+            "test_linear_integration",
+            "test_linear_transform",
+            # OTHER_LIMIT instead of DUAL_INFEASIBLE
+            "test_solve_TerminationStatus_DUAL_INFEASIBLE",
+            # OTHER_LIMIT instead of LOCALLY_INFEASIBLE
+            "test_conic_NormInfinityCone_INFEASIBLE",
+            "test_conic_NormOneCone_INFEASIBLE",
+            "test_conic_linear_INFEASIBLE",
+            "test_linear_INFEASIBLE",
+            # TODO(odow): implement
+            "test_attribute_SolverVersion",
+            # Uno does not support integrality
+            "Indicator",
+            r"[Ii]nteger",
+            "Semicontinuous",
+            "Semiinteger",
+            "SOS1",
+            "SOS2",
+            "ZeroOne",
+            "test_cpsat_",
+            # Existing MOI issues
+            "test_nonlinear_invalid",
+            "test_basic_VectorNonlinearFunction_",
         ],
     )
     return
