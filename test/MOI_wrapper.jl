@@ -22,9 +22,10 @@ function runtests()
     return
 end
 
-function ipopt_optimizer(args...; kwargs...)
-    model = AmplNLWriter.Optimizer(Ipopt_jll.amplexe, args...; kwargs...)
+function ipopt_optimizer(path = Ipopt_jll.amplexe; kwargs...)
+    model = AmplNLWriter.Optimizer(path; kwargs...)
     MOI.set(model, MOI.RawOptimizerAttribute("print_level"), 0)
+    MOI.set(model, MOI.RawOptimizerAttribute("sb"), "yes")
     MOI.set(
         model,
         MOI.RawOptimizerAttribute("option_file_name"),
@@ -111,7 +112,7 @@ function test_abstractoptimizer()
 end
 
 function test_bad_string()
-    model = AmplNLWriter.Optimizer("bad_solver")
+    model = ipopt_optimizer("bad_solver")
     x = MOI.add_variable(model)
     MOI.optimize!(model)
     @test MOI.get(model, MOI.TerminationStatus()) == MOI.OTHER_ERROR
