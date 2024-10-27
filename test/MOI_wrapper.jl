@@ -101,29 +101,26 @@ function test_uno_runtests()
                 MOI.VariableBasisStatus,
                 MOI.ConstraintBasisStatus,
                 MOI.ObjectiveBound,
-                # Bug: Uno returns incorrect duals, and does not support
-                # variable duals.
-                MOI.ConstraintDual,
             ],
-        ),
+        );
         exclude = [
             # OTHER_LIMIT instead of LOCALLY_SOLVED
-            "test_conic_linear_VectorOfVariables_2",
-            "test_nonlinear_expression_hs109",
-            "test_quadratic_constraint_GreaterThan",
-            "test_quadratic_constraint_LessThan",
+            r"^test_conic_linear_VectorOfVariables_2$",
+            r"^test_nonlinear_expression_hs109$",
+            r"^test_quadratic_constraint_GreaterThan$",
+            r"^test_quadratic_constraint_LessThan$",
             # OTHER_ERROR instead of LOCALLY_SOLVED
-            "test_linear_integration",
-            "test_linear_transform",
+            r"^test_linear_integration$",
+            r"^test_linear_transform$",
             # OTHER_LIMIT instead of DUAL_INFEASIBLE
-            "test_solve_TerminationStatus_DUAL_INFEASIBLE",
+            r"^test_solve_TerminationStatus_DUAL_INFEASIBLE$",
             # OTHER_LIMIT instead of LOCALLY_INFEASIBLE
-            "test_conic_NormInfinityCone_INFEASIBLE",
-            "test_conic_NormOneCone_INFEASIBLE",
-            "test_conic_linear_INFEASIBLE",
-            "test_linear_INFEASIBLE",
+            r"^test_conic_NormInfinityCone_INFEASIBLE$",
+            r"^test_conic_NormOneCone_INFEASIBLE$",
+            r"^test_conic_linear_INFEASIBLE$",
+            r"^test_linear_INFEASIBLE$",
             # TODO(odow): implement
-            "test_attribute_SolverVersion",
+            r"^test_attribute_SolverVersion$",
             # Uno does not support integrality
             "Indicator",
             r"[Ii]nteger",
@@ -132,10 +129,10 @@ function test_uno_runtests()
             "SOS1",
             "SOS2",
             "ZeroOne",
-            "test_cpsat_",
+            r"^test_cpsat_",
             # Existing MOI issues
-            "test_nonlinear_invalid",
-            "test_basic_VectorNonlinearFunction_",
+            r"^test_nonlinear_invalid$",
+            r"^test_basic_VectorNonlinearFunction_",
         ],
     )
     return
