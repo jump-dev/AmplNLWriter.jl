@@ -104,7 +104,6 @@ function test_uno_runtests()
                 # Bug: Uno returns incorrect duals, and does not support
                 # variable duals.
                 MOI.ConstraintDual,
-                MOI.NLPBlockDual,
             ],
         ),
         exclude = [
