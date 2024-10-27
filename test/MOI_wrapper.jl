@@ -113,7 +113,6 @@ function test_uno_runtests()
             "test_quadratic_constraint_GreaterThan",
             "test_quadratic_constraint_LessThan",
             # OTHER_ERROR instead of LOCALLY_SOLVED
-            "test_linear_integer_integration",
             "test_linear_integration",
             "test_linear_transform",
             # OTHER_LIMIT instead of DUAL_INFEASIBLE
