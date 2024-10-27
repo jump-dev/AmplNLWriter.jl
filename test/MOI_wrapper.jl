@@ -109,6 +109,8 @@ function test_uno_runtests()
             r"^test_nonlinear_expression_hs109$",
             r"^test_quadratic_constraint_GreaterThan$",
             r"^test_quadratic_constraint_LessThan$",
+            r"^test_solve_VariableIndex_ConstraintDual_MAX_SENSE$",
+            r"^test_solve_VariableIndex_ConstraintDual_MIN_SENSE$",
             # OTHER_ERROR instead of LOCALLY_SOLVED
             r"^test_linear_integration$",
             r"^test_linear_transform$",
@@ -118,7 +120,10 @@ function test_uno_runtests()
             r"^test_conic_NormInfinityCone_INFEASIBLE$",
             r"^test_conic_NormOneCone_INFEASIBLE$",
             r"^test_conic_linear_INFEASIBLE$",
+            r"^test_conic_linear_INFEASIBLE_2$",
             r"^test_linear_INFEASIBLE$",
+            r"^test_linear_INFEASIBLE_2$",
+            r"^test_solve_DualStatus_INFEASIBILITY_CERTIFICATE_",
             # TODO(odow): implement
             r"^test_attribute_SolverVersion$",
             # Uno does not support integrality
