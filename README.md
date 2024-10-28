@@ -67,8 +67,9 @@ Supported packages include:
 | [Bonmin](https://github.com/coin-or/Bonmin)   | `Bonmin_jll.jl`   | `Bomin_jll.amplexe`   |
 | [Couenne](https://github.com/coin-or/Couenne) | `Couenne_jll.jl`  | `Couenne_jll.amplexe` |
 | [Ipopt](https://github.com/coin-or/Ipopt)     | `Ipopt_jll.jl`    | `Ipopt_jll.amplexe`   |
-| [SHOT](https://github.com/coin-or/SHOT)       | `SHOT_jll.jl`     | `SHOT_jll.amplexe`    |
 | [KNITRO](https://github.comjump-dev/KNITRO.jl)| `KNITRO.jl`       | `KNITRO.amplexe`      |
+| [SHOT](https://github.com/coin-or/SHOT)       | `SHOT_jll.jl`     | `SHOT_jll.amplexe`    |
+| [Uno](https://github.com/cvanaret/Uno)        | `Uno_jll.jl`      | `Uno_jll.amplexe`     |
 
 ## MathOptInterface API
 
