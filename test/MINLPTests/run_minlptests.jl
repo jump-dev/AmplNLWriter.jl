@@ -10,6 +10,7 @@ import Bonmin_jll
 import Couenne_jll
 import Ipopt_jll
 import MINLPTests
+import SHOT_jll
 import Uno_jll
 
 const TERMINATION_TARGET = Dict(
@@ -23,7 +24,6 @@ const PRIMAL_TARGET = Dict(
 )
 
 # Common reasons for exclusion:
-# nlp/005_011     : Uses the function `\`
 # nlp/006_010     : Uses a user-defined function
 # nlp/007_010     : Ipopt returns an infeasible point, not NO_SOLUTION.
 # nlp/008_010     : Couenne fails to converge
@@ -34,156 +34,128 @@ const PRIMAL_TARGET = Dict(
 # nlp-cvx/206_010 : Couenne can't evaluate pow
 # nlp-mi/001_010  : Couenne fails to converge
 
-const CONFIG = Dict{String,Any}()
-
-CONFIG["Bonmin"] = Dict(
-    "mixed-integer" => true,
-    "amplexe" => Bonmin_jll.amplexe,
-    "options" => String["bonmin.nlp_log_level=0"],
-    "tol" => 1e-5,
-    "dual_tol" => NaN,
-    "nlp_exclude" => ["005_011", "006_010"],
-    "nlpcvx_exclude" => ["109_010"],
-    # 004_010 and 004_011 are tolerance failures on Bonmin
-    "nlpmi_exclude" => ["004_010", "004_011", "005_011", "006_010"],
-    "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
-)
-CONFIG["Couenne"] = Dict(
-    "mixed-integer" => true,
-    "amplexe" => Couenne_jll.amplexe,
-    "options" => String[],
-    "tol" => 1e-2,
-    "dual_tol" => NaN,
-    "nlp_exclude" =>
-        ["005_011", "006_010", "008_010", "008_011", "009_010", "009_011"],
-    "nlpcvx_exclude" => ["109_010", "206_010"],
-    "nlpmi_exclude" => ["001_010", "005_011", "006_010"],
-    "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
-)
-
-CONFIG["Ipopt"] = Dict(
-    "mixed-integer" => false,
-    "amplexe" => Ipopt_jll.amplexe,
-    "options" => String["print_level=0"],
-    "tol" => 1e-5,
-    "dual_tol" => 1e-5,
-    "nlp_exclude" => ["005_011", "006_010", "007_010"],
-    "nlpcvx_exclude" => ["109_010"],
-    "nlpmi_exclude" => ["005_011", "006_010"],
-    "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
-)
-
-# SHOT fails too many tests to recommend using it.
-# e.g., https://github.com/coin-or/SHOT/issues/134
-# Even problems such as `@variable(model, x); @objective(model, Min, (x-1)^2)`
-#
-# import SHOT_jll
-# CONFIG["SHOT"] = Dict(
-#     "amplexe" => SHOT_jll.amplexe,
-#     "options" => String[
-#         "Output.Console.LogLevel=6",
-#         "Output.File.LogLevel=6",
-#         "Termination.ObjectiveGap.Absolute=1e-6",
-#         "Termination.ObjectiveGap.Relative=1e-6",
-#     ],
-#     "tol" => 1e-2,
-#     "dual_tol" => NaN,
-#     "nlp_exclude" => [
-#         "005_011",  # `\` function
-#         "006_010",  # User-defined function
-#     ],
-#     "nlpcvx_exclude" => [
-#         "501_011",  # `\` function
-#     ],
-#     "nlpmi_exclude" => [
-#         "005_011",  # `\` function
-#         "006_010",  # User-defined function
-#     ],
-#     "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
-# )
-
-CONFIG["Uno"] = Dict(
-    "mixed-integer" => false,
-    "amplexe" => Uno_jll.amplexe,
-    "options" => ["logger=SILENT"],
-    "tol" => 1e-5,
-    "dual_tol" => 1e-5,
-    "nlp_exclude" => [
-        # See https://github.com/cvanaret/Uno/issues/39
-        "005_010",
-        # Unsupported user-defined function
-        "006_010",
-        # See https://github.com/cvanaret/Uno/issues/38
-        "007_010",
-    ],
-    "nlpcvx_exclude" => String[],
-    "nlpmi_exclude" => String[],
-    "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
+const CONFIG = Dict{String,Any}(
+    "Bonmin" => Dict(
+        "mixed-integer" => true,
+        "amplexe" => Bonmin_jll.amplexe,
+        "options" => String["bonmin.nlp_log_level=0"],
+        "dual_tol" => NaN,
+        "nlpcvx_exclude" => ["109_010"],
+        # 004_010 and 004_011 are tolerance failures on Bonmin
+        "nlpmi_exclude" => ["004_010", "004_011", "006_010"],
+    ),
+    "Couenne" => Dict(
+        "mixed-integer" => true,
+        "amplexe" => Couenne_jll.amplexe,
+        "options" => String[],
+        "tol" => 1e-2,
+        "dual_tol" => NaN,
+        "nlp_exclude" =>
+            ["006_010", "008_010", "008_011", "009_010", "009_011"],
+        "nlpcvx_exclude" => ["109_010", "206_010"],
+        "nlpmi_exclude" => ["001_010", "006_010"],
+    ),
+    "Ipopt" => Dict(
+        "mixed-integer" => false,
+        "amplexe" => Ipopt_jll.amplexe,
+        "options" => String["print_level=0"],
+        "nlp_exclude" => ["006_010", "007_010"],
+        "nlpcvx_exclude" => ["109_010"],
+        "nlpmi_exclude" => ["006_010"],
+    ),
+    # SHOT fails too many tests to recommend using it.
+    # e.g., https://github.com/coin-or/SHOT/issues/134
+    # Even problems such as `@variable(model, x); @objective(model, Min, (x-1)^2)`
+    # "SHOT" => Dict(
+    #     "amplexe" => SHOT_jll.amplexe,
+    #     "options" => String[
+    #         "Output.Console.LogLevel=6",
+    #         "Output.File.LogLevel=6",
+    #         "Termination.ObjectiveGap.Absolute=1e-6",
+    #         "Termination.ObjectiveGap.Relative=1e-6",
+    #     ],
+    #     "tol" => 1e-2,
+    #     "dual_tol" => NaN,
+    #     "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
+    # ),
+    "Uno" => Dict(
+        "mixed-integer" => false,
+        "amplexe" => Uno_jll.amplexe,
+        "options" => ["logger=SILENT"],
+        "nlp_exclude" => [
+            # See https://github.com/cvanaret/Uno/issues/39
+            "005_010",
+            # Unsupported user-defined function
+            "006_010",
+            # See https://github.com/cvanaret/Uno/issues/38
+            "007_010",
+        ],
+    ),
 )
 
 @testset "$k" for (k, config) in CONFIG
     OPTIMIZER =
         () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
-    PRIMAL_TARGET[MINLPTests.INFEASIBLE_PROBLEM] = config["infeasible_point"]
+    # PRIMAL_TARGET[MINLPTests.INFEASIBLE_PROBLEM] = config["infeasible_point"]
     @testset "NLP" begin
         MINLPTests.test_nlp(
             OPTIMIZER,
-            exclude = config["nlp_exclude"],
+            exclude = get(config, "nlp_exclude", ["006_010"]),
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
-            objective_tol = config["tol"],
-            primal_tol = config["tol"],
-            dual_tol = config["dual_tol"],
+            objective_tol = get(config, "tol", 1e-5),
+            primal_tol = get(config, "tol", 1e-5),
+            dual_tol = get(config, "dual_tol", 1e-5),
         )
         MINLPTests.test_nlp_expr(
             OPTIMIZER,
-            exclude = config["nlp_exclude"],
+            exclude = get(config, "nlp_exclude", ["006_010"]),
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
-            objective_tol = config["tol"],
-            primal_tol = config["tol"],
-            dual_tol = config["dual_tol"],
+            objective_tol = get(config, "tol", 1e-5),
+            primal_tol = get(config, "tol", 1e-5),
+            dual_tol = get(config, "dual_tol", 1e-5),
         )
     end
     @testset "NLP-CVX" begin
         MINLPTests.test_nlp_cvx(
             OPTIMIZER,
-            exclude = config["nlpcvx_exclude"],
+            exclude = get(config, "nlpcvx_exclude", String[]),
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
-            objective_tol = config["tol"],
-            primal_tol = config["tol"],
-            dual_tol = config["dual_tol"],
+            objective_tol = get(config, "tol", 1e-5),
+            primal_tol = get(config, "tol", 1e-5),
+            dual_tol = get(config, "dual_tol", 1e-5),
         )
         MINLPTests.test_nlp_cvx_expr(
             OPTIMIZER,
-            exclude = config["nlpcvx_exclude"],
+            exclude = get(config, "nlpcvx_exclude", String[]),
             termination_target = TERMINATION_TARGET,
             primal_target = PRIMAL_TARGET,
-            objective_tol = config["tol"],
-            primal_tol = config["tol"],
-            dual_tol = config["dual_tol"],
+            objective_tol = get(config, "tol", 1e-5),
+            primal_tol = get(config, "tol", 1e-5),
+            dual_tol = get(config, "dual_tol", 1e-5),
         )
     end
     if config["mixed-integer"]
         @testset "NLP-MI" begin
             MINLPTests.test_nlp_mi(
                 OPTIMIZER,
-                exclude = config["nlpmi_exclude"],
+                exclude = get(config, "nlpmi_exclude", ["006_010"]),
                 termination_target = TERMINATION_TARGET,
                 primal_target = PRIMAL_TARGET,
-                objective_tol = config["tol"],
-                primal_tol = config["tol"],
-                dual_tol = config["dual_tol"],
+                objective_tol = get(config, "tol", 1e-5),
+                primal_tol = get(config, "tol", 1e-5),
+                dual_tol = get(config, "dual_tol", 1e-5),
             )
             MINLPTests.test_nlp_mi_expr(
                 OPTIMIZER,
-                exclude = config["nlpmi_exclude"],
+                exclude = get(config, "nlpmi_exclude", ["006_010"]),
                 termination_target = TERMINATION_TARGET,
                 primal_target = PRIMAL_TARGET,
-                objective_tol = config["tol"],
-                primal_tol = config["tol"],
-                dual_tol = config["dual_tol"],
+                objective_tol = get(config, "tol", 1e-5),
+                primal_tol = get(config, "tol", 1e-5),
+                dual_tol = get(config, "dual_tol", 1e-5),
             )
         end
     end
