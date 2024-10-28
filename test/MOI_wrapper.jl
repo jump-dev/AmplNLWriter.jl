@@ -10,7 +10,6 @@ using Test
 import AmplNLWriter
 import AmplNLWriter: MOI
 import Ipopt_jll
-import Uno_jll
 
 function runtests()
     for name in names(@__MODULE__; all = true)
@@ -59,6 +58,12 @@ function test_ipopt_runtests()
             ],
         ),
         exclude = [
+            # TODO(odow): Bug in MOI/AmplNLWriter
+            "test_model_copy_to_",
+            # TODO(odow): implement
+            "test_attribute_SolverVersion",
+            # Skip the test with NaNs
+            "test_nonlinear_invalid",
             # Returns UnknownResultStatus
             "test_conic_NormInfinityCone_INFEASIBLE",
             "test_conic_NormOneCone_INFEASIBLE",
@@ -73,68 +78,6 @@ function test_ipopt_runtests()
             "_SOS2_",
             "test_linear_integer_",
             "test_cpsat_",
-            # We should debug why this does not skip
-            r"^test_attribute_SolverVersion$",
-            # Okay to skip. Returns OTHER_ERROR instead of INVALID_MODEL
-            r"^test_nonlinear_invalid$",
-        ],
-    )
-    return
-end
-
-function test_uno_runtests()
-    optimizer = MOI.instantiate(
-        () -> AmplNLWriter.Optimizer(Uno_jll.amplexe, ["logger=SILENT"]);
-        with_cache_type = Float64,
-        with_bridge_type = Float64,
-    )
-    MOI.Test.runtests(
-        optimizer,
-        MOI.Test.Config(
-            atol = 1e-4,
-            rtol = 1e-4,
-            optimal_status = MOI.LOCALLY_SOLVED,
-            infeasible_status = MOI.LOCALLY_INFEASIBLE,
-            exclude = Any[
-                MOI.VariableBasisStatus,
-                MOI.ConstraintBasisStatus,
-                MOI.ObjectiveBound,
-            ],
-        );
-        exclude = [
-            # OTHER_LIMIT instead of LOCALLY_SOLVED
-            r"^test_conic_linear_VectorOfVariables_2$",
-            r"^test_nonlinear_expression_hs109$",
-            r"^test_quadratic_constraint_GreaterThan$",
-            r"^test_quadratic_constraint_LessThan$",
-            r"^test_solve_VariableIndex_ConstraintDual_MAX_SENSE$",
-            r"^test_solve_VariableIndex_ConstraintDual_MIN_SENSE$",
-            # OTHER_ERROR instead of LOCALLY_SOLVED
-            r"^test_linear_integration$",
-            r"^test_linear_transform$",
-            # OTHER_LIMIT instead of DUAL_INFEASIBLE
-            r"^test_solve_TerminationStatus_DUAL_INFEASIBLE$",
-            # OTHER_LIMIT instead of LOCALLY_INFEASIBLE
-            r"^test_conic_NormInfinityCone_INFEASIBLE$",
-            r"^test_conic_NormOneCone_INFEASIBLE$",
-            r"^test_conic_linear_INFEASIBLE$",
-            r"^test_conic_linear_INFEASIBLE_2$",
-            r"^test_linear_INFEASIBLE$",
-            r"^test_linear_INFEASIBLE_2$",
-            r"^test_solve_DualStatus_INFEASIBILITY_CERTIFICATE_",
-            # Uno does not support integrality
-            "Indicator",
-            r"[Ii]nteger",
-            "Semicontinuous",
-            "Semiinteger",
-            "SOS1",
-            "SOS2",
-            "ZeroOne",
-            r"^test_cpsat_",
-            # Existing MOI issues
-            r"^test_attribute_SolverVersion$",
-            r"^test_nonlinear_invalid$",
-            r"^test_basic_VectorNonlinearFunction_",
         ],
     )
     return

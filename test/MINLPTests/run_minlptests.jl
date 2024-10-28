@@ -3,9 +3,14 @@
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
 
-import AmplNLWriter
-import MINLPTests
 using Test
+
+import AmplNLWriter
+import Bonmin_jll
+import Couenne_jll
+import Ipopt_jll
+import MINLPTests
+import Uno_jll
 
 const TERMINATION_TARGET = Dict(
     MINLPTests.FEASIBLE_PROBLEM => AmplNLWriter.MOI.LOCALLY_SOLVED,
@@ -31,7 +36,6 @@ const PRIMAL_TARGET = Dict(
 
 const CONFIG = Dict{String,Any}()
 
-import Bonmin_jll
 CONFIG["Bonmin"] = Dict(
     "mixed-integer" => true,
     "amplexe" => Bonmin_jll.amplexe,
@@ -44,8 +48,6 @@ CONFIG["Bonmin"] = Dict(
     "nlpmi_exclude" => ["004_010", "004_011", "005_011", "006_010"],
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
 )
-
-import Couenne_jll
 CONFIG["Couenne"] = Dict(
     "mixed-integer" => true,
     "amplexe" => Couenne_jll.amplexe,
@@ -59,7 +61,6 @@ CONFIG["Couenne"] = Dict(
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
 )
 
-import Ipopt_jll
 CONFIG["Ipopt"] = Dict(
     "mixed-integer" => false,
     "amplexe" => Ipopt_jll.amplexe,
@@ -101,8 +102,6 @@ CONFIG["Ipopt"] = Dict(
 #     "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
 # )
 
-import Uno_jll
-
 CONFIG["Uno"] = Dict(
     "mixed-integer" => false,
     "amplexe" => Uno_jll.amplexe,
@@ -122,8 +121,7 @@ CONFIG["Uno"] = Dict(
     "infeasible_point" => AmplNLWriter.MOI.NO_SOLUTION,
 )
 
-@testset "$(name)" for name in ["Uno", "Ipopt", "Bonmin", "Couenne"]
-    config = CONFIG[name]
+@testset "$k" for (k, config) in CONFIG
     OPTIMIZER =
         () -> AmplNLWriter.Optimizer(config["amplexe"], config["options"])
     PRIMAL_TARGET[MINLPTests.INFEASIBLE_PROBLEM] = config["infeasible_point"]
@@ -190,3 +188,63 @@ CONFIG["Uno"] = Dict(
         end
     end
 end
+
+function test_uno_runtests()
+    optimizer = MOI.instantiate(
+        () -> AmplNLWriter.Optimizer(Uno_jll.amplexe, ["logger=SILENT"]);
+        with_cache_type = Float64,
+        with_bridge_type = Float64,
+    )
+    MOI.Test.runtests(
+        optimizer,
+        MOI.Test.Config(
+            atol = 1e-4,
+            rtol = 1e-4,
+            optimal_status = MOI.LOCALLY_SOLVED,
+            infeasible_status = MOI.LOCALLY_INFEASIBLE,
+            exclude = Any[
+                MOI.VariableBasisStatus,
+                MOI.ConstraintBasisStatus,
+                MOI.ObjectiveBound,
+            ],
+        );
+        exclude = [
+            # OTHER_LIMIT instead of LOCALLY_SOLVED
+            r"^test_conic_linear_VectorOfVariables_2$",
+            r"^test_nonlinear_expression_hs109$",
+            r"^test_quadratic_constraint_GreaterThan$",
+            r"^test_quadratic_constraint_LessThan$",
+            r"^test_solve_VariableIndex_ConstraintDual_MAX_SENSE$",
+            r"^test_solve_VariableIndex_ConstraintDual_MIN_SENSE$",
+            # OTHER_ERROR instead of LOCALLY_SOLVED
+            r"^test_linear_integration$",
+            r"^test_linear_transform$",
+            # OTHER_LIMIT instead of DUAL_INFEASIBLE
+            r"^test_solve_TerminationStatus_DUAL_INFEASIBLE$",
+            # OTHER_LIMIT instead of LOCALLY_INFEASIBLE
+            r"^test_conic_NormInfinityCone_INFEASIBLE$",
+            r"^test_conic_NormOneCone_INFEASIBLE$",
+            r"^test_conic_linear_INFEASIBLE$",
+            r"^test_conic_linear_INFEASIBLE_2$",
+            r"^test_linear_INFEASIBLE$",
+            r"^test_linear_INFEASIBLE_2$",
+            r"^test_solve_DualStatus_INFEASIBILITY_CERTIFICATE_",
+            # Uno does not support integrality
+            "Indicator",
+            r"[Ii]nteger",
+            "Semicontinuous",
+            "Semiinteger",
+            "SOS1",
+            "SOS2",
+            "ZeroOne",
+            r"^test_cpsat_",
+            # Existing MOI issues
+            r"^test_attribute_SolverVersion$",
+            r"^test_nonlinear_invalid$",
+            r"^test_basic_VectorNonlinearFunction_",
+        ],
+    )
+    return
+end
+
+test_uno_runtests()
