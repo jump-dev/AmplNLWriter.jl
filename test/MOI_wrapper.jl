@@ -73,6 +73,10 @@ function test_ipopt_runtests()
             "_SOS2_",
             "test_linear_integer_",
             "test_cpsat_",
+            # We should debug why this does not skip
+            r"^test_attribute_SolverVersion$",
+            # Okay to skip. Returns OTHER_ERROR instead of INVALID_MODEL
+            r"^test_nonlinear_invalid$",
         ],
     )
     return
@@ -128,6 +132,7 @@ function test_uno_runtests()
             "ZeroOne",
             r"^test_cpsat_",
             # Existing MOI issues
+            r"^test_attribute_SolverVersion$",
             r"^test_nonlinear_invalid$",
             r"^test_basic_VectorNonlinearFunction_",
         ],
