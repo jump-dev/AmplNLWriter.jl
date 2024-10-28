@@ -59,12 +59,6 @@ function test_ipopt_runtests()
             ],
         ),
         exclude = [
-            # TODO(odow): Bug in MOI/AmplNLWriter
-            "test_model_copy_to_",
-            # TODO(odow): implement
-            "test_attribute_SolverVersion",
-            # Skip the test with NaNs
-            "test_nonlinear_invalid",
             # Returns UnknownResultStatus
             "test_conic_NormInfinityCone_INFEASIBLE",
             "test_conic_NormOneCone_INFEASIBLE",
@@ -124,8 +118,6 @@ function test_uno_runtests()
             r"^test_linear_INFEASIBLE$",
             r"^test_linear_INFEASIBLE_2$",
             r"^test_solve_DualStatus_INFEASIBILITY_CERTIFICATE_",
-            # TODO(odow): implement
-            r"^test_attribute_SolverVersion$",
             # Uno does not support integrality
             "Indicator",
             r"[Ii]nteger",
