@@ -71,6 +71,9 @@ Supported packages include:
 | [SHOT](https://github.com/coin-or/SHOT)       | `SHOT_jll.jl`     | `SHOT_jll.amplexe`    |
 | [Uno](https://github.com/cvanaret/Uno)        | `Uno_jll.jl`      | `Uno_jll.amplexe`     |
 
+**Bonmin and Couenne do not work on Apple M-series computers. For compatibility,
+install Julia via Rosetta.**
+
 ## MathOptInterface API
 
 The AmplNLWriter optimizer supports the following constraints and attributes.
