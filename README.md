@@ -1,7 +1,7 @@
 # AmplNLWriter.jl
 
-[![Build Status](https://github.com/jump-dev/AmplNLWriter.jl/workflows/CI/badge.svg?branch=master)](https://github.com/jump-dev/AmplNLWriter.jl/actions?query=workflow%3ACI)
-[![MINLPTests](https://github.com/jump-dev/AmplNLWriter.jl/workflows/MINLPTests/badge.svg?branch=master)](https://github.com/jump-dev/AmplNLWriter.jl/actions?query=workflow%3AMINLPTests)
+[![Build Status](https://github.com/jump-dev/AmplNLWriter.jl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/jump-dev/AmplNLWriter.jl/actions?query=workflow%3ACI)
+[![MINLPTests](https://github.com/jump-dev/AmplNLWriter.jl/actions/workflows/minlptests.yml/badge.svg?branch=master)](https://github.com/jump-dev/AmplNLWriter.jl/actions?query=workflow%3AMINLPTests)
 [![codecov](https://codecov.io/gh/jump-dev/AmplNLWriter.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/jump-dev/AmplNLWriter.jl)
 
 [AmplNLWriter.jl](https://github.com/jump-dev/AmplNLWriter.jl) is an interface
