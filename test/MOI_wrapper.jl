@@ -262,6 +262,20 @@ function test_no_sol_file()
     return
 end
 
+function test_output_file_with_spaces()
+    temp_dir = mktempdir()
+    model = ipopt_optimizer(; directory = temp_dir)
+    output_file = joinpath(temp_dir, "test foo.txt")
+    MOI.set(model, MOI.RawOptimizerAttribute("output_file"), output_file)
+    x = MOI.add_variable(model)
+    MOI.add_constraint(model, x, MOI.GreaterThan(2.0))
+    MOI.optimize!(model)
+    @test isfile(joinpath(temp_dir, "model.nl"))
+    @test isfile(joinpath(temp_dir, "model.sol"))
+    @test isfile(output_file)
+    return
+end
+
 function test_supports_incremental_interface()
     model = AmplNLWriter.Optimizer()
     @test !MOI.supports_incremental_interface(model)
