@@ -276,6 +276,15 @@ MOI.supports_incremental_interface(::Optimizer) = false
 
 MOI.copy_to(dest::Optimizer, src::MOI.ModelLike) = MOI.copy_to(dest.inner, src)
 
+_kv_to_option(k, v) = string(k, "=", v, "")
+
+function _kv_to_option(k::String, v::AbstractString)
+    if isempty(v)
+        return k
+    end
+    return string(k, "=\"", v, "\"")
+end
+
 function MOI.optimize!(model::Optimizer)
     start_time = time()
     directory = model.directory
@@ -284,7 +293,7 @@ function MOI.optimize!(model::Optimizer)
     end
     nl_file = joinpath(directory, "model.nl")
     open(io -> write(io, model.inner), nl_file, "w")
-    options = String[isempty(v) ? k : "$(k)=$(v)" for (k, v) in model.options]
+    options = String[_kv_to_option(k, v) for (k, v) in model.options]
     try
         sol_file = call_solver(
             model.solver_command,
