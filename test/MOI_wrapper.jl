@@ -276,6 +276,20 @@ function test_output_file_with_spaces()
     return
 end
 
+function test_option_with_blank_value()
+    temp_dir = mktempdir()
+    model = ipopt_optimizer(; directory = temp_dir)
+    output_file = joinpath(temp_dir, "test foo.txt")
+    MOI.set(model, MOI.RawOptimizerAttribute("-= "), "")
+    x = MOI.add_variable(model)
+    MOI.add_constraint(model, x, MOI.GreaterThan(2.0))
+    MOI.optimize!(model)
+    status = MOI.get(model, MOI.RawStatusString())
+    @test occursin("'-= '", status)
+    @test MOI.get(model, MOI.TerminationStatus()) == MOI.OTHER_ERROR
+    return
+end
+
 function test_supports_incremental_interface()
     model = AmplNLWriter.Optimizer()
     @test !MOI.supports_incremental_interface(model)
