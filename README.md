@@ -62,14 +62,14 @@ model = Model(() -> AmplNLWriter.Optimizer(Bonmin_jll.amplexe))
 
 Supported packages include:
 
-| Solver                                        | Julia Package     | Executable            |
-| --------------------------------------------- | ----------------- | --------------------- |
-| [Bonmin](https://github.com/coin-or/Bonmin)   | `Bonmin_jll.jl`   | `Bomin_jll.amplexe`   |
-| [Couenne](https://github.com/coin-or/Couenne) | `Couenne_jll.jl`  | `Couenne_jll.amplexe` |
-| [Ipopt](https://github.com/coin-or/Ipopt)     | `Ipopt_jll.jl`    | `Ipopt_jll.amplexe`   |
-| [KNITRO](https://github.comjump-dev/KNITRO.jl)| `KNITRO.jl`       | `KNITRO.amplexe`      |
-| [SHOT](https://github.com/coin-or/SHOT)       | `SHOT_jll.jl`     | `SHOT_jll.amplexe`    |
-| [Uno](https://github.com/cvanaret/Uno)        | `Uno_jll.jl`      | `Uno_jll.amplexe`     |
+| Solver                                         | Julia Package     | Executable            |
+| ---------------------------------------------- | ----------------- | --------------------- |
+| [Bonmin](https://github.com/coin-or/Bonmin)    | `Bonmin_jll.jl`   | `Bomin_jll.amplexe`   |
+| [Couenne](https://github.com/coin-or/Couenne)  | `Couenne_jll.jl`  | `Couenne_jll.amplexe` |
+| [Ipopt](https://github.com/coin-or/Ipopt)      | `Ipopt_jll.jl`    | `Ipopt_jll.amplexe`   |
+| [KNITRO](https://github.com/jump-dev/KNITRO.jl)| `KNITRO.jl`       | `KNITRO.amplexe`      |
+| [SHOT](https://github.com/coin-or/SHOT)        | `SHOT_jll.jl`     | `SHOT_jll.amplexe`    |
+| [Uno](https://github.com/cvanaret/Uno)         | `Uno_jll.jl`      | `Uno_jll.amplexe`     |
 
 **Bonmin and Couenne do not work on Apple M-series computers. For compatibility,
 install Julia via Rosetta.**
