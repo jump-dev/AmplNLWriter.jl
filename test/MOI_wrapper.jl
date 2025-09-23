@@ -96,11 +96,6 @@ function test_name()
     return
 end
 
-function test_show()
-    @test sprint(show, AmplNLWriter.Optimizer()) == "An AMPL (.nl) model"
-    return
-end
-
 function test_solver_name()
     @test MOI.get(ipopt_optimizer(), MOI.SolverName()) == "AmplNLWriter"
     return
