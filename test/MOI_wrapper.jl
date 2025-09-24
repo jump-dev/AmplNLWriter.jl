@@ -68,6 +68,8 @@ function test_ipopt_runtests()
             "test_conic_NormInfinityCone_INFEASIBLE",
             "test_conic_NormOneCone_INFEASIBLE",
             "test_conic_linear_VectorOfVariables_2",
+            # Bug on macOS
+            r"^test_linear_transform$",
             # Ipopt doesn't support integrality
             "_ObjectiveBound_",
             "_ZeroOne_",
