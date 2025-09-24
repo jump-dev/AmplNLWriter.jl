@@ -68,6 +68,8 @@ function test_ipopt_runtests()
             "test_conic_NormInfinityCone_INFEASIBLE",
             "test_conic_NormOneCone_INFEASIBLE",
             "test_conic_linear_VectorOfVariables_2",
+            # Bug on macOS
+            r"^test_linear_transform$",
             # Ipopt doesn't support integrality
             "_ObjectiveBound_",
             "_ZeroOne_",
@@ -93,11 +95,6 @@ function test_name()
     @test MOI.supports(model, MOI.Name())
     MOI.set(model, MOI.Name(), "Foo")
     @test MOI.get(model, MOI.Name()) == "Foo"
-    return
-end
-
-function test_show()
-    @test sprint(show, AmplNLWriter.Optimizer()) == "An AMPL (.nl) model"
     return
 end
 

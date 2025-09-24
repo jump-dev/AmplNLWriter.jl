@@ -3,17 +3,18 @@ uuid = "7c4d4715-977e-5154-bfe0-e096adeac482"
 version = "1.2.3"
 
 [deps]
+Ipopt_jll = "9cc047cb-c261-5740-88fc-0cf96f7bdcc7"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 OpenBLAS32_jll = "656ef2d0-ae68-5445-9ca0-591084a874a2"
 
 [compat]
-Ipopt_jll = "=300.1400.400, =300.1400.1400, =300.1400.1600"
-LinearAlgebra = "<0.0.1, 1.6"
+Ipopt_jll = "300.1400"
+LinearAlgebra = "1"
 MathOptInterface = "1.18"
-OpenBLAS32_jll = "0.3.12, 0.3.24"
-Test = "<0.0.1, 1.6"
-julia = "1.6"
+OpenBLAS32_jll = "0.3.12"
+Test = "1"
+julia = "1.10"
 
 [extras]
 Ipopt_jll = "9cc047cb-c261-5740-88fc-0cf96f7bdcc7"
