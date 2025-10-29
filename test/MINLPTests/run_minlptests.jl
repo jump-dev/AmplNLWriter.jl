@@ -80,7 +80,13 @@ const CONFIG = Dict{String,Any}(
     "Uno" => Dict(
         "mixed-integer" => false,
         "amplexe" => Uno_jll.amplexe,
-        "options" => ["logger=SILENT"],
+        "options" => [
+            "logger=SILENT",
+            "preset=filtersqp",
+            "QP_solver=BQPD",
+            "max_iterations=10000",
+            "unbounded_objective_threshold=-1e15",
+        ],
         "nlp_exclude" => [
             "003_014",  # Local solution
             "004_010",  # Local solution
