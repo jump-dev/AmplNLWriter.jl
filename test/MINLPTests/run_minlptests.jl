@@ -82,10 +82,12 @@ const CONFIG = Dict{String,Any}(
         "amplexe" => Uno_jll.amplexe,
         "options" => ["logger=SILENT"],
         "nlp_exclude" => [
-            # See https://github.com/cvanaret/Uno/issues/39
-            "005_010",
-            # See https://github.com/cvanaret/Uno/issues/38
-            "007_010",
+            "003_014",  # Local solution
+            "004_010",  # Local solution
+            "004_011",  # Local solution
+            "005_010",  # See https://github.com/cvanaret/Uno/issues/39
+            "007_010",  # See https://github.com/cvanaret/Uno/issues/38
+            "008_010",  # Local solution
         ],
     ),
 )
