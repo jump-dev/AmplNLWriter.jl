@@ -11,8 +11,6 @@ import Couenne_jll
 import Ipopt_jll
 import MathOptInterface as MOI
 import MINLPTests
-import SHOT_jll
-import Uno_jll
 
 const TERMINATION_TARGET = Dict(
     MINLPTests.FEASIBLE_PROBLEM => MOI.LOCALLY_SOLVED,
@@ -61,40 +59,6 @@ const CONFIG = Dict{String,Any}(
         "options" => String["print_level=0"],
         "nlp_exclude" => ["007_010"],
         "nlpcvx_exclude" => ["109_010"],
-    ),
-    # SHOT fails too many tests to recommend using it.
-    # e.g., https://github.com/coin-or/SHOT/issues/134
-    # Even problems such as `@variable(model, x); @objective(model, Min, (x-1)^2)`
-    # "SHOT" => Dict(
-    #     "amplexe" => SHOT_jll.amplexe,
-    #     "options" => String[
-    #         "Output.Console.LogLevel=6",
-    #         "Output.File.LogLevel=6",
-    #         "Termination.ObjectiveGap.Absolute=1e-6",
-    #         "Termination.ObjectiveGap.Relative=1e-6",
-    #     ],
-    #     "tol" => 1e-2,
-    #     "dual_tol" => NaN,
-    #     "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
-    # ),
-    "Uno" => Dict(
-        "mixed-integer" => false,
-        "amplexe" => Uno_jll.amplexe,
-        "options" => [
-            "logger=SILENT",
-            "preset=filtersqp",
-            "QP_solver=BQPD",
-            "max_iterations=10000",
-            "unbounded_objective_threshold=-1e15",
-        ],
-        "nlp_exclude" => [
-            "003_014",  # Local solution
-            "004_010",  # Local solution
-            "004_011",  # Local solution
-            "005_010",  # See https://github.com/cvanaret/Uno/issues/39
-            "007_010",  # See https://github.com/cvanaret/Uno/issues/38
-            "008_010",  # Local solution
-        ],
     ),
 )
 
