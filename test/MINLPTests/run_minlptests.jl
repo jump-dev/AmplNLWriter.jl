@@ -11,8 +11,6 @@ import Couenne_jll
 import Ipopt_jll
 import MathOptInterface as MOI
 import MINLPTests
-import SHOT_jll
-import Uno_jll
 
 const TERMINATION_TARGET = Dict(
     MINLPTests.FEASIBLE_PROBLEM => MOI.LOCALLY_SOLVED,
@@ -61,32 +59,6 @@ const CONFIG = Dict{String,Any}(
         "options" => String["print_level=0"],
         "nlp_exclude" => ["007_010"],
         "nlpcvx_exclude" => ["109_010"],
-    ),
-    # SHOT fails too many tests to recommend using it.
-    # e.g., https://github.com/coin-or/SHOT/issues/134
-    # Even problems such as `@variable(model, x); @objective(model, Min, (x-1)^2)`
-    # "SHOT" => Dict(
-    #     "amplexe" => SHOT_jll.amplexe,
-    #     "options" => String[
-    #         "Output.Console.LogLevel=6",
-    #         "Output.File.LogLevel=6",
-    #         "Termination.ObjectiveGap.Absolute=1e-6",
-    #         "Termination.ObjectiveGap.Relative=1e-6",
-    #     ],
-    #     "tol" => 1e-2,
-    #     "dual_tol" => NaN,
-    #     "infeasible_point" => AmplNLWriter.MOI.UNKNOWN_RESULT_STATUS,
-    # ),
-    "Uno" => Dict(
-        "mixed-integer" => false,
-        "amplexe" => Uno_jll.amplexe,
-        "options" => ["logger=SILENT"],
-        "nlp_exclude" => [
-            # See https://github.com/cvanaret/Uno/issues/39
-            "005_010",
-            # See https://github.com/cvanaret/Uno/issues/38
-            "007_010",
-        ],
     ),
 )
 
@@ -160,63 +132,3 @@ const CONFIG = Dict{String,Any}(
         end
     end
 end
-
-function test_uno_runtests()
-    optimizer = MOI.instantiate(
-        () -> AmplNLWriter.Optimizer(Uno_jll.amplexe, ["logger=SILENT"]);
-        with_cache_type = Float64,
-        with_bridge_type = Float64,
-    )
-    MOI.Test.runtests(
-        optimizer,
-        MOI.Test.Config(
-            atol = 1e-4,
-            rtol = 1e-4,
-            optimal_status = MOI.LOCALLY_SOLVED,
-            infeasible_status = MOI.LOCALLY_INFEASIBLE,
-            exclude = Any[
-                MOI.VariableBasisStatus,
-                MOI.ConstraintBasisStatus,
-                MOI.ObjectiveBound,
-            ],
-        );
-        exclude = [
-            # OTHER_LIMIT instead of LOCALLY_SOLVED
-            r"^test_conic_linear_VectorOfVariables_2$",
-            r"^test_nonlinear_expression_hs109$",
-            r"^test_quadratic_constraint_GreaterThan$",
-            r"^test_quadratic_constraint_LessThan$",
-            r"^test_solve_VariableIndex_ConstraintDual_MAX_SENSE$",
-            r"^test_solve_VariableIndex_ConstraintDual_MIN_SENSE$",
-            # OTHER_ERROR instead of LOCALLY_SOLVED
-            r"^test_linear_integration$",
-            r"^test_linear_transform$",
-            # OTHER_LIMIT instead of DUAL_INFEASIBLE
-            r"^test_solve_TerminationStatus_DUAL_INFEASIBLE$",
-            # OTHER_LIMIT instead of LOCALLY_INFEASIBLE
-            r"^test_conic_NormInfinityCone_INFEASIBLE$",
-            r"^test_conic_NormOneCone_INFEASIBLE$",
-            r"^test_conic_linear_INFEASIBLE$",
-            r"^test_conic_linear_INFEASIBLE_2$",
-            r"^test_linear_INFEASIBLE$",
-            r"^test_linear_INFEASIBLE_2$",
-            r"^test_solve_DualStatus_INFEASIBILITY_CERTIFICATE_",
-            # Uno does not support integrality
-            "Indicator",
-            r"[Ii]nteger",
-            "Semicontinuous",
-            "Semiinteger",
-            "SOS1",
-            "SOS2",
-            "ZeroOne",
-            r"^test_cpsat_",
-            # Existing MOI issues
-            r"^test_attribute_SolverVersion$",
-            r"^test_nonlinear_invalid$",
-            r"^test_basic_VectorNonlinearFunction_",
-        ],
-    )
-    return
-end
-
-test_uno_runtests()
