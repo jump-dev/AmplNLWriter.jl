@@ -106,6 +106,10 @@ List of supported constraint types:
  * [`MOI.VariableIndex`](@ref) in [`MOI.Interval{Float64}`](@ref)
  * [`MOI.VariableIndex`](@ref) in [`MOI.LessThan{Float64}`](@ref)
  * [`MOI.VariableIndex`](@ref) in [`MOI.ZeroOne`](@ref)
+ * [`MOI.VectorOfVariables`](@ref) in [`MOI.Complements`](@ref)
+ * [`MOI.VectorAffineFunction`](@ref) in [`MOI.Complements`](@ref)
+ * [`MOI.VectorQuadraticFunction`](@ref) in [`MOI.Complements`](@ref)
+ * [`MOI.VectorNonlinearFunction`](@ref) in [`MOI.Complements`](@ref)
 
 List of supported model attributes:
 
@@ -115,7 +119,7 @@ List of supported model attributes:
 
 Note that some solver executables may not support the full list of constraint
 types. For example, `Ipopt_jll` does not support `MOI.Integer` or `MOI.ZeroOne`
-constraints.
+constraints, nor does it support the `MOI.Complements` set.
 
 ## Options
 

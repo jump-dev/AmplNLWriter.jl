@@ -81,6 +81,8 @@ function test_ipopt_runtests()
             "_SOS2_",
             "test_linear_integer_",
             "test_cpsat_",
+            # Ipopt doesn't support complementarity
+            "_complementarity",
         ],
     )
     return
@@ -291,6 +293,15 @@ end
 function test_supports_incremental_interface()
     model = AmplNLWriter.Optimizer()
     @test !MOI.supports_incremental_interface(model)
+    return
+end
+
+function test_supports_complements()
+    model = AmplNLWriter.Optimizer()
+    inner = MOI.FileFormats.NL.Model()
+    F, S = MOI.VectorOfVariables, MOI.Complements
+    @test MOI.supports_constraint(model, F, S) ==
+          MOI.supports_constraint(inner, F, S)
     return
 end
 
