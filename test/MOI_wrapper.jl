@@ -55,6 +55,7 @@ function test_ipopt_runtests()
                 MOI.VariableBasisStatus,
                 MOI.ConstraintBasisStatus,
                 MOI.ObjectiveBound,
+                MOI.DualObjectiveValue,
             ],
         ),
         exclude = [

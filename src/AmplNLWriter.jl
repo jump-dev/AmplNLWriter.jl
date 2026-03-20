@@ -352,10 +352,4 @@ function MOI.get(
     return MOI.get(model.results, attr, ci)
 end
 
-function MOI.get(model::Optimizer, attr::MOI.DualObjectiveValue)
-    MOI.check_result_index_bounds(model, attr)
-    # TODO(odow): replace this with the proper dual objective.
-    return MOI.get(model, MOI.ObjectiveValue())
-end
-
-end
+end  # module
