@@ -223,41 +223,17 @@ function MOI.set(model::Optimizer, attr::MOI.RawOptimizerAttribute, value)
     return
 end
 
-const _SCALAR_FUNCTIONS = Union{
-    MOI.VariableIndex,
-    MOI.ScalarAffineFunction{Float64},
-    MOI.ScalarQuadraticFunction{Float64},
-    MOI.ScalarNonlinearFunction,
-}
-
-const _SCALAR_SETS = Union{
-    MOI.LessThan{Float64},
-    MOI.GreaterThan{Float64},
-    MOI.EqualTo{Float64},
-    MOI.Interval{Float64},
-}
-
 function MOI.supports_constraint(
-    ::Optimizer,
-    ::Type{<:_SCALAR_FUNCTIONS},
-    ::Type{<:_SCALAR_SETS},
-)
-    return true
+    model::Optimizer,
+    ::Type{F},
+    ::Type{S},
+) where {F<:MOI.AbstractFunction,S<:MOI.AbstractSet}
+    return MOI.supports_constraint(model.inner, F, S)
 end
 
-function MOI.supports_constraint(
-    ::Optimizer,
-    ::Type{MOI.VariableIndex},
-    ::Type{<:Union{MOI.ZeroOne,MOI.Integer}},
-)
-    return true
+function MOI.supports(model::Optimizer, attr::MOI.AbstractModelAttribute)
+    return MOI.supports(model.inner, attr)
 end
-
-MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{<:_SCALAR_FUNCTIONS}) = true
-
-MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
-
-MOI.supports(::Optimizer, ::MOI.NLPBlock) = true
 
 function MOI.supports(
     ::Optimizer,
